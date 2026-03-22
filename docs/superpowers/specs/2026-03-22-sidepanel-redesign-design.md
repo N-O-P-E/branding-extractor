@@ -157,7 +157,7 @@ type FetchAssigneesMessage = {
   payload: { repo: string };
 };
 
-// Background → Content-UI (existing, unchanged)
+// Background → Content-UI (modified — adds tool field)
 type ShowScreenshotMessage = {
   type: 'SHOW_SCREENSHOT';
   payload: { screenshotDataUrl: string; tool: 'select' | 'pencil' };
@@ -191,7 +191,14 @@ type FetchAssigneesResponse = {
 };
 ```
 
-Existing message types (`START_REPORT`, `CREATE_ISSUE`, `FETCH_PAGE_ISSUES`, `MessageResponse`, `PageIssue`) remain largely unchanged. `CREATE_ISSUE` payload gains optional `labels: string[]` and `assignee: string` fields.
+Existing message types (`START_REPORT`, `FETCH_PAGE_ISSUES`, `MessageResponse`, `PageIssue`) remain unchanged. `GET_HTML_SNIPPET` and `HtmlSnippetResponse` also remain unchanged (used by rectangle selection).
+
+`CREATE_ISSUE` changes:
+- `payload.region` becomes optional (`region?: Region`) — pencil-only annotations have no region
+- Adds `labels?: string[]` and `assignee?: string` fields
+- Background's `handleCreateIssue` must conditionally render the Region section in the issue body
+
+Note: Pencil-only annotations do not produce an `htmlSnippet` since there is no single selection point.
 
 ## Communication Pattern
 
@@ -199,7 +206,7 @@ Side Panel ↔ Background: `chrome.runtime.sendMessage` (both are extension page
 
 Side Panel ↔ Content-UI: Cannot directly message. Route through Background, or use `chrome.tabs.sendMessage` from Side Panel (Side Panel has access to `chrome.tabs`).
 
-Content-UI → Side Panel: `chrome.runtime.sendMessage` — Background relays or Side Panel listens via `chrome.runtime.onMessage`.
+Content-UI → Side Panel: Content-UI calls `chrome.runtime.sendMessage`. Both Background and Side Panel receive it via `chrome.runtime.onMessage`. The Side Panel listens for `CAPTURE_COMPLETE` directly; the Background ignores it. No relay needed.
 
 ## Fonts
 
@@ -208,7 +215,7 @@ Content-UI → Side Panel: `chrome.runtime.sendMessage` — Background relays or
 - Loaded via `@import` from Google Fonts in the Side Panel's CSS (extension pages can load external fonts)
 - Floating toolbar on page also uses DM Sans (bundled in content-UI CSS or loaded from extension URL via `chrome.runtime.getURL`)
 
-Font loading in content scripts: Google Fonts cannot be fetched from injected content scripts due to CSP. Instead, bundle the font files in the extension and reference via `chrome.runtime.getURL('fonts/dm-sans.woff2')` in the shadow DOM stylesheet, or declare them as `web_accessible_resources`.
+Font loading in content scripts: Google Fonts cannot be fetched from injected content scripts due to CSP. Instead, bundle the font files in the extension and reference via `chrome.runtime.getURL('fonts/dm-sans.woff2')` in the shadow DOM stylesheet. Add `'*.woff2', '*.woff'` to `web_accessible_resources` in the manifest.
 
 ## Color Palette
 
@@ -279,7 +286,7 @@ Body: {
 
 | File | Changes |
 |------|---------|
-| `chrome-extension/manifest.ts` | Add `sidePanel` permission, `side_panel` config, remove popup |
+| `chrome-extension/manifest.ts` | Add `sidePanel` permission, `side_panel` config, remove popup, add font files to `web_accessible_resources`, extend/cast `ManifestType` for `side_panel` field |
 | `chrome-extension/src/background/index.ts` | Add `setPanelBehavior`, relay `ACTIVATE_TOOL`/`CAPTURE_COMPLETE`, add label/assignee fetch handlers, add labels/assignee to issue creation |
 | `packages/shared/lib/messages.ts` | Add new message types |
 | `pages/content-ui/src/matches/all/App.tsx` | Remove form + issues drawer, add pencil tool + floating toolbar, send `CAPTURE_COMPLETE` instead of `CREATE_ISSUE` |
