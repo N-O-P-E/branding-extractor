@@ -10,6 +10,15 @@ interface Stroke {
   width: number;
 }
 
+interface Comment {
+  x: number;
+  y: number;
+  text: string;
+  color: string;
+}
+
+type CanvasSubTool = 'draw' | 'text';
+
 const STROKE_COLORS = [
   '#8B5CF6', // purple (default)
   '#EF4444', // red
@@ -85,6 +94,41 @@ const renderPencilStrokes = (
   }
 };
 
+const renderComments = (ctx: CanvasRenderingContext2D, commentsToDraw: Comment[], scaleX: number, scaleY: number) => {
+  const fontSize = 14 * Math.max(scaleX, scaleY);
+  ctx.font = `500 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+  ctx.textBaseline = 'top';
+
+  for (const comment of commentsToDraw) {
+    if (!comment.text) continue;
+    const textColor = comment.color === '#FFFFFF' || comment.color === '#F59E0B' ? '#000000' : '#FFFFFF';
+    const padding = 8 * Math.max(scaleX, scaleY);
+    const borderRadius = 6 * Math.max(scaleX, scaleY);
+    const metrics = ctx.measureText(comment.text);
+    const textHeight = fontSize * 1.2;
+    const boxW = metrics.width + padding * 2;
+    const boxH = textHeight + padding * 2;
+    const cx = comment.x * scaleX;
+    const cy = comment.y * scaleY;
+
+    // Background with rounded corners
+    ctx.beginPath();
+    ctx.roundRect(cx, cy, boxW, boxH, borderRadius);
+    ctx.fillStyle = comment.color;
+    ctx.fill();
+
+    // Light border for overlap visibility
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 1 * Math.max(scaleX, scaleY);
+    ctx.setLineDash([]);
+    ctx.stroke();
+
+    // Text
+    ctx.fillStyle = textColor;
+    ctx.fillText(comment.text, cx + padding, cy + padding);
+  }
+};
+
 const App = () => {
   const [state, setState] = useState<OverlayState>('idle');
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
@@ -103,6 +147,10 @@ const App = () => {
   const isPencilDrawing = useRef(false);
   const [strokeColor, setStrokeColor] = useState('#8B5CF6');
   const [strokeWidth, setStrokeWidth] = useState(4);
+  const [canvasSubTool, setCanvasSubTool] = useState<CanvasSubTool>('draw');
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [editingComment, setEditingComment] = useState<{ x: number; y: number } | null>(null);
+  const commentInputRef = useRef<HTMLInputElement>(null);
 
   const backdropRef = useRef<HTMLDivElement>(null);
 
@@ -115,6 +163,10 @@ const App = () => {
     setStrokes([]);
     setCurrentStroke(null);
     isPencilDrawing.current = false;
+    setComments([]);
+    setEditingComment(null);
+    setCanvasSubTool('draw');
+    actionHistory.current = [];
   }, []);
 
   useEffect(() => {
@@ -128,6 +180,10 @@ const App = () => {
         setStrokes([]);
         setCurrentStroke(null);
         isPencilDrawing.current = false;
+        setComments([]);
+        setEditingComment(null);
+        setCanvasSubTool('draw');
+        actionHistory.current = [];
         setState('selecting');
       }
       if (message.type === 'ACTIVATE_TOOL') {
@@ -172,7 +228,7 @@ const App = () => {
   }, [strokes, currentStroke, activeTool, state, redrawPencilCanvas]);
 
   const handlePencilDone = useCallback(() => {
-    if (!screenshotUrl || strokes.length === 0) return;
+    if (!screenshotUrl || (strokes.length === 0 && comments.length === 0)) return;
 
     const img = new Image();
     img.onload = () => {
@@ -188,6 +244,7 @@ const App = () => {
       const scaleX = img.naturalWidth / displayRect.width;
       const scaleY = img.naturalHeight / displayRect.height;
       renderPencilStrokes(ctx, strokes, scaleX, scaleY);
+      renderComments(ctx, comments, scaleX, scaleY);
 
       const annotatedDataUrl = canvas.toDataURL('image/png');
       const captureMessage: CaptureCompleteMessage = {
@@ -208,10 +265,18 @@ const App = () => {
       isPencilDrawing.current = false;
     };
     img.src = screenshotUrl;
-  }, [screenshotUrl, strokes]);
+  }, [screenshotUrl, strokes, comments]);
 
-  const handlePencilUndo = useCallback(() => {
-    setStrokes(prev => prev.slice(0, -1));
+  // Track action order for undo: 'stroke' or 'comment'
+  const actionHistory = useRef<Array<'stroke' | 'comment'>>([]);
+
+  const handleCanvasUndo = useCallback(() => {
+    const lastAction = actionHistory.current.pop();
+    if (lastAction === 'comment') {
+      setComments(prev => prev.slice(0, -1));
+    } else if (lastAction === 'stroke') {
+      setStrokes(prev => prev.slice(0, -1));
+    }
   }, []);
 
   // Keyboard shortcuts (Escape, Cmd+Z for pencil undo, Enter for pencil done)
@@ -225,7 +290,7 @@ const App = () => {
       if (activeTool === 'pencil') {
         if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
           e.preventDefault();
-          handlePencilUndo();
+          handleCanvasUndo();
           return;
         }
         if (e.key === 'Enter') {
@@ -237,7 +302,7 @@ const App = () => {
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [state, activeTool, dismiss, handlePencilUndo, handlePencilDone]);
+  }, [state, activeTool, dismiss, handleCanvasUndo, handlePencilDone]);
 
   // Pencil tool mouse handlers
   useEffect(() => {
@@ -265,6 +330,7 @@ const App = () => {
       setCurrentStroke(prev => {
         if (prev && prev.points.length >= 2) {
           setStrokes(s => [...s, prev]);
+          actionHistory.current.push('stroke');
         }
         return null;
       });
@@ -388,6 +454,12 @@ const App = () => {
       const pos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
 
       if (activeTool === 'pencil') {
+        if (canvasSubTool === 'text') {
+          // Place a text comment at click position
+          setEditingComment(pos);
+          setTimeout(() => commentInputRef.current?.focus(), 0);
+          return;
+        }
         isPencilDrawing.current = true;
         setCurrentStroke({ points: [pos], color: strokeColor, width: strokeWidth });
         return;
@@ -399,7 +471,7 @@ const App = () => {
       dragCurrentRef.current = pos;
       forceRender(n => n + 1);
     },
-    [state, activeTool, strokeColor, strokeWidth],
+    [state, activeTool, strokeColor, strokeWidth, canvasSubTool],
   );
 
   const overlayActive = state !== 'idle' && screenshotUrl;
@@ -417,12 +489,19 @@ const App = () => {
       : null;
 
   const handleBackdropClick = () => {
+    // Close any editing comment first
+    if (editingComment) {
+      setEditingComment(null);
+      return;
+    }
     if (state === 'selecting' && !isDragging.current && !justFinishedDrag.current && !isPencilDrawing.current) {
-      // For pencil mode, don't dismiss if there are strokes
-      if (activeTool === 'pencil' && strokes.length > 0) return;
+      // For canvas mode, don't dismiss if there are strokes or comments
+      if (activeTool === 'pencil' && (strokes.length > 0 || comments.length > 0)) return;
       dismiss();
     }
   };
+
+  const hasCanvasContent = strokes.length > 0 || comments.length > 0;
 
   const isPencilMode = activeTool === 'pencil' && state === 'selecting';
 
@@ -453,7 +532,7 @@ const App = () => {
               alt="Page screenshot"
               style={{
                 ...styles.screenshot,
-                cursor: 'crosshair',
+                cursor: isPencilMode && canvasSubTool === 'text' ? 'text' : 'crosshair',
               }}
               draggable={false}
               onMouseDown={handleMouseDown}
@@ -489,6 +568,87 @@ const App = () => {
                 }}
               />
             )}
+
+            {/* Placed comment bubbles */}
+            {isPencilMode &&
+              comments.map((comment, i) => {
+                const textColor = comment.color === '#FFFFFF' || comment.color === '#F59E0B' ? '#000' : '#fff';
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      position: 'absolute',
+                      left: comment.x,
+                      top: comment.y,
+                      background: comment.color,
+                      color: textColor,
+                      padding: '6px 10px',
+                      borderRadius: 6,
+                      fontSize: 13,
+                      fontWeight: 500,
+                      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      pointerEvents: 'none',
+                      whiteSpace: 'nowrap',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                      lineHeight: 1.3,
+                    }}>
+                    {comment.text}
+                  </div>
+                );
+              })}
+
+            {/* Editing comment input */}
+            {isPencilMode && editingComment && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: editingComment.x,
+                  top: editingComment.y,
+                  zIndex: 10,
+                }}
+                onClick={e => e.stopPropagation()}
+                onKeyDown={e => e.stopPropagation()}
+                onMouseDown={e => e.stopPropagation()}>
+                <input
+                  ref={commentInputRef}
+                  type="text"
+                  placeholder="Type comment…"
+                  style={{
+                    background: strokeColor,
+                    color: strokeColor === '#FFFFFF' || strokeColor === '#F59E0B' ? '#000' : '#fff',
+                    padding: '6px 10px',
+                    borderRadius: 6,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    outline: 'none',
+                    minWidth: 120,
+                    boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
+                  }}
+                  onKeyDown={e => {
+                    e.stopPropagation();
+                    if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
+                      setComments(prev => [
+                        ...prev,
+                        {
+                          x: editingComment.x,
+                          y: editingComment.y,
+                          text: (e.target as HTMLInputElement).value.trim(),
+                          color: strokeColor,
+                        },
+                      ]);
+                      actionHistory.current.push('comment');
+                      setEditingComment(null);
+                    }
+                    if (e.key === 'Escape') {
+                      setEditingComment(null);
+                    }
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           {/* Pencil floating toolbar — Figma-style */}
@@ -512,6 +672,65 @@ const App = () => {
               }}
               onClick={e => e.stopPropagation()}
               onKeyDown={e => e.stopPropagation()}>
+              {/* Draw / Text toggle */}
+              <div style={{ display: 'flex', gap: '2px', alignItems: 'center', padding: '0 2px' }}>
+                <button
+                  onClick={() => setCanvasSubTool('draw')}
+                  title="Draw"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: canvasSubTool === 'draw' ? 'rgba(139,92,246,0.25)' : 'transparent',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.15s ease-out',
+                    padding: 0,
+                    color: canvasSubTool === 'draw' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
+                  }}>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round">
+                    <path d="M12 19l7-7 3 3-7 7-3-3z" />
+                    <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setCanvasSubTool('text')}
+                  title="Text comment"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: canvasSubTool === 'text' ? 'rgba(139,92,246,0.25)' : 'transparent',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.15s ease-out',
+                    padding: 0,
+                    color: canvasSubTool === 'text' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                  }}>
+                  T
+                </button>
+              </div>
+
+              {/* Divider */}
+              <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.2)', margin: '0 2px' }} />
+
               {/* Stroke width presets */}
               <div style={{ display: 'flex', gap: '2px', alignItems: 'center', padding: '0 4px' }}>
                 {STROKE_WIDTHS.map(sw => (
@@ -585,19 +804,19 @@ const App = () => {
 
               {/* Undo */}
               <button
-                onClick={handlePencilUndo}
-                disabled={strokes.length === 0}
+                onClick={handleCanvasUndo}
+                disabled={!hasCanvasContent}
                 title="Undo (⌘Z)"
                 style={{
                   background: 'transparent',
-                  color: strokes.length === 0 ? 'rgba(148,163,184,0.25)' : 'rgba(203,213,225,0.9)',
+                  color: !hasCanvasContent ? 'rgba(148,163,184,0.25)' : 'rgba(203,213,225,0.9)',
                   border: 'none',
                   borderRadius: '6px',
                   width: 28,
                   height: 28,
                   fontSize: '15px',
                   fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-                  cursor: strokes.length === 0 ? 'default' : 'pointer',
+                  cursor: !hasCanvasContent ? 'default' : 'pointer',
                   transition: 'all 0.15s ease-out',
                   display: 'flex',
                   alignItems: 'center',
@@ -613,18 +832,17 @@ const App = () => {
               {/* Done */}
               <button
                 onClick={handlePencilDone}
-                disabled={strokes.length === 0}
+                disabled={!hasCanvasContent}
                 style={{
-                  background:
-                    strokes.length === 0 ? 'rgba(124,58,237,0.2)' : 'linear-gradient(135deg, #7c3aed, #9333ea)',
-                  color: strokes.length === 0 ? 'rgba(255,255,255,0.3)' : '#ffffff',
+                  background: !hasCanvasContent ? 'rgba(124,58,237,0.2)' : 'linear-gradient(135deg, #7c3aed, #9333ea)',
+                  color: !hasCanvasContent ? 'rgba(255,255,255,0.3)' : '#ffffff',
                   border: 'none',
                   borderRadius: '8px',
                   padding: '5px 14px',
                   fontSize: '12px',
                   fontWeight: 600,
                   fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-                  cursor: strokes.length === 0 ? 'default' : 'pointer',
+                  cursor: !hasCanvasContent ? 'default' : 'pointer',
                   transition: 'all 0.15s ease-out',
                   whiteSpace: 'nowrap',
                   letterSpacing: '0.02em',
@@ -635,7 +853,7 @@ const App = () => {
           )}
 
           {/* Cancel pill - shown for select tool or pencil with no strokes */}
-          {(!isPencilMode || strokes.length === 0) && (
+          {(!isPencilMode || !hasCanvasContent) && (
             <div style={styles.pillContainer}>
               <button style={styles.pill} onClick={dismiss}>
                 Cancel · Esc
@@ -644,8 +862,10 @@ const App = () => {
           )}
 
           {!isDragging.current && !isPencilMode && <div style={styles.hint}>Click and drag to select a region</div>}
-          {isPencilMode && strokes.length === 0 && !isPencilDrawing.current && (
-            <div style={styles.hint}>Draw on the screenshot to annotate</div>
+          {isPencilMode && !hasCanvasContent && !isPencilDrawing.current && !editingComment && (
+            <div style={styles.hint}>
+              {canvasSubTool === 'text' ? 'Click to place a comment' : 'Draw on the screenshot to annotate'}
+            </div>
           )}
         </div>
       )}

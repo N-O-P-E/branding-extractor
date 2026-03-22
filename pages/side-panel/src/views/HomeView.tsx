@@ -148,7 +148,7 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
           />
           <ToolButton
             icon="pencil"
-            label="Pencil"
+            label="Canvas"
             active={activeTool === 'pencil'}
             onClick={() => handleToolClick('pencil')}
           />
