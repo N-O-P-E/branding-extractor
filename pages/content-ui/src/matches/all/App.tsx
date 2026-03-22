@@ -4,6 +4,10 @@ import type { Region, ShowScreenshotMessage, ActivateToolMessage, CaptureComplet
 
 type OverlayState = 'idle' | 'selecting';
 
+interface Stroke {
+  points: Array<{ x: number; y: number }>;
+}
+
 const annotateScreenshot = (screenshotUrl: string, region: Region, imgRect: DOMRect): Promise<string> =>
   new Promise((resolve, reject) => {
     const img = new Image();
@@ -40,11 +44,31 @@ const annotateScreenshot = (screenshotUrl: string, region: Region, imgRect: DOMR
     img.src = screenshotUrl;
   });
 
+const renderPencilStrokes = (
+  ctx: CanvasRenderingContext2D,
+  strokesToDraw: Stroke[],
+  scaleX: number,
+  scaleY: number,
+) => {
+  ctx.strokeStyle = '#8B5CF6';
+  ctx.lineWidth = 3 * Math.max(scaleX, scaleY);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  for (const stroke of strokesToDraw) {
+    if (stroke.points.length < 2) continue;
+    ctx.beginPath();
+    ctx.moveTo(stroke.points[0].x * scaleX, stroke.points[0].y * scaleY);
+    for (let i = 1; i < stroke.points.length; i++) {
+      ctx.lineTo(stroke.points[i].x * scaleX, stroke.points[i].y * scaleY);
+    }
+    ctx.stroke();
+  }
+};
+
 const App = () => {
   const [state, setState] = useState<OverlayState>('idle');
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
-  // activeTool will be used by the pencil tool (Task 9)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [activeTool, setActiveTool] = useState<'select' | 'pencil'>('select');
   const imgRef = useRef<HTMLImageElement>(null);
   const isDragging = useRef(false);
@@ -52,6 +76,12 @@ const App = () => {
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const dragCurrentRef = useRef<{ x: number; y: number } | null>(null);
   const [, forceRender] = useState(0);
+
+  // Pencil tool state
+  const [strokes, setStrokes] = useState<Stroke[]>([]);
+  const [currentStroke, setCurrentStroke] = useState<Stroke | null>(null);
+  const pencilCanvasRef = useRef<HTMLCanvasElement>(null);
+  const isPencilDrawing = useRef(false);
 
   const backdropRef = useRef<HTMLDivElement>(null);
 
@@ -61,6 +91,9 @@ const App = () => {
     isDragging.current = false;
     dragStartRef.current = null;
     dragCurrentRef.current = null;
+    setStrokes([]);
+    setCurrentStroke(null);
+    isPencilDrawing.current = false;
   }, []);
 
   useEffect(() => {
@@ -71,6 +104,9 @@ const App = () => {
         isDragging.current = false;
         dragStartRef.current = null;
         dragCurrentRef.current = null;
+        setStrokes([]);
+        setCurrentStroke(null);
+        isPencilDrawing.current = false;
         setState('selecting');
       }
       if (message.type === 'ACTIVATE_TOOL') {
@@ -81,17 +117,142 @@ const App = () => {
     return () => chrome.runtime.onMessage.removeListener(listener);
   }, []);
 
-  // Escape to dismiss overlay
+  // Render pencil strokes onto the overlay canvas
+  const redrawPencilCanvas = useCallback((allStrokes: Stroke[], active: Stroke | null) => {
+    const canvas = pencilCanvasRef.current;
+    const img = imgRef.current;
+    if (!canvas || !img) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Match canvas pixel dimensions to displayed image size
+    const rect = img.getBoundingClientRect();
+    if (canvas.width !== rect.width || canvas.height !== rect.height) {
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Scale is 1:1 because we draw in display coordinates
+    const combined = active ? [...allStrokes, active] : allStrokes;
+    renderPencilStrokes(ctx, combined, 1, 1);
+  }, []);
+
+  // Redraw when strokes change (e.g. after undo)
+  useEffect(() => {
+    if (activeTool === 'pencil' && state === 'selecting') {
+      redrawPencilCanvas(strokes, currentStroke);
+    }
+  }, [strokes, currentStroke, activeTool, state, redrawPencilCanvas]);
+
+  const handlePencilDone = useCallback(() => {
+    if (!screenshotUrl || strokes.length === 0) return;
+
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+
+      const displayedImg = imgRef.current;
+      if (!displayedImg) return;
+      const displayRect = displayedImg.getBoundingClientRect();
+      const scaleX = img.naturalWidth / displayRect.width;
+      const scaleY = img.naturalHeight / displayRect.height;
+      renderPencilStrokes(ctx, strokes, scaleX, scaleY);
+
+      const annotatedDataUrl = canvas.toDataURL('image/png');
+      const captureMessage: CaptureCompleteMessage = {
+        type: 'CAPTURE_COMPLETE',
+        payload: {
+          screenshotDataUrl: screenshotUrl,
+          annotatedScreenshotDataUrl: annotatedDataUrl,
+          pageUrl: window.location.href,
+          viewportWidth: window.innerWidth,
+          viewportHeight: window.innerHeight,
+        },
+      };
+      chrome.runtime.sendMessage(captureMessage);
+      setState('idle');
+      setScreenshotUrl(null);
+      setStrokes([]);
+      setCurrentStroke(null);
+      isPencilDrawing.current = false;
+    };
+    img.src = screenshotUrl;
+  }, [screenshotUrl, strokes]);
+
+  const handlePencilUndo = useCallback(() => {
+    setStrokes(prev => prev.slice(0, -1));
+  }, []);
+
+  // Keyboard shortcuts (Escape, Cmd+Z for pencil undo, Enter for pencil done)
   useEffect(() => {
     if (state === 'idle') return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         dismiss();
+        return;
+      }
+      if (activeTool === 'pencil') {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+          e.preventDefault();
+          handlePencilUndo();
+          return;
+        }
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handlePencilDone();
+          return;
+        }
       }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [state, dismiss]);
+  }, [state, activeTool, dismiss, handlePencilUndo, handlePencilDone]);
+
+  // Pencil tool mouse handlers
+  useEffect(() => {
+    if (state !== 'selecting' || activeTool !== 'pencil') return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isPencilDrawing.current || !imgRef.current) return;
+      const rect = imgRef.current.getBoundingClientRect();
+      const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+      const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
+
+      setCurrentStroke(prev => {
+        if (!prev) return prev;
+        const updated = { points: [...prev.points, { x, y }] };
+        // Redraw immediately for real-time feedback
+        redrawPencilCanvas(strokes, updated);
+        return updated;
+      });
+    };
+
+    const handleMouseUp = () => {
+      if (!isPencilDrawing.current) return;
+      isPencilDrawing.current = false;
+
+      setCurrentStroke(prev => {
+        if (prev && prev.points.length >= 2) {
+          setStrokes(s => [...s, prev]);
+        }
+        return null;
+      });
+    };
+
+    document.addEventListener('mousemove', handleMouseMove, true);
+    document.addEventListener('mouseup', handleMouseUp, true);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove, true);
+      document.removeEventListener('mouseup', handleMouseUp, true);
+    };
+  }, [state, activeTool, strokes, redrawPencilCanvas]);
 
   const finishDrag = useCallback(
     async (endX: number, endY: number) => {
@@ -166,9 +327,9 @@ const App = () => {
     [screenshotUrl],
   );
 
-  // Document-level mousemove/mouseup for reliable drag tracking
+  // Document-level mousemove/mouseup for reliable drag tracking (select tool)
   useEffect(() => {
-    if (state !== 'selecting') return;
+    if (state !== 'selecting' || activeTool !== 'select') return;
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging.current || !imgRef.current) return;
@@ -193,7 +354,7 @@ const App = () => {
       document.removeEventListener('mousemove', handleMouseMove, true);
       document.removeEventListener('mouseup', handleMouseUp, true);
     };
-  }, [state, finishDrag]);
+  }, [state, activeTool, finishDrag]);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLImageElement>) => {
@@ -201,12 +362,20 @@ const App = () => {
       e.preventDefault();
       const rect = e.currentTarget.getBoundingClientRect();
       const pos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
+      if (activeTool === 'pencil') {
+        isPencilDrawing.current = true;
+        setCurrentStroke({ points: [pos] });
+        return;
+      }
+
+      // Select tool
       isDragging.current = true;
       dragStartRef.current = pos;
       dragCurrentRef.current = pos;
       forceRender(n => n + 1);
     },
-    [state],
+    [state, activeTool],
   );
 
   const overlayActive = state !== 'idle' && screenshotUrl;
@@ -214,7 +383,7 @@ const App = () => {
   const dragStart = dragStartRef.current;
   const dragCurrent = dragCurrentRef.current;
   const dragSelection =
-    isDragging.current && dragStart && dragCurrent
+    activeTool === 'select' && isDragging.current && dragStart && dragCurrent
       ? {
           x: Math.min(dragStart.x, dragCurrent.x),
           y: Math.min(dragStart.y, dragCurrent.y),
@@ -224,10 +393,14 @@ const App = () => {
       : null;
 
   const handleBackdropClick = () => {
-    if (state === 'selecting' && !isDragging.current && !justFinishedDrag.current) {
+    if (state === 'selecting' && !isDragging.current && !justFinishedDrag.current && !isPencilDrawing.current) {
+      // For pencil mode, don't dismiss if there are strokes
+      if (activeTool === 'pencil' && strokes.length > 0) return;
       dismiss();
     }
   };
+
+  const isPencilMode = activeTool === 'pencil' && state === 'selecting';
 
   return (
     <>
@@ -262,6 +435,22 @@ const App = () => {
               onMouseDown={handleMouseDown}
             />
 
+            {/* Pencil overlay canvas */}
+            {isPencilMode && (
+              <canvas
+                ref={pencilCanvasRef}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  pointerEvents: 'none',
+                  borderRadius: '14px',
+                }}
+              />
+            )}
+
             {dragSelection && dragSelection.width > 0 && dragSelection.height > 0 && (
               <div
                 style={{
@@ -278,13 +467,81 @@ const App = () => {
             )}
           </div>
 
-          <div style={styles.pillContainer}>
-            <button style={styles.pill} onClick={dismiss}>
-              Cancel · Esc
-            </button>
-          </div>
+          {/* Pencil floating toolbar */}
+          {isPencilMode && (
+            <div
+              style={{
+                position: 'fixed',
+                bottom: '24px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                display: 'flex',
+                gap: '6px',
+                padding: '8px 12px',
+                background: '#0f172a',
+                border: '1px solid rgba(148,163,184,0.2)',
+                borderRadius: '12px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                zIndex: 2147483647,
+                alignItems: 'center',
+              }}
+              onClick={e => e.stopPropagation()}
+              onKeyDown={e => e.stopPropagation()}>
+              <button
+                onClick={handlePencilUndo}
+                disabled={strokes.length === 0}
+                style={{
+                  background: 'rgba(30, 41, 59, 0.8)',
+                  color: strokes.length === 0 ? 'rgba(148, 163, 184, 0.3)' : 'rgba(203, 213, 225, 0.9)',
+                  border: '1px solid rgba(148, 163, 184, 0.15)',
+                  borderRadius: '8px',
+                  padding: '6px 14px',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                  cursor: strokes.length === 0 ? 'default' : 'pointer',
+                  transition: 'all 0.15s ease-out',
+                  whiteSpace: 'nowrap',
+                }}>
+                {'↩ Undo ⌘Z'}
+              </button>
+              <div style={{ width: 1, height: 24, background: 'rgba(148,163,184,0.15)' }} />
+              <button
+                onClick={handlePencilDone}
+                disabled={strokes.length === 0}
+                style={{
+                  background:
+                    strokes.length === 0 ? 'rgba(124, 58, 237, 0.3)' : 'linear-gradient(135deg, #7c3aed, #9333ea)',
+                  color: strokes.length === 0 ? 'rgba(255, 255, 255, 0.4)' : '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '6px 14px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                  cursor: strokes.length === 0 ? 'default' : 'pointer',
+                  transition: 'all 0.15s ease-out',
+                  whiteSpace: 'nowrap',
+                }}>
+                {'Done ↵'}
+              </button>
+            </div>
+          )}
 
-          {!isDragging.current && <div style={styles.hint}>Click and drag to select a region</div>}
+          {/* Cancel pill - shown for select tool or pencil with no strokes */}
+          {(!isPencilMode || strokes.length === 0) && (
+            <div style={styles.pillContainer}>
+              <button style={styles.pill} onClick={dismiss}>
+                Cancel · Esc
+              </button>
+            </div>
+          )}
+
+          {!isDragging.current && !isPencilMode && <div style={styles.hint}>Click and drag to select a region</div>}
+          {isPencilMode && strokes.length === 0 && !isPencilDrawing.current && (
+            <div style={styles.hint}>Draw on the screenshot to annotate</div>
+          )}
         </div>
       )}
     </>
