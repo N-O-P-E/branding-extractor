@@ -13,7 +13,48 @@ export interface ShowScreenshotMessage {
   type: 'SHOW_SCREENSHOT';
   payload: {
     screenshotDataUrl: string;
+    tool: 'select' | 'pencil';
   };
+}
+
+export interface ActivateToolMessage {
+  type: 'ACTIVATE_TOOL';
+  payload: { tool: 'select' | 'pencil' };
+}
+
+export interface CaptureCompleteMessage {
+  type: 'CAPTURE_COMPLETE';
+  payload: {
+    screenshotDataUrl: string;
+    annotatedScreenshotDataUrl: string;
+    region?: Region;
+    pageUrl: string;
+    viewportWidth: number;
+    viewportHeight: number;
+    htmlSnippet?: string;
+  };
+}
+
+export interface FetchLabelsMessage {
+  type: 'FETCH_LABELS';
+  payload: { repo: string };
+}
+
+export interface FetchLabelsResponse {
+  success: boolean;
+  labels?: Array<{ name: string; color: string }>;
+  error?: string;
+}
+
+export interface FetchAssigneesMessage {
+  type: 'FETCH_ASSIGNEES';
+  payload: { repo: string };
+}
+
+export interface FetchAssigneesResponse {
+  success: boolean;
+  assignees?: Array<{ login: string; avatar_url: string }>;
+  error?: string;
 }
 
 export interface CreateIssueMessage {
@@ -22,12 +63,14 @@ export interface CreateIssueMessage {
     description: string;
     screenshotDataUrl: string;
     annotatedScreenshotDataUrl: string;
-    region: Region;
+    region?: Region;
     pageUrl: string;
     viewportWidth: number;
     viewportHeight: number;
     template?: string;
     htmlSnippet?: string;
+    labels?: string[];
+    assignee?: string;
   };
 }
 
@@ -73,7 +116,11 @@ export type ExtensionMessage =
   | CreateIssueMessage
   | GetHtmlSnippetMessage
   | FetchPageIssuesMessage
-  | ShowIssuesPanelMessage;
+  | ShowIssuesPanelMessage
+  | ActivateToolMessage
+  | CaptureCompleteMessage
+  | FetchLabelsMessage
+  | FetchAssigneesMessage;
 
 export interface MessageResponse {
   success: boolean;

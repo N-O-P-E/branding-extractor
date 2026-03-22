@@ -29,6 +29,7 @@ chrome.runtime.onMessage.addListener(
       handleShowIssuesPanel(message);
       return true;
     }
+    return false;
   },
 );
 
@@ -50,7 +51,7 @@ const handleStartReport = async (sendResponse: (response: MessageResponse) => vo
 
     const payload: ShowScreenshotMessage = {
       type: 'SHOW_SCREENSHOT',
-      payload: { screenshotDataUrl },
+      payload: { screenshotDataUrl, tool: 'select' },
     };
 
     await chrome.tabs.sendMessage(tab.id, payload);
@@ -194,7 +195,9 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
     if (template) body += `- **Template:** ${template}\n`;
     if (themeId) body += `- **Theme ID:** ${themeId}\n`;
     body += `- **Viewport:** ${viewportWidth} x ${viewportHeight}\n`;
-    body += `- **Region:** x:${Math.round(region.x)}, y:${Math.round(region.y)}, width:${Math.round(region.width)}, height:${Math.round(region.height)}\n`;
+    if (region) {
+      body += `- **Region:** x:${Math.round(region.x)}, y:${Math.round(region.y)}, width:${Math.round(region.width)}, height:${Math.round(region.height)}\n`;
+    }
     if (htmlSnippet) {
       body += `\n## HTML Snippet\n\`\`\`html\n${htmlSnippet}\n\`\`\`\n`;
     }
