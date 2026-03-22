@@ -9,6 +9,7 @@ import type {
   FetchLabelsResponse,
   FetchPageIssuesMessage,
   FetchPageIssuesResponse,
+  FetchReposResponse,
   MessageResponse,
   PageIssue,
   ShowIssuesPanelMessage,
@@ -37,6 +38,10 @@ chrome.runtime.onMessage.addListener(
     }
     if (message.type === 'FETCH_ASSIGNEES') {
       handleFetchAssignees(message, sendResponse as (response: FetchAssigneesResponse) => void);
+      return true;
+    }
+    if (message.type === 'FETCH_REPOS') {
+      handleFetchRepos(sendResponse as (response: FetchReposResponse) => void);
       return true;
     }
     if (message.type === 'SHOW_ISSUES_PANEL') {
@@ -271,6 +276,27 @@ const handleFetchLabels = async (
       success: true,
       labels: data.map(l => ({ name: l.name, color: l.color })),
     });
+  } catch (err) {
+    sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
+  }
+};
+
+const handleFetchRepos = async (sendResponse: (response: FetchReposResponse) => void) => {
+  try {
+    const octokit = await getOctokit();
+    const repos: Array<{ full_name: string; description: string | null }> = [];
+    // Fetch repos the user has access to (up to 200)
+    for (let page = 1; page <= 2; page++) {
+      const { data } = await octokit.repos.listForAuthenticatedUser({
+        per_page: 100,
+        sort: 'updated',
+        direction: 'desc',
+        page,
+      });
+      repos.push(...data.map(r => ({ full_name: r.full_name, description: r.description })));
+      if (data.length < 100) break;
+    }
+    sendResponse({ success: true, repos });
   } catch (err) {
     sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
   }

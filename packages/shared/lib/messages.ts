@@ -110,6 +110,16 @@ export interface ShowIssuesPanelMessage {
   payload: { issues: PageIssue[] };
 }
 
+export interface FetchReposMessage {
+  type: 'FETCH_REPOS';
+}
+
+export interface FetchReposResponse {
+  success: boolean;
+  repos?: Array<{ full_name: string; description: string | null }>;
+  error?: string;
+}
+
 export type ExtensionMessage =
   | StartReportMessage
   | ShowScreenshotMessage
@@ -120,7 +130,8 @@ export type ExtensionMessage =
   | ActivateToolMessage
   | CaptureCompleteMessage
   | FetchLabelsMessage
-  | FetchAssigneesMessage;
+  | FetchAssigneesMessage
+  | FetchReposMessage;
 
 export interface MessageResponse {
   success: boolean;

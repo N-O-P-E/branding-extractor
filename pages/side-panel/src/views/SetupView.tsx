@@ -16,14 +16,23 @@ const colors = {
   error: '#f87171',
 } as const;
 
+interface GitHubRepo {
+  full_name: string;
+  description: string | null;
+}
+
 export default function SetupView({ onDone }: SetupViewProps) {
   const [pat, setPat] = useState('');
   const [patStatus, setPatStatus] = useState<'idle' | 'validating' | 'valid' | 'invalid'>('idle');
   const [patUser, setPatUser] = useState('');
   const [repos, setRepos] = useState<string[]>([]);
-  const [newRepo, setNewRepo] = useState('');
-  const [repoError, setRepoError] = useState('');
   const [saved, setSaved] = useState(false);
+
+  // Searchable repo picker state
+  const [availableRepos, setAvailableRepos] = useState<GitHubRepo[]>([]);
+  const [reposLoading, setReposLoading] = useState(false);
+  const [repoSearch, setRepoSearch] = useState('');
+  const [repoDropdownOpen, setRepoDropdownOpen] = useState(false);
 
   useEffect(() => {
     chrome.storage.sync.get(['githubPat', 'repoList']).then(result => {
@@ -36,6 +45,48 @@ export default function SetupView({ onDone }: SetupViewProps) {
       }
     });
   }, []);
+
+  // Fetch available repos when token is valid
+  const fetchAvailableRepos = useCallback(() => {
+    setReposLoading(true);
+    chrome.runtime.sendMessage(
+      { type: 'FETCH_REPOS' },
+      (response: { success: boolean; repos?: GitHubRepo[]; error?: string }) => {
+        if (response?.success && response.repos) {
+          setAvailableRepos(response.repos);
+        }
+        setReposLoading(false);
+      },
+    );
+  }, []);
+
+  useEffect(() => {
+    if (patStatus === 'valid') {
+      fetchAvailableRepos();
+    }
+  }, [patStatus, fetchAvailableRepos]);
+
+  const filteredRepos = availableRepos.filter(
+    r => !repos.includes(r.full_name) && r.full_name.toLowerCase().includes(repoSearch.toLowerCase()),
+  );
+
+  const addRepo = useCallback(
+    (repoName: string) => {
+      if (repos.includes(repoName)) return;
+      const updated = [...repos, repoName];
+      setRepos(updated);
+      setRepoSearch('');
+      setRepoDropdownOpen(false);
+      chrome.storage.sync.set({ repoList: updated });
+      chrome.storage.sync.get('selectedRepo').then(result => {
+        if (!result.selectedRepo) {
+          chrome.storage.sync.set({ selectedRepo: updated[0] });
+        }
+      });
+      flashSaved();
+    },
+    [repos],
+  );
 
   const flashSaved = () => {
     setSaved(true);
@@ -63,30 +114,6 @@ export default function SetupView({ onDone }: SetupViewProps) {
       setPatStatus('invalid');
     }
   }, [pat]);
-
-  const addRepo = useCallback(() => {
-    const repo = newRepo.trim();
-    if (!repo) return;
-    if (!repo.includes('/')) {
-      setRepoError('Format must be owner/repo');
-      return;
-    }
-    if (repos.includes(repo)) {
-      setRepoError('Repository already added');
-      return;
-    }
-    setRepoError('');
-    const updated = [...repos, repo];
-    setRepos(updated);
-    setNewRepo('');
-    chrome.storage.sync.set({ repoList: updated });
-    chrome.storage.sync.get('selectedRepo').then(result => {
-      if (!result.selectedRepo) {
-        chrome.storage.sync.set({ selectedRepo: updated[0] });
-      }
-    });
-    flashSaved();
-  }, [newRepo, repos]);
 
   const removeRepo = useCallback(
     (repo: string) => {
@@ -238,28 +265,111 @@ export default function SetupView({ onDone }: SetupViewProps) {
           }}>
           Repositories
         </h2>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+
+        {/* Searchable repo picker */}
+        <div style={{ position: 'relative' }}>
           <input
             type="text"
-            placeholder="owner/repo"
-            value={newRepo}
-            style={inputStyle}
-            onChange={e => {
-              setNewRepo(e.target.value);
-              setRepoError('');
+            placeholder={reposLoading ? 'Loading repositories…' : 'Search repositories…'}
+            value={repoSearch}
+            disabled={reposLoading || patStatus !== 'valid'}
+            style={{
+              ...inputStyle,
+              width: '100%',
+              boxSizing: 'border-box',
+              opacity: patStatus !== 'valid' ? 0.4 : 1,
             }}
-            onKeyDown={e => {
-              if (e.key === 'Enter') addRepo();
+            onFocus={() => setRepoDropdownOpen(true)}
+            onChange={e => {
+              setRepoSearch(e.target.value);
+              setRepoDropdownOpen(true);
             }}
           />
-          <button
-            style={!newRepo.trim() ? buttonDisabledStyle : buttonStyle}
-            onClick={addRepo}
-            disabled={!newRepo.trim()}>
-            Add
-          </button>
+          {repoDropdownOpen && filteredRepos.length > 0 && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                marginTop: 4,
+                background: '#1e293b',
+                border: `1px solid ${colors.border}`,
+                borderRadius: 8,
+                maxHeight: 220,
+                overflowY: 'auto',
+                zIndex: 10,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              }}>
+              {filteredRepos.slice(0, 50).map(repo => (
+                <button
+                  key={repo.full_name}
+                  onClick={() => addRepo(repo.full_name)}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    textAlign: 'left',
+                    background: 'none',
+                    border: 'none',
+                    borderBottom: `1px solid ${colors.border}`,
+                    padding: '10px 12px',
+                    cursor: 'pointer',
+                    color: colors.textPrimary,
+                    fontSize: 13,
+                    transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={e => {
+                    (e.target as HTMLElement).style.background = 'rgba(139,92,246,0.1)';
+                  }}
+                  onMouseLeave={e => {
+                    (e.target as HTMLElement).style.background = 'none';
+                  }}>
+                  <div style={{ fontWeight: 500 }}>{repo.full_name}</div>
+                  {repo.description && (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: colors.textSecondary,
+                        marginTop: 2,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}>
+                      {repo.description}
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+          {repoDropdownOpen && !reposLoading && repoSearch && filteredRepos.length === 0 && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                marginTop: 4,
+                background: '#1e293b',
+                border: `1px solid ${colors.border}`,
+                borderRadius: 8,
+                padding: '12px',
+                fontSize: 13,
+                color: colors.textSecondary,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              }}>
+              No matching repositories found.
+            </div>
+          )}
         </div>
-        {repoError && <div style={{ marginTop: 6, fontSize: 13, color: colors.error }}>{repoError}</div>}
+
+        {/* Click outside to close dropdown */}
+        {repoDropdownOpen && (
+          // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+          <div style={{ position: 'fixed', inset: 0, zIndex: 5 }} onClick={() => setRepoDropdownOpen(false)} />
+        )}
+
+        {/* Added repos list */}
         {repos.length > 0 && (
           <ul
             style={{
@@ -305,8 +415,13 @@ export default function SetupView({ onDone }: SetupViewProps) {
             ))}
           </ul>
         )}
-        {repos.length === 0 && (
-          <p style={{ marginTop: 10, fontSize: 13, color: colors.textSecondary }}>No repositories added yet.</p>
+        {repos.length === 0 && patStatus === 'valid' && !reposLoading && (
+          <p style={{ marginTop: 10, fontSize: 13, color: colors.textSecondary }}>
+            Search and select repositories above.
+          </p>
+        )}
+        {patStatus !== 'valid' && (
+          <p style={{ marginTop: 10, fontSize: 13, color: colors.textSecondary }}>Connect your GitHub token first.</p>
         )}
       </section>
 
