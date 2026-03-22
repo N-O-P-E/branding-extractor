@@ -147,18 +147,21 @@ const App = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Match canvas pixel dimensions to displayed image size
+    // Retina-aware: set canvas backing pixels to devicePixelRatio
+    const dpr = window.devicePixelRatio || 1;
     const rect = img.getBoundingClientRect();
-    if (canvas.width !== rect.width || canvas.height !== rect.height) {
-      canvas.width = rect.width;
-      canvas.height = rect.height;
+    const targetW = Math.round(rect.width * dpr);
+    const targetH = Math.round(rect.height * dpr);
+    if (canvas.width !== targetW || canvas.height !== targetH) {
+      canvas.width = targetW;
+      canvas.height = targetH;
     }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Scale is 1:1 because we draw in display coordinates
+    // Scale strokes by dpr so they map from CSS coords to backing pixels
     const combined = active ? [...allStrokes, active] : allStrokes;
-    renderPencilStrokes(ctx, combined, 1, 1);
+    renderPencilStrokes(ctx, combined, dpr, dpr);
   }, []);
 
   // Redraw when strokes change (e.g. after undo)
