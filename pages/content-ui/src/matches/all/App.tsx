@@ -548,7 +548,7 @@ const App = () => {
               alt="Page screenshot"
               style={{
                 ...styles.screenshot,
-                cursor: isPencilMode && canvasSubTool === 'text' ? 'text' : 'crosshair',
+                cursor: isPencilMode && canvasSubTool === 'text' ? (editingComment ? 'grab' : 'text') : 'crosshair',
               }}
               draggable={false}
               onMouseDown={handleMouseDown}
