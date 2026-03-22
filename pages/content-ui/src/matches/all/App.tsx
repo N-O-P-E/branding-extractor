@@ -19,6 +19,8 @@ interface Comment {
 
 type CanvasSubTool = 'draw' | 'text';
 
+const isLightColor = (color: string) => color === '#FFFFFF' || color === '#F59E0B';
+
 const STROKE_COLORS = [
   '#8B5CF6', // purple (default)
   '#EF4444', // red
@@ -95,37 +97,38 @@ const renderPencilStrokes = (
 };
 
 const renderComments = (ctx: CanvasRenderingContext2D, commentsToDraw: Comment[], scaleX: number, scaleY: number) => {
-  const fontSize = 14 * Math.max(scaleX, scaleY);
+  const scale = Math.max(scaleX, scaleY);
+  const fontSize = 14 * scale;
+  const lineHeight = fontSize * 1.3;
   ctx.font = `500 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
   ctx.textBaseline = 'top';
 
   for (const comment of commentsToDraw) {
     if (!comment.text) continue;
-    const textColor = comment.color === '#FFFFFF' || comment.color === '#F59E0B' ? '#000000' : '#FFFFFF';
-    const padding = 8 * Math.max(scaleX, scaleY);
-    const borderRadius = 6 * Math.max(scaleX, scaleY);
-    const metrics = ctx.measureText(comment.text);
-    const textHeight = fontSize * 1.2;
-    const boxW = metrics.width + padding * 2;
-    const boxH = textHeight + padding * 2;
+    const textColor = isLightColor(comment.color) ? '#000000' : '#FFFFFF';
+    const padding = 8 * scale;
+    const borderRadius = 6 * scale;
+    const lines = comment.text.split('\n');
+    const maxLineWidth = Math.max(...lines.map(l => ctx.measureText(l).width));
+    const boxW = maxLineWidth + padding * 2;
+    const boxH = lines.length * lineHeight + padding * 2;
     const cx = comment.x * scaleX;
     const cy = comment.y * scaleY;
 
-    // Background with rounded corners
     ctx.beginPath();
     ctx.roundRect(cx, cy, boxW, boxH, borderRadius);
     ctx.fillStyle = comment.color;
     ctx.fill();
 
-    // Light border for overlap visibility
     ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-    ctx.lineWidth = 1 * Math.max(scaleX, scaleY);
+    ctx.lineWidth = 1 * scale;
     ctx.setLineDash([]);
     ctx.stroke();
 
-    // Text
     ctx.fillStyle = textColor;
-    ctx.fillText(comment.text, cx + padding, cy + padding);
+    lines.forEach((line, i) => {
+      ctx.fillText(line, cx + padding, cy + padding + i * lineHeight);
+    });
   }
 };
 
@@ -150,7 +153,7 @@ const App = () => {
   const [canvasSubTool, setCanvasSubTool] = useState<CanvasSubTool>('draw');
   const [comments, setComments] = useState<Comment[]>([]);
   const [editingComment, setEditingComment] = useState<{ x: number; y: number } | null>(null);
-  const commentInputRef = useRef<HTMLInputElement>(null);
+  const commentInputRef = useRef<HTMLTextAreaElement>(null);
 
   const backdropRef = useRef<HTMLDivElement>(null);
 
@@ -571,32 +574,30 @@ const App = () => {
 
             {/* Placed comment bubbles */}
             {isPencilMode &&
-              comments.map((comment, i) => {
-                const textColor = comment.color === '#FFFFFF' || comment.color === '#F59E0B' ? '#000' : '#fff';
-                return (
-                  <div
-                    key={i}
-                    style={{
-                      position: 'absolute',
-                      left: comment.x,
-                      top: comment.y,
-                      background: comment.color,
-                      color: textColor,
-                      padding: '6px 10px',
-                      borderRadius: 6,
-                      fontSize: 13,
-                      fontWeight: 500,
-                      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-                      border: '1px solid rgba(255,255,255,0.3)',
-                      pointerEvents: 'none',
-                      whiteSpace: 'nowrap',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                      lineHeight: 1.3,
-                    }}>
-                    {comment.text}
-                  </div>
-                );
-              })}
+              comments.map((comment, i) => (
+                <div
+                  key={i}
+                  style={{
+                    position: 'absolute',
+                    left: comment.x,
+                    top: comment.y,
+                    background: comment.color,
+                    color: isLightColor(comment.color) ? '#000' : '#fff',
+                    padding: '6px 10px',
+                    borderRadius: 6,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    pointerEvents: 'none',
+                    whiteSpace: 'pre-wrap',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                    lineHeight: 1.3,
+                    maxWidth: 300,
+                  }}>
+                  {comment.text}
+                </div>
+              ))}
 
             {/* Editing comment input */}
             {isPencilMode && editingComment && (
@@ -610,13 +611,19 @@ const App = () => {
                 onClick={e => e.stopPropagation()}
                 onKeyDown={e => e.stopPropagation()}
                 onMouseDown={e => e.stopPropagation()}>
-                <input
+                <style>{`
+                  .coworker-comment-input::placeholder {
+                    color: ${isLightColor(strokeColor) ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.5)'};
+                  }
+                `}</style>
+                <textarea
                   ref={commentInputRef}
-                  type="text"
-                  placeholder="Type comment…"
+                  className="coworker-comment-input"
+                  placeholder="Comment…"
+                  rows={1}
                   style={{
                     background: strokeColor,
-                    color: strokeColor === '#FFFFFF' || strokeColor === '#F59E0B' ? '#000' : '#fff',
+                    color: isLightColor(strokeColor) ? '#000' : '#fff',
                     padding: '6px 10px',
                     borderRadius: 6,
                     fontSize: 13,
@@ -624,23 +631,46 @@ const App = () => {
                     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                     border: '1px solid rgba(255,255,255,0.3)',
                     outline: 'none',
-                    minWidth: 120,
+                    minWidth: 40,
+                    width: 'auto',
+                    maxWidth: 300,
                     boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
+                    resize: 'none',
+                    overflow: 'hidden',
+                    lineHeight: '1.3',
+                    display: 'block',
+                    boxSizing: 'content-box',
+                    // Placeholder color via CSS class won't work in shadow DOM inline,
+                    // so we handle it with a caretColor trick
+                    caretColor: isLightColor(strokeColor) ? '#000' : '#fff',
+                  }}
+                  onInput={e => {
+                    const el = e.target as HTMLTextAreaElement;
+                    // Auto-size: reset then measure
+                    el.style.height = 'auto';
+                    el.style.height = el.scrollHeight + 'px';
+                    // Auto-width based on content
+                    el.style.width = '40px';
+                    el.style.width = Math.min(300, Math.max(40, el.scrollWidth)) + 'px';
                   }}
                   onKeyDown={e => {
                     e.stopPropagation();
-                    if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
-                      setComments(prev => [
-                        ...prev,
-                        {
-                          x: editingComment.x,
-                          y: editingComment.y,
-                          text: (e.target as HTMLInputElement).value.trim(),
-                          color: strokeColor,
-                        },
-                      ]);
-                      actionHistory.current.push('comment');
-                      setEditingComment(null);
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      const val = (e.target as HTMLTextAreaElement).value.trim();
+                      if (val) {
+                        setComments(prev => [
+                          ...prev,
+                          {
+                            x: editingComment.x,
+                            y: editingComment.y,
+                            text: val,
+                            color: strokeColor,
+                          },
+                        ]);
+                        actionHistory.current.push('comment');
+                        setEditingComment(null);
+                      }
                     }
                     if (e.key === 'Escape') {
                       setEditingComment(null);
