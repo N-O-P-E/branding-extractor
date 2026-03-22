@@ -14,7 +14,7 @@ export default function RepoSelector({ selectedRepo, repos, onChange }: RepoSele
           fontSize: 10,
           fontWeight: 500,
           letterSpacing: '0.08em',
-          color: 'rgba(241,245,249,0.4)',
+          color: 'rgba(241,245,249,0.45)',
           marginBottom: 6,
           textTransform: 'uppercase',
         }}>
@@ -42,6 +42,7 @@ export default function RepoSelector({ selectedRepo, repos, onChange }: RepoSele
           backgroundPosition: 'right 12px center',
           paddingRight: 32,
           boxSizing: 'border-box',
+          transition: 'all 0.15s',
         }}>
         {repos.length === 0 && (
           <option value="" disabled>

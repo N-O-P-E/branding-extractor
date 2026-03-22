@@ -95,10 +95,10 @@ export default function LabelSelect({ repo, selected, onChange }: LabelSelectPro
             borderRadius: 8,
             padding: '8px 12px',
             color: colors.textPrimary,
-            fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
             fontSize: 13,
             outline: 'none',
             boxSizing: 'border-box',
+            transition: 'all 0.15s',
           }}
         />
         {selected.length > 0 && (
@@ -116,6 +116,7 @@ export default function LabelSelect({ repo, selected, onChange }: LabelSelectPro
                   color: '#c4b5fd',
                   cursor: 'pointer',
                   border: 'none',
+                  transition: 'all 0.15s',
                 }}>
                 {label} &times;
               </button>
@@ -144,7 +145,6 @@ export default function LabelSelect({ repo, selected, onChange }: LabelSelectPro
           borderRadius: 8,
           padding: '8px 12px',
           color: selected.length > 0 ? colors.textPrimary : colors.textMuted,
-          fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
           fontSize: 13,
           textAlign: 'left',
           cursor: 'pointer',
@@ -153,6 +153,7 @@ export default function LabelSelect({ repo, selected, onChange }: LabelSelectPro
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          transition: 'all 0.15s',
         }}>
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {selected.length > 0 ? selected.join(', ') : 'Select labels'}
@@ -196,10 +197,10 @@ export default function LabelSelect({ repo, selected, onChange }: LabelSelectPro
                   border: 'none',
                   cursor: 'pointer',
                   color: colors.textPrimary,
-                  fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
                   fontSize: 13,
                   textAlign: 'left',
                   boxSizing: 'border-box',
+                  transition: 'all 0.15s',
                 }}>
                 <span
                   style={{

@@ -75,10 +75,10 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
             borderRadius: 8,
             padding: '8px 12px',
             color: colors.textPrimary,
-            fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
             fontSize: 13,
             outline: 'none',
             boxSizing: 'border-box',
+            transition: 'all 0.15s',
           }}
         />
       </div>
@@ -103,7 +103,6 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
           borderRadius: 8,
           padding: '8px 12px',
           color: selected ? colors.textPrimary : colors.textMuted,
-          fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
           fontSize: 13,
           textAlign: 'left',
           cursor: 'pointer',
@@ -112,6 +111,7 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          transition: 'all 0.15s',
         }}>
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {selected || 'Select assignee'}
@@ -152,11 +152,11 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
               border: 'none',
               cursor: 'pointer',
               color: colors.textMuted,
-              fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
               fontSize: 13,
               textAlign: 'left',
               fontStyle: 'italic',
               boxSizing: 'border-box',
+              transition: 'all 0.15s',
             }}>
             None
           </button>
@@ -180,10 +180,10 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
                   border: 'none',
                   cursor: 'pointer',
                   color: colors.textPrimary,
-                  fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
                   fontSize: 13,
                   textAlign: 'left',
                   boxSizing: 'border-box',
+                  transition: 'all 0.15s',
                 }}>
                 <img
                   src={assignee.avatar_url}

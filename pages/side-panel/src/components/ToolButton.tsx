@@ -36,7 +36,7 @@ export default function ToolButton({ icon, label, active, onClick }: ToolButtonP
         justifyContent: 'center',
         gap: 8,
         padding: '12px 16px',
-        borderRadius: 8,
+        borderRadius: 10,
         border: `1px solid ${active ? 'rgba(139,92,246,0.5)' : 'rgba(139,92,246,0.3)'}`,
         background: active ? 'rgba(139,92,246,0.2)' : 'transparent',
         color: active ? '#a78bfa' : '#f1f5f9',

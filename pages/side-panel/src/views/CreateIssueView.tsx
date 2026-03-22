@@ -23,8 +23,9 @@ const colors = {
   inputBg: 'rgba(148,163,184,0.08)',
   border: 'rgba(148,163,184,0.15)',
   textPrimary: '#f1f5f9',
+  textSecondary: 'rgba(241,245,249,0.45)',
   textMuted: 'rgba(241,245,249,0.3)',
-  success: '#22c55e',
+  success: '#4ade80',
   error: '#f87171',
 } as const;
 
@@ -98,7 +99,6 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
           minHeight: '100vh',
           background: colors.bgPrimary,
           color: colors.textPrimary,
-          fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -125,7 +125,6 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
         minHeight: '100vh',
         background: colors.bgPrimary,
         color: colors.textPrimary,
-        fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
         boxSizing: 'border-box',
       }}>
       {/* Header */}
@@ -142,14 +141,13 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
             lineHeight: 1,
             display: 'flex',
             alignItems: 'center',
+            transition: 'all 0.15s',
           }}
           aria-label="Back">
           &#8592;
         </button>
         <h1
           style={{
-            fontFamily: 'Instrument Serif, serif',
-            fontWeight: 400,
             fontSize: 26,
             margin: 0,
             color: colors.textPrimary,
@@ -186,11 +184,11 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
             borderRadius: 8,
             padding: '12px 14px',
             color: colors.textPrimary,
-            fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
             fontSize: 14,
             outline: 'none',
             resize: 'vertical',
             boxSizing: 'border-box',
+            transition: 'all 0.15s',
           }}
         />
 
@@ -228,13 +226,13 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
                 border: 'none',
                 color: colors.error,
                 cursor: 'pointer',
-                fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
                 fontSize: 13,
                 fontWeight: 600,
                 textDecoration: 'underline',
                 padding: 0,
                 flexShrink: 0,
                 marginLeft: 8,
+                transition: 'all 0.15s',
               }}>
               Retry
             </button>
@@ -254,11 +252,11 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
             borderRadius: 10,
             padding: '13px',
             color: '#fff',
-            fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
             fontSize: 15,
             fontWeight: 500,
             cursor: submitting || !selectedRepo ? 'not-allowed' : 'pointer',
             textAlign: 'center' as const,
+            transition: 'all 0.15s',
           }}>
           {submitting ? 'Submitting...' : 'Submit Issue'}
         </button>

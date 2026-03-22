@@ -10,7 +10,8 @@ interface HomeViewProps {
 
 const colors = {
   textPrimary: '#f1f5f9',
-  textMuted: 'rgba(241,245,249,0.4)',
+  textSecondary: 'rgba(241,245,249,0.45)',
+  textMuted: 'rgba(241,245,249,0.3)',
   purpleAccent: '#a78bfa',
   purple500: '#8b5cf6',
   border: 'rgba(148,163,184,0.15)',
@@ -72,8 +73,6 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
   };
 
   const sectionHeadingStyle: React.CSSProperties = {
-    fontFamily: 'Instrument Serif, serif',
-    fontWeight: 400,
     fontSize: 18,
     margin: 0,
     color: colors.purpleAccent,
@@ -87,7 +86,6 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '12px 0',
-    borderBottom: `1px solid ${colors.divider}`,
     cursor: 'pointer',
     background: 'none',
     border: 'none',
@@ -96,9 +94,9 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
     borderBottomColor: colors.divider,
     width: '100%',
     color: colors.textPrimary,
-    fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
     fontSize: 14,
     textAlign: 'left',
+    transition: 'all 0.15s',
   };
 
   return (
@@ -107,15 +105,12 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
         minHeight: '100vh',
         background: '#0f172a',
         color: colors.textPrimary,
-        fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
         boxSizing: 'border-box',
       }}>
       {/* Header */}
       <div style={{ padding: '28px 20px 0' }}>
         <h1
           style={{
-            fontFamily: 'Instrument Serif, serif',
-            fontWeight: 400,
             fontSize: 26,
             margin: 0,
             color: colors.textPrimary,
@@ -123,7 +118,7 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
           }}>
           Coworker
         </h1>
-        <p style={{ margin: '6px 0 0', color: colors.textMuted, fontSize: 13 }}>Visual issue reporting</p>
+        <p style={{ margin: '6px 0 0', color: colors.textSecondary, fontSize: 13 }}>Visual issue reporting</p>
       </div>
 
       {/* Repository section */}
@@ -163,7 +158,6 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
           <span
             style={{
               fontSize: 12,
-              fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
               fontWeight: 500,
               background: 'rgba(139,92,246,0.2)',
               color: '#c4b5fd',
@@ -175,9 +169,9 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
           </span>
         </h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
-          {loading && <p style={{ fontSize: 13, color: colors.textMuted, margin: 0 }}>Loading...</p>}
+          {loading && <p style={{ fontSize: 13, color: colors.textSecondary, margin: 0 }}>Loading...</p>}
           {!loading && issues.length === 0 && (
-            <p style={{ fontSize: 13, color: colors.textMuted, margin: 0 }}>No issues found for this page.</p>
+            <p style={{ fontSize: 13, color: colors.textSecondary, margin: 0 }}>No issues found for this page.</p>
           )}
           {!loading && issues.map(issue => <IssueCard key={issue.number} issue={issue} />)}
         </div>
@@ -192,19 +186,19 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
         <div style={{ marginTop: 8 }}>
           <button onClick={onOpenSettings} style={settingsRowStyle}>
             <span>GitHub Token</span>
-            <span style={{ fontSize: 12, color: patConnected ? colors.green : colors.textMuted }}>
+            <span style={{ fontSize: 12, color: patConnected ? colors.green : colors.textSecondary }}>
               {patConnected ? 'Connected' : 'Not connected'}
             </span>
           </button>
           <button onClick={onOpenSettings} style={settingsRowStyle}>
             <span>Repositories</span>
-            <span style={{ fontSize: 12, color: colors.textMuted }}>
+            <span style={{ fontSize: 12, color: colors.textSecondary }}>
               {repos.length} {repos.length === 1 ? 'repo' : 'repos'}
             </span>
           </button>
           <button onClick={onOpenSettings} style={{ ...settingsRowStyle, borderBottom: 'none' }}>
             <span>Default Labels</span>
-            <span style={{ fontSize: 12, color: colors.textMuted }}>visual-issue</span>
+            <span style={{ fontSize: 12, color: colors.textSecondary }}>visual-issue</span>
           </button>
         </div>
       </div>

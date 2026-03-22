@@ -42,8 +42,8 @@ export default function IssueCard({ issue }: IssueCardProps) {
         cursor: 'pointer',
         textAlign: 'left',
         color: '#f1f5f9',
-        fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
         boxSizing: 'border-box',
+        transition: 'all 0.15s',
       }}>
       {/* Thumbnail placeholder */}
       <div
@@ -94,7 +94,7 @@ export default function IssueCard({ issue }: IssueCardProps) {
             gap: 8,
             marginTop: 4,
             fontSize: 11,
-            color: 'rgba(241,245,249,0.4)',
+            color: 'rgba(241,245,249,0.45)',
           }}>
           {/* Status badge */}
           <span

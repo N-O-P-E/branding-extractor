@@ -3,6 +3,10 @@ import { Octokit } from '@octokit/rest';
 import type {
   CreateIssueMessage,
   ExtensionMessage,
+  FetchAssigneesMessage,
+  FetchAssigneesResponse,
+  FetchLabelsMessage,
+  FetchLabelsResponse,
   FetchPageIssuesMessage,
   FetchPageIssuesResponse,
   MessageResponse,
@@ -11,10 +15,12 @@ import type {
   ShowScreenshotMessage,
 } from '@extension/shared';
 
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error);
+
 chrome.runtime.onMessage.addListener(
   (message: ExtensionMessage, _sender, sendResponse: (response: MessageResponse | FetchPageIssuesResponse) => void) => {
-    if (message.type === 'START_REPORT') {
-      handleStartReport(sendResponse);
+    if (message.type === 'ACTIVATE_TOOL') {
+      handleStartReport(message.payload.tool, sendResponse);
       return true;
     }
     if (message.type === 'CREATE_ISSUE') {
@@ -25,6 +31,14 @@ chrome.runtime.onMessage.addListener(
       handleFetchPageIssues(message, sendResponse as (response: FetchPageIssuesResponse) => void);
       return true;
     }
+    if (message.type === 'FETCH_LABELS') {
+      handleFetchLabels(message, sendResponse as (response: FetchLabelsResponse) => void);
+      return true;
+    }
+    if (message.type === 'FETCH_ASSIGNEES') {
+      handleFetchAssignees(message, sendResponse as (response: FetchAssigneesResponse) => void);
+      return true;
+    }
     if (message.type === 'SHOW_ISSUES_PANEL') {
       handleShowIssuesPanel(message);
       return true;
@@ -33,7 +47,7 @@ chrome.runtime.onMessage.addListener(
   },
 );
 
-const handleStartReport = async (sendResponse: (response: MessageResponse) => void) => {
+const handleStartReport = async (tool: 'select' | 'pencil', sendResponse: (response: MessageResponse) => void) => {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
@@ -51,7 +65,7 @@ const handleStartReport = async (sendResponse: (response: MessageResponse) => vo
 
     const payload: ShowScreenshotMessage = {
       type: 'SHOW_SCREENSHOT',
-      payload: { screenshotDataUrl, tool: 'select' },
+      payload: { screenshotDataUrl, tool },
     };
 
     await chrome.tabs.sendMessage(tab.id, payload);
@@ -142,6 +156,8 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
       viewportHeight,
       template,
       htmlSnippet,
+      labels: userLabels,
+      assignee,
     } = message.payload;
 
     const releaseId = await getOrCreateScreenshotRelease(octokit, owner, repo);
@@ -207,12 +223,14 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
 
     const title = `[Visual] ${description.slice(0, 80)}${description.length > 80 ? '...' : ''}`;
 
+    const issueLabels = ['visual-issue', ...(userLabels ?? [])];
     const issue = await octokit.issues.create({
       owner,
       repo,
       title,
       body,
-      labels: ['visual-issue'],
+      labels: issueLabels,
+      ...(assignee ? { assignees: [assignee] } : {}),
     });
 
     // Cache the created issue so it appears immediately in fetch results
@@ -231,6 +249,48 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
       success: true,
       issueUrl: issue.data.html_url,
       issueNumber: issue.data.number,
+    });
+  } catch (err) {
+    sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
+  }
+};
+
+const handleFetchLabels = async (
+  message: FetchLabelsMessage,
+  sendResponse: (response: FetchLabelsResponse) => void,
+) => {
+  try {
+    const octokit = await getOctokit();
+    const [owner, repo] = message.payload.repo.split('/');
+    const { data } = await octokit.issues.listLabelsForRepo({
+      owner,
+      repo,
+      per_page: 100,
+    });
+    sendResponse({
+      success: true,
+      labels: data.map(l => ({ name: l.name, color: l.color })),
+    });
+  } catch (err) {
+    sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
+  }
+};
+
+const handleFetchAssignees = async (
+  message: FetchAssigneesMessage,
+  sendResponse: (response: FetchAssigneesResponse) => void,
+) => {
+  try {
+    const octokit = await getOctokit();
+    const [owner, repo] = message.payload.repo.split('/');
+    const { data } = await octokit.issues.listAssignees({
+      owner,
+      repo,
+      per_page: 100,
+    });
+    sendResponse({
+      success: true,
+      assignees: data.map(a => ({ login: a.login, avatar_url: a.avatar_url ?? '' })),
     });
   } catch (err) {
     sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });

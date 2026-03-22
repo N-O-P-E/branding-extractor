@@ -7,7 +7,8 @@ interface SetupViewProps {
 const colors = {
   bg: '#0f172a',
   textPrimary: '#f1f5f9',
-  textMuted: 'rgba(241,245,249,0.4)',
+  textSecondary: 'rgba(241,245,249,0.45)',
+  textMuted: 'rgba(241,245,249,0.3)',
   purpleAccent: '#a78bfa',
   green: '#4ade80',
   inputBg: 'rgba(148,163,184,0.08)',
@@ -110,24 +111,24 @@ export default function SetupView({ onDone }: SetupViewProps) {
     borderRadius: 8,
     padding: '10px 14px',
     color: colors.textPrimary,
-    fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
     fontSize: 14,
     outline: 'none',
     minWidth: 0,
+    transition: 'all 0.15s',
   };
 
   const buttonStyle: React.CSSProperties = {
     background: 'linear-gradient(135deg, #7c3aed, #9333ea)',
     border: 'none',
-    borderRadius: 8,
+    borderRadius: 10,
     padding: '10px 18px',
     color: '#fff',
-    fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
     fontSize: 14,
     fontWeight: 500,
     cursor: 'pointer',
     whiteSpace: 'nowrap',
     flexShrink: 0,
+    transition: 'all 0.15s',
   };
 
   const buttonDisabledStyle: React.CSSProperties = {
@@ -144,14 +145,11 @@ export default function SetupView({ onDone }: SetupViewProps) {
         color: colors.textPrimary,
         padding: '28px 20px 40px',
         boxSizing: 'border-box',
-        fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
       }}>
       {/* Header */}
       <div style={{ marginBottom: 32 }}>
         <h1
           style={{
-            fontFamily: 'Instrument Serif, serif',
-            fontWeight: 400,
             fontSize: 26,
             margin: 0,
             color: colors.textPrimary,
@@ -159,7 +157,7 @@ export default function SetupView({ onDone }: SetupViewProps) {
           }}>
           Setup
         </h1>
-        <p style={{ margin: '6px 0 0', color: colors.textMuted, fontSize: 13 }}>
+        <p style={{ margin: '6px 0 0', color: colors.textSecondary, fontSize: 13 }}>
           Connect your GitHub account to get started.
         </p>
       </div>
@@ -168,15 +166,13 @@ export default function SetupView({ onDone }: SetupViewProps) {
       <section style={{ marginBottom: 32 }}>
         <h2
           style={{
-            fontFamily: 'Instrument Serif, serif',
-            fontWeight: 400,
             fontSize: 18,
             margin: '0 0 6px',
             color: colors.purpleAccent,
           }}>
           GitHub Token
         </h2>
-        <p style={{ margin: '0 0 12px', color: colors.textMuted, fontSize: 13, lineHeight: 1.5 }}>
+        <p style={{ margin: '0 0 12px', color: colors.textSecondary, fontSize: 13, lineHeight: 1.5 }}>
           Create a token at{' '}
           <a
             href="https://github.com/settings/tokens/new"
@@ -236,8 +232,6 @@ export default function SetupView({ onDone }: SetupViewProps) {
       <section style={{ marginBottom: 40 }}>
         <h2
           style={{
-            fontFamily: 'Instrument Serif, serif',
-            fontWeight: 400,
             fontSize: 18,
             margin: '0 0 12px',
             color: colors.purpleAccent,
@@ -295,13 +289,14 @@ export default function SetupView({ onDone }: SetupViewProps) {
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: colors.textMuted,
+                    color: colors.textSecondary,
                     cursor: 'pointer',
                     fontSize: 18,
                     lineHeight: 1,
                     padding: '0 2px',
                     display: 'flex',
                     alignItems: 'center',
+                    transition: 'all 0.15s',
                   }}
                   aria-label={`Remove ${repo}`}>
                   &times;
@@ -311,7 +306,7 @@ export default function SetupView({ onDone }: SetupViewProps) {
           </ul>
         )}
         {repos.length === 0 && (
-          <p style={{ marginTop: 10, fontSize: 13, color: colors.textMuted }}>No repositories added yet.</p>
+          <p style={{ marginTop: 10, fontSize: 13, color: colors.textSecondary }}>No repositories added yet.</p>
         )}
       </section>
 
