@@ -644,7 +644,7 @@ const App = () => {
                     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                     border: '1px solid rgba(255,255,255,0.3)',
                     outline: 'none',
-                    minWidth: 40,
+                    minWidth: 80,
                     width: 'auto',
                     maxWidth: 300,
                     boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
@@ -663,8 +663,8 @@ const App = () => {
                     el.style.height = 'auto';
                     el.style.height = el.scrollHeight + 'px';
                     // Auto-width based on content
-                    el.style.width = '40px';
-                    el.style.width = Math.min(300, Math.max(40, el.scrollWidth)) + 'px';
+                    el.style.width = '80px';
+                    el.style.width = Math.min(300, Math.max(80, el.scrollWidth)) + 'px';
                   }}
                   onKeyDown={e => {
                     e.stopPropagation();
