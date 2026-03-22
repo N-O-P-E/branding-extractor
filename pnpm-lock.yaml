@@ -367,7 +367,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/vite-config
 
-  pages/popup:
+  pages/side-panel:
     dependencies:
       '@extension/shared':
         specifier: workspace:*
