@@ -69,7 +69,14 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
 
   const handleToolClick = (tool: 'select' | 'pencil') => {
     setActiveTool(prev => (prev === tool ? null : tool));
-    chrome.runtime.sendMessage({ type: 'ACTIVATE_TOOL', payload: { tool } });
+    chrome.runtime.sendMessage(
+      { type: 'ACTIVATE_TOOL', payload: { tool } },
+      (response: { success: boolean; error?: string }) => {
+        if (response && !response.success) {
+          console.error('ACTIVATE_TOOL failed:', response.error);
+        }
+      },
+    );
   };
 
   const sectionHeadingStyle: React.CSSProperties = {
