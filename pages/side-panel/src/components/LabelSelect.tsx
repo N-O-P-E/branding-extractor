@@ -156,7 +156,7 @@ export default function LabelSelect({ repo, selected, onChange }: LabelSelectPro
           transition: 'all 0.15s',
         }}>
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {selected.length > 0 ? selected.join(', ') : 'Select labels'}
+          {selected.length === 0 ? 'Select labels' : selected.length === 1 ? selected[0] : `${selected.length} labels`}
         </span>
         <span style={{ fontSize: 10, marginLeft: 4, flexShrink: 0 }}>{open ? '\u25B2' : '\u25BC'}</span>
       </button>
