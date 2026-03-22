@@ -1,0 +1,10 @@
+{
+  "extensionDescription": {
+    "description": "Extension description",
+    "message": "Create GitHub issues for Ask Phill Accelerator projects"
+  },
+  "extensionName": {
+    "description": "Extension name",
+    "message": "APA Coworker"
+  }
+}
