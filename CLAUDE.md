@@ -1,50 +1,91 @@
-# APA Coworker
+# CLAUDE.md
 
-Chrome extension (MV3) for visual issue reporting on Shopify storefronts.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project
+
+Coworker — Chrome extension (MV3) for visual issue reporting. Distributed via Chrome Web Store under Studio Nope.
 
 ## Build & dev
 
 ```bash
-pnpm install
-pnpm dev          # development build with HMR
-pnpm build        # production build to dist/
+pnpm install          # install dependencies (pnpm 10.11, node 22.15)
+pnpm dev              # development build with HMR → dist/
+pnpm build            # production build → dist/
+pnpm zip              # build + create distribution ZIP
+pnpm lint             # eslint
+pnpm lint:fix         # eslint --fix
+pnpm format           # prettier
+pnpm type-check       # tsc across all workspaces
+pnpm e2e              # webdriverio e2e tests (builds zip first)
+pnpm update-version   # bump version across all workspace packages
 ```
 
-Load `dist/` as unpacked extension in `chrome://extensions`.
+Load `dist/` as unpacked extension in `chrome://extensions` (enable Developer mode).
 
 ## Architecture
 
-Monorepo using pnpm workspaces + Turborepo. Key areas:
+Monorepo: pnpm workspaces + Turborepo (concurrency: 12, TUI mode).
 
-- **`chrome-extension/`** — Manifest (`manifest.ts`), background service worker, build config
-- **`pages/popup/`** — Extension popup with inline settings (no separate options page)
-- **`pages/content-ui/`** — Injected UI: screenshot overlay, annotation canvas, issue form, issues panel (all rendered in Shadow DOM)
-- **`pages/content/`** — Content script for DOM inspection (HTML snippet extraction)
-- **`packages/shared/`** — Shared TypeScript types (`messages.ts`) and utilities
+### Extension components
+
+| Component | Location | Runs in | Format |
+|-----------|----------|---------|--------|
+| Background service worker | `chrome-extension/src/background/index.ts` | Extension process | ES module |
+| Popup | `pages/popup/src/Popup.tsx` | Extension popup | SPA (Vite + React) |
+| Content-UI | `pages/content-ui/src/matches/all/App.tsx` | Page (Shadow DOM) | IIFE bundle |
+| Content script | `pages/content/src/matches/all/index.ts` | Page (isolated world) | IIFE bundle |
+
+### Shared packages
+
+- **`packages/shared/`** — Message types (`lib/messages.ts`), Shadow DOM init (`lib/utils/init-app-with-shadow.ts`), utilities
+- **`packages/vite-config/`** — `withPageConfig()` shared Vite setup for pages
+- **`packages/hmr/`** — WebSocket-based HMR for dev (watchPublicPlugin, watchRebuildPlugin, makeEntryPointPlugin)
+- **`packages/env/`** — `IS_DEV`/`IS_PROD` flags via dotenvx
+- **`packages/ui/`** — Tailwind utilities, `withUI()` helper
 
 ## Message flow
 
-Popup/content-ui communicate with the background service worker via `chrome.runtime.sendMessage`. Message types are defined in `packages/shared/lib/messages.ts`:
+All inter-component communication uses `chrome.runtime.sendMessage`. Types defined in `packages/shared/lib/messages.ts`:
 
-- `START_REPORT` — Captures screenshot, sends to content-ui
-- `CREATE_ISSUE` — Uploads screenshot to GitHub Release Assets, creates issue
-- `FETCH_PAGE_ISSUES` — Fetches issues matching current page URL
-- `SHOW_ISSUES_PANEL` — Relays issue data from popup to content-ui panel
-- `GET_HTML_SNIPPET` — Extracts HTML from content script
+```
+Popup → Background: START_REPORT
+Background → Content-UI: SHOW_SCREENSHOT (with captureVisibleTab data URL)
+Content-UI → Content: GET_HTML_SNIPPET (elementFromPoint extraction)
+Content-UI → Background: CREATE_ISSUE (screenshot + annotation + metadata)
+Background → GitHub API: upload release asset + create issue
+Popup → Background: FETCH_PAGE_ISSUES → SHOW_ISSUES_PANEL → Content-UI
+```
 
-## Screenshot storage
+## Shadow DOM isolation
 
-Screenshots are uploaded as GitHub Release Assets on a dedicated `visual-issues` release (not committed to repo). The background script resolves release asset URLs to signed CDN URLs for cross-origin `<img>` display.
+Content-UI renders inside Shadow DOM (`delegatesFocus: true`, z-index max). Keyboard events are intercepted at capture phase and re-dispatched as non-composed clones to prevent leaking to host page. Styles injected via `adoptedStyleSheets` (Chrome) or `<style>` tags (Firefox).
 
 ## Conventions
 
-- Settings (GitHub PAT, repos) stored in `chrome.storage.sync`
-- Content-ui uses Shadow DOM with `delegatesFocus: true`
-- Issue body format: Screenshot > Description > Details (environment, template, viewport, region)
-- Issue titles prefixed with `[Visual]`
-- Labels: `visual-issue`, `from-extension`
-- Recently created issues are cached in-memory in the background script for optimistic display
+- Manifest permissions: `activeTab`, `storage`, host: `<all_urls>`
+- Settings stored in `chrome.storage.sync`: `githubPat`, `selectedRepo`, `repoList`
+- Issue titles: `[Visual] <description>`, labels: `visual-issue`, `from-extension`
+- Screenshots uploaded as GitHub Release Assets on `visual-issues` release tag
+- Issues include Analysis section for `@claude` tagging; `analyzed` label triggers badge
+- Tailwind class ordering via prettier-plugin-tailwindcss
+- TypeScript strict mode, `prefer-const`, consistent-type-imports
+- Import order: external → @extension/* → builtins
 
-## Claude analysis
+## Chrome Extension reference
 
-Issues include an "Analysis" section prompting users to tag `@claude` in a comment. Claude then analyzes the issue against the target repo's codebase and posts an implementation plan. The extension detects the `analyzed` label and shows a badge in the issues panel and popup.
+When working on extension features, consult these official docs:
+
+- **Manifest V3**: https://developer.chrome.com/docs/extensions/develop/migrate/what-is-mv3
+- **Content Scripts**: https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts
+- **Message Passing**: https://developer.chrome.com/docs/extensions/develop/concepts/messaging
+- **Service Workers**: https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/events
+- **Permissions**: https://developer.chrome.com/docs/extensions/develop/concepts/declare-permissions
+- **chrome.tabs API**: https://developer.chrome.com/docs/extensions/reference/api/tabs
+- **chrome.storage API**: https://developer.chrome.com/docs/extensions/reference/api/storage
+- **chrome.runtime API**: https://developer.chrome.com/docs/extensions/reference/api/runtime
+- **Chrome Web Store publishing**: https://developer.chrome.com/docs/webstore/publish/
+- **CWS review process**: https://developer.chrome.com/docs/webstore/review-process
+- **CWS policies**: https://developer.chrome.com/docs/webstore/program-policies/policies
+
+Key constraints: `captureVisibleTab` rate limited to 2 calls/sec. `storage.sync` max 100KB total, 8KB per item. Message max 64 MiB JSON. Service worker event handlers must be at global scope. Always validate messages from content scripts.
