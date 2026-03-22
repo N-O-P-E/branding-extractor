@@ -6,7 +6,26 @@ type OverlayState = 'idle' | 'selecting';
 
 interface Stroke {
   points: Array<{ x: number; y: number }>;
+  color: string;
+  width: number;
 }
+
+const STROKE_COLORS = [
+  '#8B5CF6', // purple (default)
+  '#EF4444', // red
+  '#F59E0B', // amber
+  '#22C55E', // green
+  '#3B82F6', // blue
+  '#EC4899', // pink
+  '#FFFFFF', // white
+  '#000000', // black
+];
+
+const STROKE_WIDTHS = [
+  { value: 2, label: 'S' },
+  { value: 4, label: 'M' },
+  { value: 8, label: 'L' },
+];
 
 const annotateScreenshot = (screenshotUrl: string, region: Region, imgRect: DOMRect): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -50,13 +69,13 @@ const renderPencilStrokes = (
   scaleX: number,
   scaleY: number,
 ) => {
-  ctx.strokeStyle = '#8B5CF6';
-  ctx.lineWidth = 3 * Math.max(scaleX, scaleY);
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
   for (const stroke of strokesToDraw) {
     if (stroke.points.length < 2) continue;
+    ctx.strokeStyle = stroke.color;
+    ctx.lineWidth = stroke.width * Math.max(scaleX, scaleY);
     ctx.beginPath();
     ctx.moveTo(stroke.points[0].x * scaleX, stroke.points[0].y * scaleY);
     for (let i = 1; i < stroke.points.length; i++) {
@@ -82,6 +101,8 @@ const App = () => {
   const [currentStroke, setCurrentStroke] = useState<Stroke | null>(null);
   const pencilCanvasRef = useRef<HTMLCanvasElement>(null);
   const isPencilDrawing = useRef(false);
+  const [strokeColor, setStrokeColor] = useState('#8B5CF6');
+  const [strokeWidth, setStrokeWidth] = useState(4);
 
   const backdropRef = useRef<HTMLDivElement>(null);
 
@@ -365,7 +386,7 @@ const App = () => {
 
       if (activeTool === 'pencil') {
         isPencilDrawing.current = true;
-        setCurrentStroke({ points: [pos] });
+        setCurrentStroke({ points: [pos], color: strokeColor, width: strokeWidth });
         return;
       }
 
@@ -375,7 +396,7 @@ const App = () => {
       dragCurrentRef.current = pos;
       forceRender(n => n + 1);
     },
-    [state, activeTool],
+    [state, activeTool, strokeColor, strokeWidth],
   );
 
   const overlayActive = state !== 'idle' && screenshotUrl;
@@ -467,7 +488,7 @@ const App = () => {
             )}
           </div>
 
-          {/* Pencil floating toolbar */}
+          {/* Pencil floating toolbar — Figma-style */}
           {isPencilMode && (
             <div
               style={{
@@ -476,55 +497,136 @@ const App = () => {
                 left: '50%',
                 transform: 'translateX(-50%)',
                 display: 'flex',
-                gap: '6px',
-                padding: '8px 12px',
-                background: '#0f172a',
+                gap: '2px',
+                padding: '6px 8px',
+                background: '#1e293b',
                 border: '1px solid rgba(148,163,184,0.2)',
                 borderRadius: '12px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.1)',
                 fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                 zIndex: 2147483647,
                 alignItems: 'center',
               }}
               onClick={e => e.stopPropagation()}
               onKeyDown={e => e.stopPropagation()}>
+              {/* Stroke width presets */}
+              <div style={{ display: 'flex', gap: '2px', alignItems: 'center', padding: '0 4px' }}>
+                {STROKE_WIDTHS.map(sw => (
+                  <button
+                    key={sw.value}
+                    onClick={() => setStrokeWidth(sw.value)}
+                    title={`${sw.label} stroke`}
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: strokeWidth === sw.value ? 'rgba(139,92,246,0.25)' : 'transparent',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.15s ease-out',
+                      padding: 0,
+                    }}>
+                    <div
+                      style={{
+                        width: sw.value + 4,
+                        height: sw.value + 4,
+                        borderRadius: '50%',
+                        background: strokeWidth === sw.value ? '#f1f5f9' : 'rgba(148,163,184,0.5)',
+                        transition: 'all 0.15s ease-out',
+                      }}
+                    />
+                  </button>
+                ))}
+              </div>
+
+              {/* Divider */}
+              <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.2)', margin: '0 4px' }} />
+
+              {/* Color swatches */}
+              <div style={{ display: 'flex', gap: '3px', alignItems: 'center', padding: '0 4px' }}>
+                {STROKE_COLORS.map(color => (
+                  <button
+                    key={color}
+                    onClick={() => setStrokeColor(color)}
+                    title={color}
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: '50%',
+                      border:
+                        strokeColor === color
+                          ? '2px solid #f1f5f9'
+                          : color === '#000000'
+                            ? '1px solid rgba(148,163,184,0.3)'
+                            : '1px solid rgba(0,0,0,0.15)',
+                      background: color,
+                      cursor: 'pointer',
+                      padding: 0,
+                      transition: 'all 0.15s ease-out',
+                      boxShadow:
+                        strokeColor === color
+                          ? `0 0 0 2px ${color === '#FFFFFF' || color === '#F59E0B' ? 'rgba(0,0,0,0.3)' : color}40`
+                          : 'none',
+                      transform: strokeColor === color ? 'scale(1.15)' : 'scale(1)',
+                      flexShrink: 0,
+                    }}
+                  />
+                ))}
+              </div>
+
+              {/* Divider */}
+              <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.2)', margin: '0 4px' }} />
+
+              {/* Undo */}
               <button
                 onClick={handlePencilUndo}
                 disabled={strokes.length === 0}
+                title="Undo (⌘Z)"
                 style={{
-                  background: 'rgba(30, 41, 59, 0.8)',
-                  color: strokes.length === 0 ? 'rgba(148, 163, 184, 0.3)' : 'rgba(203, 213, 225, 0.9)',
-                  border: '1px solid rgba(148, 163, 184, 0.15)',
-                  borderRadius: '8px',
-                  padding: '6px 14px',
-                  fontSize: '13px',
-                  fontWeight: 500,
+                  background: 'transparent',
+                  color: strokes.length === 0 ? 'rgba(148,163,184,0.25)' : 'rgba(203,213,225,0.9)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  width: 28,
+                  height: 28,
+                  fontSize: '15px',
                   fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                   cursor: strokes.length === 0 ? 'default' : 'pointer',
                   transition: 'all 0.15s ease-out',
-                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: 0,
                 }}>
-                {'↩ Undo ⌘Z'}
+                ↩
               </button>
-              <div style={{ width: 1, height: 24, background: 'rgba(148,163,184,0.15)' }} />
+
+              {/* Divider */}
+              <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.2)', margin: '0 2px' }} />
+
+              {/* Done */}
               <button
                 onClick={handlePencilDone}
                 disabled={strokes.length === 0}
                 style={{
                   background:
-                    strokes.length === 0 ? 'rgba(124, 58, 237, 0.3)' : 'linear-gradient(135deg, #7c3aed, #9333ea)',
-                  color: strokes.length === 0 ? 'rgba(255, 255, 255, 0.4)' : '#ffffff',
+                    strokes.length === 0 ? 'rgba(124,58,237,0.2)' : 'linear-gradient(135deg, #7c3aed, #9333ea)',
+                  color: strokes.length === 0 ? 'rgba(255,255,255,0.3)' : '#ffffff',
                   border: 'none',
                   borderRadius: '8px',
-                  padding: '6px 14px',
-                  fontSize: '13px',
+                  padding: '5px 14px',
+                  fontSize: '12px',
                   fontWeight: 600,
                   fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                   cursor: strokes.length === 0 ? 'default' : 'pointer',
                   transition: 'all 0.15s ease-out',
                   whiteSpace: 'nowrap',
+                  letterSpacing: '0.02em',
                 }}>
-                {'Done ↵'}
+                Done
               </button>
             </div>
           )}
