@@ -652,7 +652,7 @@ const App = () => {
                     overflow: 'hidden',
                     lineHeight: '1.3',
                     display: 'block',
-                    boxSizing: 'content-box',
+                    boxSizing: 'border-box',
                     // Placeholder color via CSS class won't work in shadow DOM inline,
                     // so we handle it with a caretColor trick
                     caretColor: isLightColor(strokeColor) ? '#000' : '#fff',
