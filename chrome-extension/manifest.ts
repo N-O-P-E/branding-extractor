@@ -6,18 +6,20 @@ const packageJson = JSON.parse(readFileSync('./package.json', 'utf8'));
 const manifest = {
   manifest_version: 3,
   default_locale: 'en',
-  name: 'APA Coworker',
+  name: 'Coworker',
   version: packageJson.version,
   description: '__MSG_extensionDescription__',
   host_permissions: ['<all_urls>'],
-  permissions: ['activeTab', 'storage'],
+  permissions: ['activeTab', 'storage', 'sidePanel'],
   background: {
     service_worker: 'background.js',
     type: 'module',
   },
   action: {
-    default_popup: 'popup/index.html',
     default_icon: 'icon-34.png',
+  },
+  side_panel: {
+    default_path: 'side-panel/index.html',
   },
   icons: {
     '128': 'icon-128.png',
@@ -38,10 +40,10 @@ const manifest = {
   ],
   web_accessible_resources: [
     {
-      resources: ['*.js', '*.css', '*.svg', 'icon-128.png', 'icon-34.png'],
+      resources: ['*.js', '*.css', '*.svg', '*.woff2', '*.woff', 'icon-128.png', 'icon-34.png'],
       matches: ['*://*/*'],
     },
   ],
-} satisfies ManifestType;
+} as ManifestType & { side_panel: { default_path: string } };
 
 export default manifest;
