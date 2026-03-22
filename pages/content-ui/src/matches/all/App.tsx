@@ -248,7 +248,7 @@ const App = () => {
 
       setCurrentStroke(prev => {
         if (!prev) return prev;
-        const updated = { points: [...prev.points, { x, y }] };
+        const updated = { ...prev, points: [...prev.points, { x, y }] };
         // Redraw immediately for real-time feedback
         redrawPencilCanvas(strokes, updated);
         return updated;
