@@ -1,3 +1,4 @@
+import HomeView from './views/HomeView';
 import SetupView from './views/SetupView';
 import { useState, useEffect } from 'react';
 
@@ -26,7 +27,7 @@ export default function SidePanel() {
   return (
     <div style={{ minHeight: '100vh' }}>
       {view === 'setup' && <SetupView onDone={() => setView('home')} />}
-      {view === 'home' && <div>Home View (TODO)</div>}
+      {view === 'home' && <HomeView onOpenSettings={() => setView('setup')} />}
       {view === 'create-issue' && <div>Create Issue View (TODO)</div>}
     </div>
   );
