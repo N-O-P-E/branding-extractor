@@ -128,7 +128,7 @@ const getOrCreateScreenshotRelease = async (octokit: Octokit, owner: string, rep
     repo,
     tag_name: RELEASE_TAG,
     name: 'Visual Issue Screenshots',
-    body: 'Screenshots uploaded by APA Coworker Extension. Do not delete this release.',
+    body: 'Screenshots uploaded by Coworker by Studio N.O.P.E.. Do not delete this release.',
   });
   return data.id;
 };
@@ -219,7 +219,7 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
     }
     body += `\n## Analysis\n`;
     body += `> Tag \`@claude\` in a comment to analyze this issue against the codebase.\n`;
-    body += `\n---\n*Reported via APA Coworker Extension*\n`;
+    body += `\n---\n*Reported via Coworker by Studio N.O.P.E.*\n`;
 
     const title = `[Visual] ${description.slice(0, 80)}${description.length > 80 ? '...' : ''}`;
 

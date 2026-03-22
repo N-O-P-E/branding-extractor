@@ -1,7 +1,7 @@
 {
-  "name": "apa-coworker",
+  "name": "coworker",
   "version": "0.6.0",
-  "description": "APA Coworker - Visual issue reporter Chrome extension",
+  "description": "Coworker - Visual issue reporter Chrome extension by Studio N.O.P.E.",
   "private": true,
   "sideEffects": false,
   "type": "module",
