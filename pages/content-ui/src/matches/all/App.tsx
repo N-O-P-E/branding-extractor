@@ -296,10 +296,23 @@ const App = () => {
           handleCanvasUndo();
           return;
         }
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' && !editingComment) {
           e.preventDefault();
           handlePencilDone();
           return;
+        }
+        // D for draw, T for text (only when not editing a comment)
+        if (!editingComment) {
+          if (e.key === 'd' || e.key === 'D') {
+            e.preventDefault();
+            setCanvasSubTool('draw');
+            return;
+          }
+          if (e.key === 't' || e.key === 'T') {
+            e.preventDefault();
+            setCanvasSubTool('text');
+            return;
+          }
         }
       }
     };
@@ -706,9 +719,8 @@ const App = () => {
               <div style={{ display: 'flex', gap: '2px', alignItems: 'center', padding: '0 2px' }}>
                 <button
                   onClick={() => setCanvasSubTool('draw')}
-                  title="Draw"
+                  title="Draw (D)"
                   style={{
-                    width: 28,
                     height: 28,
                     borderRadius: '6px',
                     border: 'none',
@@ -717,13 +729,15 @@ const App = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    gap: 4,
                     transition: 'all 0.15s ease-out',
-                    padding: 0,
+                    padding: '0 6px',
                     color: canvasSubTool === 'draw' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
+                    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                   }}>
                   <svg
-                    width="14"
-                    height="14"
+                    width="13"
+                    height="13"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -733,12 +747,20 @@ const App = () => {
                     <path d="M12 19l7-7 3 3-7 7-3-3z" />
                     <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
                   </svg>
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      fontWeight: 500,
+                      opacity: 0.5,
+                      letterSpacing: '0.02em',
+                    }}>
+                    D
+                  </span>
                 </button>
                 <button
                   onClick={() => setCanvasSubTool('text')}
-                  title="Text comment"
+                  title="Text comment (T)"
                   style={{
-                    width: 28,
                     height: 28,
                     borderRadius: '6px',
                     border: 'none',
@@ -747,14 +769,22 @@ const App = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    gap: 4,
                     transition: 'all 0.15s ease-out',
-                    padding: 0,
+                    padding: '0 6px',
                     color: canvasSubTool === 'text' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
-                    fontSize: '14px',
-                    fontWeight: 700,
                     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                   }}>
-                  T
+                  <span style={{ fontSize: '14px', fontWeight: 700, lineHeight: 1 }}>T</span>
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      fontWeight: 500,
+                      opacity: 0.5,
+                      letterSpacing: '0.02em',
+                    }}>
+                    T
+                  </span>
                 </button>
               </div>
 
