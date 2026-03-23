@@ -95,29 +95,24 @@ export default function SidePanel() {
         )}
       </div>
       {/* Footer */}
-      <div
+      <a
+        href="https://studionope.nl"
+        target="_blank"
+        rel="noopener noreferrer"
         style={{
+          display: 'block',
           padding: '12px 20px',
           textAlign: 'center',
-          fontSize: 12,
-          color: 'rgba(241,245,249,0.3)',
-          borderTop: '1px solid rgba(148,163,184,0.08)',
+          fontSize: 15,
+          fontFamily: "'Instrument Serif', serif",
+          color: '#ffffff',
+          background: '#8B5CF6',
           marginTop: 8,
+          textDecoration: 'none',
+          cursor: 'pointer',
         }}>
-        <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 13 }}>
-          Built by{' '}
-          <a
-            href="https://studionope.nl"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              color: '#f1f5f9',
-              textDecoration: 'none',
-            }}>
-            Studio N.O.P.E.
-          </a>
-        </div>
-      </div>
+        Built by <strong>Studio N.O.P.E.</strong>
+      </a>
     </div>
   );
 }
