@@ -425,6 +425,7 @@ const handleFetchPageIssues = async (
         html_url: issue.html_url,
         created_at: issue.created_at,
         author: issue.user?.login,
+        author_avatar: issue.user?.avatar_url,
         description: descriptionMatch?.[1]?.trim(),
         screenshot_url: urlMatch?.[1],
         has_analysis: issue.labels?.some(

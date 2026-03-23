@@ -96,6 +96,19 @@ export default function IssueCard({ issue }: IssueCardProps) {
             fontSize: 11,
             color: 'rgba(241,245,249,0.45)',
           }}>
+          {/* Author avatar + name */}
+          {issue.author && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              {issue.author_avatar && (
+                <img
+                  src={issue.author_avatar}
+                  alt=""
+                  style={{ width: 14, height: 14, borderRadius: '50%', flexShrink: 0 }}
+                />
+              )}
+              <span>{issue.author}</span>
+            </span>
+          )}
           {/* Status badge */}
           <span
             style={{

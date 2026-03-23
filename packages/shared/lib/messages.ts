@@ -120,6 +120,7 @@ export interface PageIssue {
   html_url: string;
   created_at: string;
   author?: string;
+  author_avatar?: string;
   description?: string;
   screenshot_url?: string;
   has_analysis?: boolean;
