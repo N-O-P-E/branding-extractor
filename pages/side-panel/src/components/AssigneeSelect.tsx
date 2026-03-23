@@ -62,7 +62,15 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
       <div style={{ flex: 1 }}>
         <label
           htmlFor="assignee-fallback-input"
-          style={{ fontSize: 12, color: colors.textMuted, marginBottom: 4, display: 'block' }}>
+          style={{
+            fontSize: 11,
+            fontWeight: 500,
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase' as const,
+            color: 'rgba(241,245,249,0.4)',
+            marginBottom: 6,
+            display: 'block',
+          }}>
           Assignee
         </label>
         <input
@@ -92,7 +100,15 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
     <div ref={containerRef} style={{ flex: 1, position: 'relative' }}>
       <label
         htmlFor="assignee-select-btn"
-        style={{ fontSize: 12, color: colors.textMuted, marginBottom: 4, display: 'block' }}>
+        style={{
+          fontSize: 11,
+          fontWeight: 500,
+          letterSpacing: '0.04em',
+          textTransform: 'uppercase' as const,
+          color: 'rgba(241,245,249,0.4)',
+          marginBottom: 6,
+          display: 'block',
+        }}>
         Assignee
       </label>
       <button

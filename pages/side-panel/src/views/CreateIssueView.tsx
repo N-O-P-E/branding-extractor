@@ -317,6 +317,18 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
 
       <div style={{ padding: '20px' }}>
         {/* Description */}
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 500,
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase' as const,
+            color: 'rgba(241,245,249,0.4)',
+            marginBottom: 6,
+            display: 'block',
+          }}>
+          Description
+        </span>
         <textarea
           placeholder="Describe the issue..."
           value={description}
@@ -387,86 +399,111 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
 
         {/* Browser & Environment info */}
         {liveBrowserMetadata && (
-          <div
-            style={{
-              marginTop: 12,
-              padding: '10px 12px',
-              background: 'rgba(148,163,184,0.05)',
-              border: `1px solid ${colors.border}`,
-              borderRadius: 8,
-              fontSize: 11,
-              color: colors.textSecondary,
-              lineHeight: 1.7,
-            }}>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
-                {liveBrowserMetadata.browser.name} {liveBrowserMetadata.browser.version}
-              </span>
-              <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
-                {liveBrowserMetadata.os.name} {liveBrowserMetadata.os.version}
-              </span>
-              <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
-                {liveBrowserMetadata.device.screenWidth}×{liveBrowserMetadata.device.screenHeight} @
-                {liveBrowserMetadata.device.pixelRatio}x
-              </span>
-              <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
-                {liveBrowserMetadata.device.colorScheme}
-              </span>
+          <>
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 500,
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase' as const,
+                color: 'rgba(241,245,249,0.4)',
+                marginTop: 12,
+                marginBottom: 6,
+                display: 'block',
+              }}>
+              Environment
+            </span>
+            <div
+              style={{
+                marginTop: 12,
+                padding: '10px 12px',
+                background: 'rgba(148,163,184,0.05)',
+                border: `1px solid ${colors.border}`,
+                borderRadius: 8,
+                fontSize: 11,
+                color: colors.textSecondary,
+                lineHeight: 1.7,
+              }}>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                  {liveBrowserMetadata.browser.name} {liveBrowserMetadata.browser.version}
+                </span>
+                <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                  {liveBrowserMetadata.os.name} {liveBrowserMetadata.os.version}
+                </span>
+                <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                  {liveBrowserMetadata.device.screenWidth}×{liveBrowserMetadata.device.screenHeight} @
+                  {liveBrowserMetadata.device.pixelRatio}x
+                </span>
+                <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                  {liveBrowserMetadata.device.colorScheme}
+                </span>
+              </div>
+              {liveBrowserMetadata.shopify && (
+                <div
+                  style={{
+                    marginTop: 8,
+                    paddingTop: 8,
+                    borderTop: `1px solid ${colors.border}`,
+                    display: 'flex',
+                    gap: 6,
+                    flexWrap: 'wrap',
+                  }}>
+                  <span
+                    style={{
+                      background: 'rgba(139,92,246,0.1)',
+                      color: '#c4b5fd',
+                      padding: '2px 6px',
+                      borderRadius: 4,
+                    }}>
+                    {liveBrowserMetadata.shopify.storeName}
+                  </span>
+                  <span
+                    style={{
+                      background: 'rgba(139,92,246,0.1)',
+                      color: '#c4b5fd',
+                      padding: '2px 6px',
+                      borderRadius: 4,
+                    }}>
+                    {liveBrowserMetadata.shopify.environment}
+                  </span>
+                  {liveBrowserMetadata.shopify.template && (
+                    <span
+                      style={{
+                        background: 'rgba(139,92,246,0.1)',
+                        color: '#c4b5fd',
+                        padding: '2px 6px',
+                        borderRadius: 4,
+                      }}>
+                      {liveBrowserMetadata.shopify.template}
+                    </span>
+                  )}
+                  {liveBrowserMetadata.shopify.themeName && (
+                    <span
+                      style={{
+                        background: 'rgba(139,92,246,0.1)',
+                        color: '#c4b5fd',
+                        padding: '2px 6px',
+                        borderRadius: 4,
+                      }}>
+                      {liveBrowserMetadata.shopify.themeName}
+                    </span>
+                  )}
+                  {liveBrowserMetadata.shopify.themeId && (
+                    <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                      Theme #{liveBrowserMetadata.shopify.themeId}
+                    </span>
+                  )}
+                </div>
+              )}
+              {liveBrowserMetadata.consoleErrors.length > 0 && (
+                <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${colors.border}`, color: '#f87171' }}>
+                  {liveBrowserMetadata.consoleErrors.length} console{' '}
+                  {liveBrowserMetadata.consoleErrors.length === 1 ? 'error' : 'errors'} detected
+                </div>
+              )}
             </div>
-            {liveBrowserMetadata.shopify && (
-              <div
-                style={{
-                  marginTop: 8,
-                  paddingTop: 8,
-                  borderTop: `1px solid ${colors.border}`,
-                  display: 'flex',
-                  gap: 6,
-                  flexWrap: 'wrap',
-                }}>
-                <span
-                  style={{ background: 'rgba(139,92,246,0.1)', color: '#c4b5fd', padding: '2px 6px', borderRadius: 4 }}>
-                  {liveBrowserMetadata.shopify.storeName}
-                </span>
-                <span
-                  style={{ background: 'rgba(139,92,246,0.1)', color: '#c4b5fd', padding: '2px 6px', borderRadius: 4 }}>
-                  {liveBrowserMetadata.shopify.environment}
-                </span>
-                {liveBrowserMetadata.shopify.template && (
-                  <span
-                    style={{
-                      background: 'rgba(139,92,246,0.1)',
-                      color: '#c4b5fd',
-                      padding: '2px 6px',
-                      borderRadius: 4,
-                    }}>
-                    {liveBrowserMetadata.shopify.template}
-                  </span>
-                )}
-                {liveBrowserMetadata.shopify.themeName && (
-                  <span
-                    style={{
-                      background: 'rgba(139,92,246,0.1)',
-                      color: '#c4b5fd',
-                      padding: '2px 6px',
-                      borderRadius: 4,
-                    }}>
-                    {liveBrowserMetadata.shopify.themeName}
-                  </span>
-                )}
-                {liveBrowserMetadata.shopify.themeId && (
-                  <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
-                    Theme #{liveBrowserMetadata.shopify.themeId}
-                  </span>
-                )}
-              </div>
-            )}
-            {liveBrowserMetadata.consoleErrors.length > 0 && (
-              <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${colors.border}`, color: '#f87171' }}>
-                {liveBrowserMetadata.consoleErrors.length} console{' '}
-                {liveBrowserMetadata.consoleErrors.length === 1 ? 'error' : 'errors'} detected
-              </div>
-            )}
-          </div>
+          </>
         )}
 
         {/* Submit button */}
