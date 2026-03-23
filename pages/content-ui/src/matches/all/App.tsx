@@ -243,12 +243,12 @@ const App = () => {
       const scaleX = displayRect ? img.naturalWidth / displayRect.width : window.devicePixelRatio;
       const scaleY = displayRect ? img.naturalHeight / displayRect.height : window.devicePixelRatio;
 
-      // Draw selection rectangles
+      // Draw selection rectangles (stored as fractions 0-1, scale to full image)
       for (const region of selections) {
-        const rx = region.x * scaleX;
-        const ry = region.y * scaleY;
-        const rw = region.width * scaleX;
-        const rh = region.height * scaleY;
+        const rx = region.x * img.naturalWidth;
+        const ry = region.y * img.naturalHeight;
+        const rw = region.width * img.naturalWidth;
+        const rh = region.height * img.naturalHeight;
         ctx.strokeStyle = '#8B5CF6';
         ctx.lineWidth = 3 * Math.max(scaleX, scaleY);
         ctx.setLineDash([8 * scaleX, 4 * scaleX]);
@@ -268,7 +268,14 @@ const App = () => {
         payload: {
           screenshotDataUrl: screenshotUrl,
           annotatedScreenshotDataUrl: annotatedDataUrl,
-          region: selections[0],
+          region: selections[0]
+            ? {
+                x: selections[0].x * window.innerWidth,
+                y: selections[0].y * window.innerHeight,
+                width: selections[0].width * window.innerWidth,
+                height: selections[0].height * window.innerHeight,
+              }
+            : undefined,
           pageUrl: window.location.href,
           viewportWidth: window.innerWidth,
           viewportHeight: window.innerHeight,
@@ -408,8 +415,17 @@ const App = () => {
 
       const selectedRegion = { x, y, width, height };
 
-      // Store the selection — don't send CAPTURE_COMPLETE yet
-      setSelections(prev => [...prev, selectedRegion]);
+      // Store as fraction of image display size for consistent rendering
+      const imgRect = imgRef.current.getBoundingClientRect();
+      setSelections(prev => [
+        ...prev,
+        {
+          x: selectedRegion.x / imgRect.width,
+          y: selectedRegion.y / imgRect.height,
+          width: selectedRegion.width / imgRect.width,
+          height: selectedRegion.height / imgRect.height,
+        },
+      ]);
       actionHistory.current.push('selection');
 
       // Try to get HTML snippet at center of selection
@@ -529,8 +545,17 @@ const App = () => {
           html = html.slice(0, 2000) + '...';
         }
       }
-      // Store the selection and snippet — transition to screenshot overlay
-      setSelections(prev => [...prev, region]);
+      // Store the selection as viewport-fraction coords (0-1 range)
+      // so they can be scaled to any display size of the screenshot
+      setSelections(prev => [
+        ...prev,
+        {
+          x: region.x / window.innerWidth,
+          y: region.y / window.innerHeight,
+          width: region.width / window.innerWidth,
+          height: region.height / window.innerHeight,
+        },
+      ]);
       setHtmlSnippets(prev => [...prev, html]);
       actionHistory.current.push('selection');
 
@@ -715,22 +740,27 @@ const App = () => {
               />
             )}
 
-            {/* Stored selection rectangles */}
-            {selections.map((sel, i) => (
-              <div
-                key={`sel-${i}`}
-                style={{
-                  position: 'absolute',
-                  left: sel.x,
-                  top: sel.y,
-                  width: sel.width,
-                  height: sel.height,
-                  border: '2px dashed #8B5CF6',
-                  backgroundColor: 'rgba(139, 92, 246, 0.15)',
-                  pointerEvents: 'none',
-                }}
-              />
-            ))}
+            {/* Stored selection rectangles (stored as fractions, scale to image display) */}
+            {selections.map((sel, i) => {
+              const imgEl = imgRef.current;
+              const iw = imgEl?.clientWidth ?? 1;
+              const ih = imgEl?.clientHeight ?? 1;
+              return (
+                <div
+                  key={`sel-${i}`}
+                  style={{
+                    position: 'absolute',
+                    left: sel.x * iw,
+                    top: sel.y * ih,
+                    width: sel.width * iw,
+                    height: sel.height * ih,
+                    border: '2px dashed #8B5CF6',
+                    backgroundColor: 'rgba(139, 92, 246, 0.15)',
+                    pointerEvents: 'none',
+                  }}
+                />
+              );
+            })}
 
             {/* Active drag selection */}
             {dragSelection && dragSelection.width > 0 && dragSelection.height > 0 && (
