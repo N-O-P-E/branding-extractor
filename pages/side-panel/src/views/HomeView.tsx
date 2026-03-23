@@ -155,12 +155,14 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
             icon="select"
             label="Select"
             active={activeTool === 'select'}
+            disabled={activeTool !== null && activeTool !== 'select'}
             onClick={() => handleToolClick('select')}
           />
           <ToolButton
             icon="pencil"
             label="Canvas"
             active={activeTool === 'pencil'}
+            disabled={activeTool !== null && activeTool !== 'pencil'}
             onClick={() => handleToolClick('pencil')}
           />
           <ToolButton

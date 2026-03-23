@@ -324,30 +324,41 @@ const App = () => {
         dismiss();
         return;
       }
-      if (activeTool === 'pencil') {
-        if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+      // Undo (all modes)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        e.preventDefault();
+        handleCanvasUndo();
+        return;
+      }
+      // Enter to finish (when not editing a comment)
+      if (e.key === 'Enter' && !editingComment) {
+        e.preventDefault();
+        handleDone();
+        return;
+      }
+      // D for draw, T for text, S for select area (when not editing a comment)
+      if (!editingComment) {
+        if (e.key === 'd' || e.key === 'D') {
           e.preventDefault();
-          handleCanvasUndo();
+          setActiveTool('pencil');
+          setCanvasSubTool('draw');
+          setEditingComment(null);
+          chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: 'pencil' } });
           return;
         }
-        if (e.key === 'Enter' && !editingComment) {
+        if (e.key === 't' || e.key === 'T') {
           e.preventDefault();
-          handleDone();
+          setActiveTool('pencil');
+          setCanvasSubTool('text');
+          chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: 'pencil' } });
           return;
         }
-        // D for draw, T for text (only when not editing a comment)
-        if (!editingComment) {
-          if (e.key === 'd' || e.key === 'D') {
-            e.preventDefault();
-            setCanvasSubTool('draw');
-            setEditingComment(null);
-            return;
-          }
-          if (e.key === 't' || e.key === 'T') {
-            e.preventDefault();
-            setCanvasSubTool('text');
-            return;
-          }
+        if (e.key === 's' || e.key === 'S') {
+          e.preventDefault();
+          setActiveTool('select');
+          setEditingComment(null);
+          chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: 'select' } });
+          return;
         }
       }
     };
@@ -967,6 +978,38 @@ const App = () => {
               }}
               onClick={e => e.stopPropagation()}
               onKeyDown={e => e.stopPropagation()}>
+              {/* Tool toggle: Select area / Draw / Text */}
+              <div style={{ display: 'flex', gap: '2px', alignItems: 'center', padding: '0 2px' }}>
+                {/* Select area */}
+                <button
+                  onClick={() => {
+                    setActiveTool('select');
+                    setEditingComment(null);
+                    chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: 'select' } });
+                  }}
+                  title="Select area (S)"
+                  style={{
+                    height: 28,
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: activeTool === 'select' ? 'rgba(139,92,246,0.25)' : 'transparent',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 4,
+                    transition: 'all 0.15s ease-out',
+                    padding: '0 6px',
+                    color: activeTool === 'select' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
+                    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                  }}>
+                  <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="2" y="2" width="16" height="16" rx="2" strokeDasharray="3 3" />
+                  </svg>
+                  <span style={{ fontSize: '10px', fontWeight: 500, opacity: 0.5 }}>S</span>
+                </button>
+              </div>
+
               {/* Draw / Text toggle (canvas mode only) */}
               {isPencilMode && (
                 <>
