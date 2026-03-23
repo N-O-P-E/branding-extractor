@@ -1014,12 +1014,10 @@ const App = () => {
               style={{
                 ...styles.screenshot,
                 cursor:
-                  isPencilMode && canvasSubTool === 'text'
-                    ? editingComment
-                      ? 'grab'
-                      : 'text'
-                    : isPencilMode && canvasSubTool === 'image'
-                      ? 'copy'
+                  isPencilMode && canvasSubTool === 'image'
+                    ? 'copy'
+                    : isPencilMode && canvasSubTool === 'text'
+                      ? 'default'
                       : 'crosshair',
               }}
               draggable={false}
