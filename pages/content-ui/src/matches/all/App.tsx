@@ -747,6 +747,7 @@ const App = () => {
               }}
               draggable={false}
               onMouseDown={handleMouseDown}
+              onLoad={() => forceRender(n => n + 1)}
             />
 
             {/* Pencil overlay canvas */}
