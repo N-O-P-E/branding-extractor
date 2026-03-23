@@ -436,9 +436,21 @@ const App = () => {
     return () => document.removeEventListener('paste', handlePaste, true);
   }, [state, placeImageFromFile]);
 
-  // Keyboard shortcuts (Escape, Cmd+Z for pencil undo, Enter for pencil done)
+  // Focus the backdrop when overlay opens so it receives keyboard events
+  useEffect(() => {
+    if (state === 'selecting' && backdropRef.current) {
+      backdropRef.current.focus();
+    }
+  }, [state]);
+
+  // Keyboard shortcuts — attached to backdrop ref so they work inside shadow DOM
+  // (Shadow DOM intercepts events at window level and re-dispatches non-composed
+  // clones that only bubble within the shadow DOM, not to document)
   useEffect(() => {
     if (state === 'idle') return;
+    const el = backdropRef.current;
+    if (!el) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         dismiss();
@@ -450,17 +462,19 @@ const App = () => {
         handleCanvasUndo();
         return;
       }
-      // Enter to finish (when not actively typing in comment)
-      const isTypingComment = editingComment && document.activeElement?.tagName === 'TEXTAREA';
-      if (e.key === 'Enter' && !isTypingComment) {
+
+      // Check if user is actively typing in a textarea (comment input)
+      const target = e.target as HTMLElement;
+      const isTyping = target.tagName === 'TEXTAREA' || target.tagName === 'INPUT';
+
+      // Enter to finish (when not typing)
+      if (e.key === 'Enter' && !isTyping) {
         e.preventDefault();
         handleDone();
         return;
       }
-      // D/S/C/I tool switching — always works unless actively typing in comment textarea
-      // Check if focus is on the comment textarea — if so, don't intercept regular keys
-      const isTypingInComment = editingComment && document.activeElement?.tagName === 'TEXTAREA';
-      if (!isTypingInComment) {
+      // D/S/C/I tool switching (when not typing)
+      if (!isTyping) {
         if (e.key === 'd' || e.key === 'D') {
           e.preventDefault();
           setActiveTool('pencil');
@@ -494,9 +508,10 @@ const App = () => {
         }
       }
     };
-    document.addEventListener('keydown', handleKeyDown, true);
-    return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [state, activeTool, dismiss, handleCanvasUndo, handleDone, editingComment]);
+    // Use capture phase on the backdrop element
+    el.addEventListener('keydown', handleKeyDown, true);
+    return () => el.removeEventListener('keydown', handleKeyDown, true);
+  }, [state, dismiss, handleCanvasUndo, handleDone]);
 
   // Pencil tool mouse handlers
   useEffect(() => {
