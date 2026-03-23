@@ -38,42 +38,6 @@ const STROKE_WIDTHS = [
   { value: 8, label: 'L' },
 ];
 
-const annotateScreenshot = (screenshotUrl: string, region: Region, imgRect: DOMRect): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const scaleX = img.naturalWidth / imgRect.width;
-      const scaleY = img.naturalHeight / imgRect.height;
-
-      const canvas = document.createElement('canvas');
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        reject(new Error('Could not get canvas context'));
-        return;
-      }
-
-      ctx.drawImage(img, 0, 0);
-
-      const rx = region.x * scaleX;
-      const ry = region.y * scaleY;
-      const rw = region.width * scaleX;
-      const rh = region.height * scaleY;
-
-      ctx.strokeStyle = '#8B5CF6';
-      ctx.lineWidth = 3 * Math.max(scaleX, scaleY);
-      ctx.setLineDash([8 * scaleX, 4 * scaleX]);
-      ctx.strokeRect(rx, ry, rw, rh);
-      ctx.fillStyle = 'rgba(139, 92, 246, 0.15)';
-      ctx.fillRect(rx, ry, rw, rh);
-
-      resolve(canvas.toDataURL('image/png'));
-    };
-    img.onerror = () => reject(new Error('Failed to load screenshot'));
-    img.src = screenshotUrl;
-  });
-
 const renderPencilStrokes = (
   ctx: CanvasRenderingContext2D,
   strokesToDraw: Stroke[],
@@ -157,6 +121,10 @@ const App = () => {
   const [draggingCommentIndex, setDraggingCommentIndex] = useState<number | null>(null);
   const dragCommentOffset = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
 
+  // Accumulated annotations from select/inspect tools
+  const [selections, setSelections] = useState<Region[]>([]);
+  const [htmlSnippets, setHtmlSnippets] = useState<string[]>([]);
+
   // Inspect tool state
   const [inspectActive, setInspectActive] = useState(false);
   const [inspectHighlight, setInspectHighlight] = useState<DOMRect | null>(null);
@@ -180,6 +148,8 @@ const App = () => {
     setInspectActive(false);
     setInspectHighlight(null);
     inspectHoveredEl.current = null;
+    setSelections([]);
+    setHtmlSnippets([]);
     actionHistory.current = [];
   }, []);
 
@@ -209,6 +179,8 @@ const App = () => {
         setComments([]);
         setEditingComment(null);
         setCanvasSubTool('draw');
+        setSelections([]);
+        setHtmlSnippets([]);
         actionHistory.current = [];
         setState('selecting');
       }
@@ -253,8 +225,10 @@ const App = () => {
     }
   }, [strokes, currentStroke, activeTool, state, redrawPencilCanvas]);
 
-  const handlePencilDone = useCallback(() => {
-    if (!screenshotUrl || (strokes.length === 0 && comments.length === 0)) return;
+  const hasAnyContent = strokes.length > 0 || comments.length > 0 || selections.length > 0;
+
+  const handleDone = useCallback(() => {
+    if (!screenshotUrl || !hasAnyContent) return;
 
     const img = new Image();
     img.onload = () => {
@@ -265,10 +239,26 @@ const App = () => {
       ctx.drawImage(img, 0, 0);
 
       const displayedImg = imgRef.current;
-      if (!displayedImg) return;
-      const displayRect = displayedImg.getBoundingClientRect();
-      const scaleX = img.naturalWidth / displayRect.width;
-      const scaleY = img.naturalHeight / displayRect.height;
+      const displayRect = displayedImg?.getBoundingClientRect();
+      const scaleX = displayRect ? img.naturalWidth / displayRect.width : window.devicePixelRatio;
+      const scaleY = displayRect ? img.naturalHeight / displayRect.height : window.devicePixelRatio;
+
+      // Draw selection rectangles
+      for (const region of selections) {
+        const rx = region.x * scaleX;
+        const ry = region.y * scaleY;
+        const rw = region.width * scaleX;
+        const rh = region.height * scaleY;
+        ctx.strokeStyle = '#8B5CF6';
+        ctx.lineWidth = 3 * Math.max(scaleX, scaleY);
+        ctx.setLineDash([8 * scaleX, 4 * scaleX]);
+        ctx.strokeRect(rx, ry, rw, rh);
+        ctx.fillStyle = 'rgba(139, 92, 246, 0.15)';
+        ctx.fillRect(rx, ry, rw, rh);
+      }
+      ctx.setLineDash([]);
+
+      // Draw strokes and comments
       renderPencilStrokes(ctx, strokes, scaleX, scaleY);
       renderComments(ctx, comments, scaleX, scaleY);
 
@@ -278,23 +268,21 @@ const App = () => {
         payload: {
           screenshotDataUrl: screenshotUrl,
           annotatedScreenshotDataUrl: annotatedDataUrl,
+          region: selections[0],
           pageUrl: window.location.href,
           viewportWidth: window.innerWidth,
           viewportHeight: window.innerHeight,
+          htmlSnippet: htmlSnippets.length > 0 ? htmlSnippets.join('\n\n---\n\n') : undefined,
         },
       };
       chrome.runtime.sendMessage(captureMessage);
-      setState('idle');
-      setScreenshotUrl(null);
-      setStrokes([]);
-      setCurrentStroke(null);
-      isPencilDrawing.current = false;
+      dismiss();
     };
     img.src = screenshotUrl;
-  }, [screenshotUrl, strokes, comments]);
+  }, [screenshotUrl, hasAnyContent, strokes, comments, selections, htmlSnippets, dismiss]);
 
   // Track action order for undo: 'stroke' or 'comment'
-  const actionHistory = useRef<Array<'stroke' | 'comment'>>([]);
+  const actionHistory = useRef<Array<'stroke' | 'comment' | 'selection'>>([]);
 
   const handleCanvasUndo = useCallback(() => {
     const lastAction = actionHistory.current.pop();
@@ -302,6 +290,9 @@ const App = () => {
       setComments(prev => prev.slice(0, -1));
     } else if (lastAction === 'stroke') {
       setStrokes(prev => prev.slice(0, -1));
+    } else if (lastAction === 'selection') {
+      setSelections(prev => prev.slice(0, -1));
+      setHtmlSnippets(prev => prev.slice(0, -1));
     }
   }, []);
 
@@ -321,7 +312,7 @@ const App = () => {
         }
         if (e.key === 'Enter' && !editingComment) {
           e.preventDefault();
-          handlePencilDone();
+          handleDone();
           return;
         }
         // D for draw, T for text (only when not editing a comment)
@@ -342,7 +333,7 @@ const App = () => {
     };
     document.addEventListener('keydown', handleKeyDown, true);
     return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [state, activeTool, dismiss, handleCanvasUndo, handlePencilDone, editingComment]);
+  }, [state, activeTool, dismiss, handleCanvasUndo, handleDone, editingComment]);
 
   // Pencil tool mouse handlers
   useEffect(() => {
@@ -417,42 +408,29 @@ const App = () => {
 
       const selectedRegion = { x, y, width, height };
 
+      // Store the selection — don't send CAPTURE_COMPLETE yet
+      setSelections(prev => [...prev, selectedRegion]);
+      actionHistory.current.push('selection');
+
+      // Try to get HTML snippet at center of selection
       try {
         const imgRect = imgRef.current.getBoundingClientRect();
-        const annotatedDataUrl = await annotateScreenshot(screenshotUrl, selectedRegion, imgRect);
-
-        // Get HTML snippet at center of selection
         const centerX = x + width / 2 + imgRect.left;
         const centerY = y + height / 2 + imgRect.top;
-        let snippet: string | undefined;
-        try {
-          const snippetResponse = await chrome.runtime.sendMessage({
-            type: 'GET_HTML_SNIPPET',
-            payload: { x: centerX, y: centerY },
-          });
-          snippet = snippetResponse?.html ?? undefined;
-        } catch {
-          // Snippet extraction is optional
+        const snippetResponse = await chrome.runtime.sendMessage({
+          type: 'GET_HTML_SNIPPET',
+          payload: { x: centerX, y: centerY },
+        });
+        if (snippetResponse?.html) {
+          setHtmlSnippets(prev => [...prev, snippetResponse.html]);
         }
-
-        const captureMessage: CaptureCompleteMessage = {
-          type: 'CAPTURE_COMPLETE',
-          payload: {
-            screenshotDataUrl: screenshotUrl,
-            annotatedScreenshotDataUrl: annotatedDataUrl,
-            region: selectedRegion,
-            pageUrl: window.location.href,
-            viewportWidth: window.innerWidth,
-            viewportHeight: window.innerHeight,
-            htmlSnippet: snippet,
-          },
-        };
-        chrome.runtime.sendMessage(captureMessage);
-        setState('idle');
-        setScreenshotUrl(null);
       } catch {
-        forceRender(n => n + 1);
+        // Snippet extraction is optional
       }
+
+      // Switch to canvas mode so user can add more annotations
+      setActiveTool('pencil');
+      forceRender(n => n + 1);
     },
     [screenshotUrl],
   );
@@ -551,50 +529,17 @@ const App = () => {
           html = html.slice(0, 2000) + '...';
         }
       }
-      const snippet = html;
+      // Store the selection and snippet — transition to screenshot overlay
+      setSelections(prev => [...prev, region]);
+      setHtmlSnippets(prev => [...prev, html]);
+      actionHistory.current.push('selection');
 
-      // Annotate the screenshot with the element highlight
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext('2d')!;
-        ctx.drawImage(img, 0, 0);
-
-        const scaleX = img.naturalWidth / window.innerWidth;
-        const scaleY = img.naturalHeight / window.innerHeight;
-        const rx = region.x * scaleX;
-        const ry = region.y * scaleY;
-        const rw = region.width * scaleX;
-        const rh = region.height * scaleY;
-
-        ctx.strokeStyle = '#8B5CF6';
-        ctx.lineWidth = 3 * Math.max(scaleX, scaleY);
-        ctx.setLineDash([]);
-        ctx.strokeRect(rx, ry, rw, rh);
-        ctx.fillStyle = 'rgba(139, 92, 246, 0.15)';
-        ctx.fillRect(rx, ry, rw, rh);
-
-        const annotatedDataUrl = canvas.toDataURL('image/png');
-        const captureMessage: CaptureCompleteMessage = {
-          type: 'CAPTURE_COMPLETE',
-          payload: {
-            screenshotDataUrl: screenshotUrl,
-            annotatedScreenshotDataUrl: annotatedDataUrl,
-            region,
-            pageUrl: window.location.href,
-            viewportWidth: window.innerWidth,
-            viewportHeight: window.innerHeight,
-            htmlSnippet: snippet,
-          },
-        };
-        chrome.runtime.sendMessage(captureMessage);
-        setInspectActive(false);
-        setInspectHighlight(null);
-        inspectHoveredEl.current = null;
-      };
-      img.src = screenshotUrl;
+      // Exit inspect mode, enter canvas overlay so user can add more
+      setInspectActive(false);
+      setInspectHighlight(null);
+      inspectHoveredEl.current = null;
+      setActiveTool('pencil');
+      setState('selecting');
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -671,7 +616,7 @@ const App = () => {
     }
   };
 
-  const hasCanvasContent = strokes.length > 0 || comments.length > 0;
+  const hasCanvasContent = strokes.length > 0 || comments.length > 0 || selections.length > 0;
 
   const isPencilMode = activeTool === 'pencil' && state === 'selecting';
 
@@ -770,6 +715,24 @@ const App = () => {
               />
             )}
 
+            {/* Stored selection rectangles */}
+            {selections.map((sel, i) => (
+              <div
+                key={`sel-${i}`}
+                style={{
+                  position: 'absolute',
+                  left: sel.x,
+                  top: sel.y,
+                  width: sel.width,
+                  height: sel.height,
+                  border: '2px dashed #8B5CF6',
+                  backgroundColor: 'rgba(139, 92, 246, 0.15)',
+                  pointerEvents: 'none',
+                }}
+              />
+            ))}
+
+            {/* Active drag selection */}
             {dragSelection && dragSelection.width > 0 && dragSelection.height > 0 && (
               <div
                 style={{
@@ -1106,7 +1069,7 @@ const App = () => {
 
               {/* Done */}
               <button
-                onClick={handlePencilDone}
+                onClick={handleDone}
                 disabled={!hasCanvasContent}
                 style={{
                   background: !hasCanvasContent ? 'rgba(124,58,237,0.2)' : 'linear-gradient(135deg, #7c3aed, #9333ea)',
