@@ -1,4 +1,4 @@
-# APA Coworker
+# Coworker
 
 Chrome extension for reporting visual issues on Shopify storefronts. Captures annotated screenshots and creates GitHub issues with full context.
 
@@ -20,8 +20,8 @@ Chrome extension for reporting visual issues on Shopify storefronts. Captures an
 
 **No coding required** — just download, unzip, and load in Chrome.
 
-1. **Download** the latest release:  
-   👉 [apa-coworker-extension.zip](https://github.com/askphill/apa-coworker/releases/latest/download/apa-coworker-extension.zip)
+1. **Download** the latest release:
+   [coworker-extension.zip](https://github.com/N-O-P-E/coworker/releases/latest/download/coworker-extension.zip)
 
 2. **Unzip** the downloaded file
 
@@ -29,16 +29,16 @@ Chrome extension for reporting visual issues on Shopify storefronts. Captures an
    - Open Chrome and go to `chrome://extensions`
    - Enable **Developer mode** (toggle in the top-right corner)
    - Click **Load unpacked**
-   - Select the unzipped `apa-coworker-extension` folder
+   - Select the unzipped `coworker-extension` folder
 
 4. **Configure:**
-   - Click the APA Coworker icon in your toolbar
-   - Click the ⚙️ gear icon to open **Settings**
+   - Click the Coworker icon in your toolbar
+   - Click the gear icon to open **Settings**
    - Add your **GitHub Personal Access Token**:
      - Go to [github.com/settings/tokens/new](https://github.com/settings/tokens/new)
      - Select the `repo` scope
      - Generate and paste the token, then click **Validate**
-   - Add one or more **repositories** in `owner/repo` format (e.g. `askphill/apa-base`)
+   - Add one or more **repositories** in `owner/repo` format (e.g. `your-org/your-repo`)
 
 Done! You're ready to report issues.
 
@@ -47,7 +47,7 @@ Done! You're ready to report issues.
 ## Usage
 
 1. Navigate to the Shopify page where you want to report an issue
-2. Click the APA Coworker icon and select a target repo
+2. Click the Coworker icon and select a target repo
 3. Click **Report Issue**
 4. Draw a region on the page to highlight the problem area
 5. Use the annotation tools to add context
@@ -71,8 +71,8 @@ For contributors who want to build from source.
 ### Build from source
 
 ```bash
-git clone https://github.com/askphill/apa-coworker.git
-cd apa-coworker
+git clone https://github.com/N-O-P-E/coworker.git
+cd coworker
 pnpm install
 pnpm build
 ```
@@ -123,4 +123,4 @@ packages/
 
 ## Distribution
 
-Build and share the `dist/` folder, or use `pnpm zip` to create `apa-coworker-extension.zip` for easy distribution.
+Build and share the `dist/` folder, or use `pnpm zip` to create `coworker-extension.zip` for easy distribution.
