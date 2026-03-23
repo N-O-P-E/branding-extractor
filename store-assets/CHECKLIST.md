@@ -45,9 +45,9 @@ Chrome Web Store requires **1-5 screenshots** (1280x800 or 640x400).
 
 ## 🔗 URLs Needed
 
-- **Privacy policy URL**: Host `privacy-policy.md` somewhere (GitHub Pages, studio-nope.com, or raw GitHub)
-- **Support URL** (optional): GitHub issues page
-- **Website** (optional): studio-nope.com
+- **Privacy policy URL**: `https://www.studionope.nl/vgr-policy`
+- **Support URL**: `https://github.com/N-O-P-E/visual-github-reporter/issues`
+- **Website**: `https://www.studionope.nl`
 
 ## 🚀 Publishing Steps
 
