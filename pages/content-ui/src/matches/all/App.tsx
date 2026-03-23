@@ -873,8 +873,7 @@ const App = () => {
       setHtmlSnippets(prev => [...prev, html]);
       actionHistory.current.push('selection');
 
-      // Store element info for display
-      const tag = el.tagName.toLowerCase();
+      // Store element info for display (reuses `tag` from above)
       const elId = el.id ? `#${el.id}` : '';
       const classes = [...el.classList]
         .slice(0, 3)
