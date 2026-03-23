@@ -2,13 +2,14 @@ import CreateIssueView from './views/CreateIssueView';
 import HomeView from './views/HomeView';
 import SetupView from './views/SetupView';
 import { useState, useEffect } from 'react';
-import type { CaptureCompleteMessage } from '@extension/shared';
+import type { BrowserMetadata, CaptureCompleteMessage } from '@extension/shared';
 
 type View = 'home' | 'setup' | 'create-issue';
 
 export default function SidePanel() {
   const [view, setView] = useState<View>('home');
   const [captureData, setCaptureData] = useState<CaptureCompleteMessage['payload'] | null>(null);
+  const [browserMetadata, setBrowserMetadata] = useState<BrowserMetadata | null>(null);
 
   useEffect(() => {
     chrome.storage.sync.get('githubPat', ({ githubPat }) => {
@@ -25,7 +26,12 @@ export default function SidePanel() {
       }
       // When overlay opens (tool activated), show the create-issue form
       if (message.type === 'OVERLAY_OPENED') {
+        setBrowserMetadata(null);
         setView('create-issue');
+      }
+      // Browser metadata from content-UI
+      if (message.type === 'BROWSER_METADATA' && message.payload) {
+        setBrowserMetadata(message.payload as unknown as BrowserMetadata);
       }
       // When overlay is closed (dismissed without submitting), go back to home
       if (message.type === 'TOOL_SWITCHED' && (message as { payload?: { tool: string } }).payload?.tool === '') {
@@ -45,6 +51,7 @@ export default function SidePanel() {
         {view === 'create-issue' && (
           <CreateIssueView
             captureData={captureData}
+            browserMetadata={browserMetadata}
             onBack={() => {
               setView('home');
               // Dismiss the overlay on the page

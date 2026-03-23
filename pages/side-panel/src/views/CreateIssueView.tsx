@@ -16,6 +16,7 @@ interface CaptureData {
 
 interface CreateIssueViewProps {
   captureData: CaptureData | null;
+  browserMetadata: BrowserMetadata | null;
   onBack: () => void;
   onSuccess: () => void;
 }
@@ -31,7 +32,7 @@ const colors = {
   error: '#f87171',
 } as const;
 
-export default function CreateIssueView({ captureData, onBack, onSuccess }: CreateIssueViewProps) {
+export default function CreateIssueView({ captureData, browserMetadata, onBack, onSuccess }: CreateIssueViewProps) {
   const [description, setDescription] = useState('');
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [selectedAssignee, setSelectedAssignee] = useState('');
@@ -364,6 +365,90 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
               }}>
               Retry
             </button>
+          </div>
+        )}
+
+        {/* Browser & Environment info */}
+        {browserMetadata && (
+          <div
+            style={{
+              marginTop: 16,
+              padding: '12px 14px',
+              background: 'rgba(148,163,184,0.05)',
+              border: `1px solid ${colors.border}`,
+              borderRadius: 8,
+              fontSize: 11,
+              color: colors.textSecondary,
+              lineHeight: 1.7,
+            }}>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                {browserMetadata.browser.name} {browserMetadata.browser.version}
+              </span>
+              <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                {browserMetadata.os.name} {browserMetadata.os.version}
+              </span>
+              <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                {browserMetadata.device.screenWidth}×{browserMetadata.device.screenHeight} @
+                {browserMetadata.device.pixelRatio}x
+              </span>
+              <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                {browserMetadata.device.colorScheme}
+              </span>
+            </div>
+            {browserMetadata.shopify && (
+              <div
+                style={{
+                  marginTop: 8,
+                  paddingTop: 8,
+                  borderTop: `1px solid ${colors.border}`,
+                  display: 'flex',
+                  gap: 6,
+                  flexWrap: 'wrap',
+                }}>
+                <span
+                  style={{ background: 'rgba(139,92,246,0.1)', color: '#c4b5fd', padding: '2px 6px', borderRadius: 4 }}>
+                  {browserMetadata.shopify.storeName}
+                </span>
+                <span
+                  style={{ background: 'rgba(139,92,246,0.1)', color: '#c4b5fd', padding: '2px 6px', borderRadius: 4 }}>
+                  {browserMetadata.shopify.environment}
+                </span>
+                {browserMetadata.shopify.template && (
+                  <span
+                    style={{
+                      background: 'rgba(139,92,246,0.1)',
+                      color: '#c4b5fd',
+                      padding: '2px 6px',
+                      borderRadius: 4,
+                    }}>
+                    {browserMetadata.shopify.template}
+                  </span>
+                )}
+                {browserMetadata.shopify.themeName && (
+                  <span
+                    style={{
+                      background: 'rgba(139,92,246,0.1)',
+                      color: '#c4b5fd',
+                      padding: '2px 6px',
+                      borderRadius: 4,
+                    }}>
+                    {browserMetadata.shopify.themeName}
+                  </span>
+                )}
+                {browserMetadata.shopify.themeId && (
+                  <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                    Theme #{browserMetadata.shopify.themeId}
+                  </span>
+                )}
+              </div>
+            )}
+            {browserMetadata.consoleErrors.length > 0 && (
+              <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${colors.border}`, color: '#f87171' }}>
+                {browserMetadata.consoleErrors.length} console{' '}
+                {browserMetadata.consoleErrors.length === 1 ? 'error' : 'errors'} detected
+              </div>
+            )}
           </div>
         )}
 

@@ -285,6 +285,11 @@ const App = () => {
         setHtmlSnippets([]);
         actionHistory.current = [];
         setState('selecting');
+
+        // Send browser metadata to side panel immediately
+        collectBrowserMetadata().then(metadata => {
+          chrome.runtime.sendMessage({ type: 'BROWSER_METADATA', payload: metadata });
+        });
       }
       if (message.type === 'ACTIVATE_TOOL') {
         setActiveTool(message.payload.tool);
