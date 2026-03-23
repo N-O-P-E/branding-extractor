@@ -158,6 +158,9 @@ const App = () => {
     setSelections([]);
     setHtmlSnippets([]);
     actionHistory.current = [];
+
+    // Notify side panel that overlay is closed so buttons reset
+    chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: '' } });
   }, []);
 
   useEffect(() => {

@@ -39,8 +39,9 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
   // Listen for tool switch messages from content-UI
   useEffect(() => {
     const listener = (message: { type: string; payload?: { tool: string } }) => {
-      if (message.type === 'TOOL_SWITCHED' && message.payload?.tool) {
-        setActiveTool(message.payload.tool as 'select' | 'pencil' | 'inspect');
+      if (message.type === 'TOOL_SWITCHED') {
+        const tool = message.payload?.tool;
+        setActiveTool(tool ? (tool as 'select' | 'pencil' | 'inspect') : null);
       }
     };
     chrome.runtime.onMessage.addListener(listener);
