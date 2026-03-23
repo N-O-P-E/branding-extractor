@@ -24,7 +24,7 @@ export default function SidePanel() {
         // Don't switch view — create-issue view is already showing
       }
       // When overlay opens (tool activated), show the create-issue form
-      if (message.type === 'SHOW_SCREENSHOT') {
+      if (message.type === 'OVERLAY_OPENED') {
         setView('create-issue');
       }
       // When overlay is closed (dismissed without submitting), go back to home

@@ -74,6 +74,8 @@ const handleStartReport = async (tool: 'select' | 'pencil', sendResponse: (respo
     };
 
     await chrome.tabs.sendMessage(tab.id, payload);
+    // Also notify side panel that overlay is opening
+    chrome.runtime.sendMessage({ type: 'OVERLAY_OPENED' }).catch(() => {});
     sendResponse({ success: true });
   } catch (err) {
     sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
