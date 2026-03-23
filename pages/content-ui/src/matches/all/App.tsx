@@ -16,6 +16,7 @@ interface Comment {
   y: number;
   text: string;
   color: string;
+  order: number;
 }
 
 interface Selection extends Region {
@@ -30,6 +31,7 @@ interface PlacedImage {
   dataUrl: string;
   naturalWidth: number;
   naturalHeight: number;
+  order: number;
 }
 
 type CanvasSubTool = 'draw' | 'text' | 'image';
@@ -189,6 +191,7 @@ const App = () => {
   const backdropRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<OverlayState>('idle');
   const screenshotUrlRef = useRef<string | null>(null);
+  const orderCounter = useRef(0);
 
   const dismiss = useCallback(() => {
     setState('idle');
@@ -213,6 +216,7 @@ const App = () => {
     setDraggingImageIndex(null);
     setResizingImageIndex(null);
     actionHistory.current = [];
+    orderCounter.current = 0;
 
     // Notify side panel that overlay is closed so buttons reset
     chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: '' } });
@@ -409,6 +413,7 @@ const App = () => {
           dataUrl,
           naturalWidth: img.naturalWidth,
           naturalHeight: img.naturalHeight,
+          order: ++orderCounter.current,
         },
       ]);
       actionHistory.current.push('image');
@@ -1206,7 +1211,7 @@ const App = () => {
                     height: pi.height,
                     cursor: draggingImageIndex === i ? 'grabbing' : 'grab',
                     userSelect: 'none',
-                    zIndex: draggingImageIndex === i ? 5 : 2,
+                    zIndex: draggingImageIndex === i ? 9999 : pi.order + 10,
                     border: '1px solid rgba(255,255,255,0.4)',
                     borderRadius: 4,
                     overflow: 'hidden',
@@ -1271,7 +1276,7 @@ const App = () => {
                     maxWidth: 300,
                     cursor: draggingCommentIndex === i ? 'grabbing' : 'grab',
                     userSelect: 'none',
-                    zIndex: draggingCommentIndex === i ? 5 : 1,
+                    zIndex: draggingCommentIndex === i ? 9999 : comment.order + 10,
                   }}>
                   {comment.text}
                 </div>
@@ -1320,6 +1325,7 @@ const App = () => {
                             y: editingComment.y,
                             text: val,
                             color: strokeColor,
+                            order: ++orderCounter.current,
                           },
                         ]);
                         actionHistory.current.push('comment');
