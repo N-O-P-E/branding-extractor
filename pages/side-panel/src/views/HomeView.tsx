@@ -91,7 +91,7 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
   };
 
   const handleToolClick = (tool: 'select' | 'pencil' | 'inspect') => {
-    setActiveTool(prev => (prev === tool ? null : tool));
+    setActiveTool(tool);
     chrome.runtime.sendMessage(
       { type: 'ACTIVATE_TOOL', payload: { tool } },
       (response: { success: boolean; error?: string }) => {
