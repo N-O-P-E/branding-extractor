@@ -1,126 +1,105 @@
 # Visual Issue Reporter
 
-Chrome extension for reporting visual issues on Shopify storefronts. Captures annotated screenshots and creates GitHub issues with full context.
+Chrome extension for reporting visual issues on Shopify storefronts. Captures annotated screenshots and creates GitHub issues with full browser and Shopify context.
+
+By [Studio N.O.P.E.](https://studionope.nl)
 
 ## Features
 
-- Screenshot capture with region selection and annotation
-- Creates GitHub issues with screenshot, description, environment info, and HTML snippet
-- Issues panel: see all reported issues for the current page
-- Detects environment (live, preview, editor, local) and Shopify template
-- Screenshots stored as GitHub Release Assets
-- Inline settings in popup (GitHub token + repo management)
-- Tag `@claude` on any issue to get an AI-powered implementation plan
+- **Screenshot & annotate** — capture any region, draw, add text, place images
+- **Three tools** — Select (region), Canvas (annotate), Inspect (pick DOM elements)
+- **GitHub issues** — creates issues with screenshot, environment info, HTML snippet, and console errors
+- **Shopify-aware** — detects store, theme, template, and environment (live/preview/editor/local)
+- **Side panel UI** — repo selector, label/assignee pickers, page issues list
+- **AI analysis** — tag `@claude` on any issue for an implementation plan
 
 ---
 
 ## Installation
 
-### Download and Install (Recommended)
+### Chrome Web Store
 
-**No coding required** — just download, unzip, and load in Chrome.
+Install from the [Chrome Web Store](https://chromewebstore.google.com) (search "Visual Issue Reporter").
 
-1. **Download** the latest release:
-   [visual-issue-reporter.zip](https://github.com/N-O-P-E/visual-issue-reporter/releases/latest/download/visual-issue-reporter.zip)
+### Manual install
 
-2. **Unzip** the downloaded file
+1. Download [visual-issue-reporter.zip](https://github.com/N-O-P-E/visual-issue-reporter/releases/latest/download/visual-issue-reporter.zip)
+2. Unzip the file
+3. Go to `chrome://extensions`, enable **Developer mode**
+4. Click **Load unpacked** and select the unzipped folder
 
-3. **Load in Chrome:**
-   - Open Chrome and go to `chrome://extensions`
-   - Enable **Developer mode** (toggle in the top-right corner)
-   - Click **Load unpacked**
-   - Select the unzipped folder
+### Setup
 
-4. **Configure:**
-   - Click the Visual Issue Reporter icon in your toolbar
-   - Click the gear icon to open **Settings**
-   - Add your **GitHub Personal Access Token**:
-     - Go to [github.com/settings/tokens/new](https://github.com/settings/tokens/new)
-     - Select the `repo` scope
-     - Generate and paste the token, then click **Validate**
-   - Add one or more **repositories** in `owner/repo` format (e.g. `your-org/your-repo`)
-
-Done! You're ready to report issues.
+1. Click the extension icon to open the side panel
+2. Add your **GitHub Personal Access Token** ([create one](https://github.com/settings/tokens/new) with `repo` scope)
+3. Search and add repositories to report issues to
 
 ---
 
 ## Usage
 
-1. Navigate to the Shopify page where you want to report an issue
-2. Click the Visual Issue Reporter icon and select a target repo
-3. Click **Report Issue**
-4. Draw a region on the page to highlight the problem area
-5. Use the annotation tools to add context
-6. Fill in the issue form with a title and description
-7. Submit — the issue is created on GitHub with the screenshot and details
+1. Navigate to the page with the issue
+2. Select a target repo in the side panel
+3. Pick a tool — **Select** to highlight a region, **Canvas** to draw/annotate, or **Inspect** to pick a DOM element
+4. Annotate the screenshot with drawing, text, or images
+5. Fill in a title and description, pick labels and assignee
+6. Submit — the issue is created on GitHub with the annotated screenshot and full context
 
-To view existing issues for the current page, open the popup and check the issues list. Click **Show on page** to see them overlaid.
+Open the side panel to see all reported issues for the current page. Click **Show on page** to overlay them.
 
 ---
 
-## Development Setup
-
-For contributors who want to build from source.
+## Development
 
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) >= 22.15.1
-- [pnpm](https://pnpm.io/) 10.x (`corepack enable && corepack prepare pnpm@latest --activate`)
+- [pnpm](https://pnpm.io/) 10.x
 - Google Chrome
 
-### Build from source
+### Getting started
 
 ```bash
 git clone https://github.com/N-O-P-E/visual-issue-reporter.git
 cd visual-issue-reporter
 pnpm install
-pnpm build
+pnpm dev
 ```
 
-Then load the `dist/` folder as an unpacked extension (see step 3 above).
+Load `dist/` as an unpacked extension in `chrome://extensions` (Developer mode). Changes hot-reload.
 
-### Development commands
+### Commands
 
 ```bash
-pnpm dev       # Development build with HMR
-pnpm build     # Production build
-pnpm zip       # Build and zip for distribution
-pnpm lint      # Lint all packages
-pnpm format    # Format all packages
+pnpm dev           # development build with HMR
+pnpm build         # production build
+pnpm zip           # build + zip for distribution
+pnpm lint          # eslint
+pnpm format        # prettier
+pnpm type-check    # tsc across all workspaces
+pnpm e2e           # end-to-end tests
 ```
-
-After running `pnpm dev`, load the `dist/` folder as an unpacked extension. Changes will hot-reload.
 
 ### Project structure
 
 ```
-chrome-extension/    Chrome extension manifest and background service worker
+chrome-extension/       manifest, background service worker
 pages/
-  popup/             Extension popup (main UI + inline settings)
-  content-ui/        Content script UI (screenshot overlay, issue form, issues panel)
-  content/           Content script (DOM inspection for HTML snippets)
+  side-panel/           side panel UI (repo selector, issue form, settings)
+  content-ui/           page overlay (screenshot, annotation canvas, issues panel)
+  content/              content script (DOM inspection, main-world injection)
+  popup/                extension popup
 packages/
-  shared/            Shared types and utilities
-  ui/                Tailwind config helper
-  i18n/              Locale files (en)
-  env/               Environment variables
-  hmr/               Hot module reload for development
-  dev-utils/         Manifest parser
-  vite-config/       Shared Vite configuration
-  tailwindcss-config/ Shared Tailwind configuration
+  shared/               message types, browser metadata, console capture, utilities
+  ui/                   Tailwind config helper
+  i18n/                 locale files
+  env/                  environment flags
+  hmr/                  hot module reload
+  vite-config/          shared Vite setup
 ```
-
-### Key files
-
-| File | Purpose |
-|------|---------|
-| `chrome-extension/src/background/index.ts` | Background service worker: issue creation, screenshot upload, page issue fetching |
-| `pages/content-ui/src/matches/all/App.tsx` | Content script UI: screenshot overlay, annotation, issue form, issues panel |
-| `pages/popup/src/Popup.tsx` | Popup: repo selector, issue list, inline settings |
-| `packages/shared/lib/messages.ts` | Shared message types between background, popup, and content scripts |
 
 ---
 
-## Distribution
+## License
 
-Build and share the `dist/` folder, or use `pnpm zip` to create `visual-issue-reporter.zip` for easy distribution.
+MIT
