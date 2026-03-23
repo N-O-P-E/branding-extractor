@@ -110,6 +110,11 @@ export interface ShowIssuesPanelMessage {
   payload: { issues: PageIssue[] };
 }
 
+export interface ToolSwitchedMessage {
+  type: 'TOOL_SWITCHED';
+  payload: { tool: 'select' | 'pencil' | 'inspect' };
+}
+
 export interface FetchReposMessage {
   type: 'FETCH_REPOS';
 }

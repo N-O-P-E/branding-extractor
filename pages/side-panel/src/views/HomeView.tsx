@@ -36,6 +36,17 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
     });
   }, []);
 
+  // Listen for tool switch messages from content-UI
+  useEffect(() => {
+    const listener = (message: { type: string; payload?: { tool: string } }) => {
+      if (message.type === 'TOOL_SWITCHED' && message.payload?.tool) {
+        setActiveTool(message.payload.tool as 'select' | 'pencil' | 'inspect');
+      }
+    };
+    chrome.runtime.onMessage.addListener(listener);
+    return () => chrome.runtime.onMessage.removeListener(listener);
+  }, []);
+
   // Fetch issues when repo changes or on mount
   const fetchIssues = useCallback(async () => {
     if (!selectedRepo) return;

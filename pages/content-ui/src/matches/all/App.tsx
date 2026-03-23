@@ -132,6 +132,7 @@ const App = () => {
   const inspectHoveredEl = useRef<Element | null>(null);
 
   const backdropRef = useRef<HTMLDivElement>(null);
+  const overlayActiveRef = useRef(false);
 
   const dismiss = useCallback(() => {
     setState('idle');
@@ -158,6 +159,13 @@ const App = () => {
     const listener = (message: ShowScreenshotMessage | ActivateToolMessage) => {
       if (message.type === 'SHOW_SCREENSHOT') {
         const tool = message.payload.tool ?? 'select';
+
+        // If overlay is already active, just switch tool — don't reset the session
+        if (overlayActiveRef.current) {
+          setActiveTool(tool);
+          return;
+        }
+
         setActiveTool(tool);
 
         if (tool === 'inspect') {
@@ -448,6 +456,9 @@ const App = () => {
       // Switch to canvas mode so user can add more annotations
       setActiveTool('pencil');
       forceRender(n => n + 1);
+
+      // Notify side panel to switch its button state to canvas
+      chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: 'pencil' } });
     },
     [screenshotUrl],
   );
@@ -578,6 +589,9 @@ const App = () => {
       inspectHoveredEl.current = null;
       setActiveTool('pencil');
       setState('selecting');
+
+      // Notify side panel to switch its button state to canvas
+      chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: 'pencil' } });
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -628,6 +642,7 @@ const App = () => {
   );
 
   const overlayActive = state !== 'idle' && screenshotUrl;
+  overlayActiveRef.current = !!overlayActive;
 
   const dragStart = dragStartRef.current;
   const dragCurrent = dragCurrentRef.current;
