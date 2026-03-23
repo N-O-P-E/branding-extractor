@@ -469,7 +469,7 @@ export default function SetupView({ onDone }: SetupViewProps) {
         </p>
         <div style={{ display: 'flex', gap: 8 }}>
           <a
-            href="https://github.com/N-O-P-E/coworker/issues"
+            href="https://github.com/N-O-P-E/visual-github-reporter/issues"
             target="_blank"
             rel="noopener noreferrer"
             style={{
@@ -487,7 +487,7 @@ export default function SetupView({ onDone }: SetupViewProps) {
             Suggest a feature
           </a>
           <a
-            href="https://github.com/N-O-P-E/coworker"
+            href="https://github.com/N-O-P-E/visual-github-reporter"
             target="_blank"
             rel="noopener noreferrer"
             style={{
