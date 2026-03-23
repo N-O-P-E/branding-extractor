@@ -40,13 +40,30 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [successUrl, setSuccessUrl] = useState('');
-  const [metadataOpen, setMetadataOpen] = useState(false);
+
+  const [liveBrowserMetadata, setLiveBrowserMetadata] = useState<BrowserMetadata | null>(browserMetadata);
 
   useEffect(() => {
     chrome.storage.sync.get('selectedRepo').then(result => {
       if (result.selectedRepo) setSelectedRepo(result.selectedRepo as string);
     });
   }, []);
+
+  // Listen for BROWSER_METADATA directly in this component
+  useEffect(() => {
+    const listener = (message: { type: string; payload?: BrowserMetadata }) => {
+      if (message.type === 'BROWSER_METADATA' && message.payload) {
+        setLiveBrowserMetadata(message.payload);
+      }
+    };
+    chrome.runtime.onMessage.addListener(listener);
+    return () => chrome.runtime.onMessage.removeListener(listener);
+  }, []);
+
+  // Update when prop changes
+  useEffect(() => {
+    if (browserMetadata) setLiveBrowserMetadata(browserMetadata);
+  }, [browserMetadata]);
 
   // Keep a ref to the latest captureData for the async submit flow
   const captureDataRef = useRef(captureData);
@@ -369,7 +386,7 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
         )}
 
         {/* Browser & Environment info */}
-        {browserMetadata && (
+        {liveBrowserMetadata && (
           <div
             style={{
               marginTop: 12,
@@ -383,20 +400,20 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
             }}>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
-                {browserMetadata.browser.name} {browserMetadata.browser.version}
+                {liveBrowserMetadata.browser.name} {liveBrowserMetadata.browser.version}
               </span>
               <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
-                {browserMetadata.os.name} {browserMetadata.os.version}
+                {liveBrowserMetadata.os.name} {liveBrowserMetadata.os.version}
               </span>
               <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
-                {browserMetadata.device.screenWidth}×{browserMetadata.device.screenHeight} @
-                {browserMetadata.device.pixelRatio}x
+                {liveBrowserMetadata.device.screenWidth}×{liveBrowserMetadata.device.screenHeight} @
+                {liveBrowserMetadata.device.pixelRatio}x
               </span>
               <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
-                {browserMetadata.device.colorScheme}
+                {liveBrowserMetadata.device.colorScheme}
               </span>
             </div>
-            {browserMetadata.shopify && (
+            {liveBrowserMetadata.shopify && (
               <div
                 style={{
                   marginTop: 8,
@@ -408,13 +425,13 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
                 }}>
                 <span
                   style={{ background: 'rgba(139,92,246,0.1)', color: '#c4b5fd', padding: '2px 6px', borderRadius: 4 }}>
-                  {browserMetadata.shopify.storeName}
+                  {liveBrowserMetadata.shopify.storeName}
                 </span>
                 <span
                   style={{ background: 'rgba(139,92,246,0.1)', color: '#c4b5fd', padding: '2px 6px', borderRadius: 4 }}>
-                  {browserMetadata.shopify.environment}
+                  {liveBrowserMetadata.shopify.environment}
                 </span>
-                {browserMetadata.shopify.template && (
+                {liveBrowserMetadata.shopify.template && (
                   <span
                     style={{
                       background: 'rgba(139,92,246,0.1)',
@@ -422,10 +439,10 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
                       padding: '2px 6px',
                       borderRadius: 4,
                     }}>
-                    {browserMetadata.shopify.template}
+                    {liveBrowserMetadata.shopify.template}
                   </span>
                 )}
-                {browserMetadata.shopify.themeName && (
+                {liveBrowserMetadata.shopify.themeName && (
                   <span
                     style={{
                       background: 'rgba(139,92,246,0.1)',
@@ -433,20 +450,20 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
                       padding: '2px 6px',
                       borderRadius: 4,
                     }}>
-                    {browserMetadata.shopify.themeName}
+                    {liveBrowserMetadata.shopify.themeName}
                   </span>
                 )}
-                {browserMetadata.shopify.themeId && (
+                {liveBrowserMetadata.shopify.themeId && (
                   <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
-                    Theme #{browserMetadata.shopify.themeId}
+                    Theme #{liveBrowserMetadata.shopify.themeId}
                   </span>
                 )}
               </div>
             )}
-            {browserMetadata.consoleErrors.length > 0 && (
+            {liveBrowserMetadata.consoleErrors.length > 0 && (
               <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${colors.border}`, color: '#f87171' }}>
-                {browserMetadata.consoleErrors.length} console{' '}
-                {browserMetadata.consoleErrors.length === 1 ? 'error' : 'errors'} detected
+                {liveBrowserMetadata.consoleErrors.length} console{' '}
+                {liveBrowserMetadata.consoleErrors.length === 1 ? 'error' : 'errors'} detected
               </div>
             )}
           </div>
@@ -476,138 +493,6 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
 
         {/* Shortcut hint */}
         <p style={{ marginTop: 8, fontSize: 12, color: colors.textMuted, textAlign: 'center' }}>{'\u2318'} + Enter</p>
-
-        {/* Metadata accordion */}
-        {captureData?.browserMetadata && (
-          <div style={{ marginTop: 16 }}>
-            <button
-              onClick={() => setMetadataOpen(prev => !prev)}
-              style={{
-                width: '100%',
-                background: 'none',
-                border: `1px solid ${colors.border}`,
-                borderRadius: metadataOpen ? '8px 8px 0 0' : 8,
-                padding: '10px 14px',
-                color: colors.textSecondary,
-                fontSize: 12,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                transition: 'all 0.15s',
-              }}>
-              <span>Browser & Environment</span>
-              <span
-                style={{ transform: metadataOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-                &#9660;
-              </span>
-            </button>
-            {metadataOpen && (
-              <div
-                style={{
-                  padding: '12px 14px',
-                  fontSize: 11,
-                  color: colors.textSecondary,
-                  lineHeight: 1.8,
-                  borderLeft: `1px solid ${colors.border}`,
-                  borderRight: `1px solid ${colors.border}`,
-                  borderBottom: `1px solid ${colors.border}`,
-                  borderRadius: '0 0 8px 8px',
-                }}>
-                <div>
-                  <strong>Browser:</strong> {captureData?.browserMetadata.browser.name}{' '}
-                  {captureData?.browserMetadata.browser.version} ({captureData?.browserMetadata.browser.engine})
-                </div>
-                <div>
-                  <strong>OS:</strong> {captureData?.browserMetadata.os.name} {captureData?.browserMetadata.os.version}
-                </div>
-                <div>
-                  <strong>Device:</strong> {captureData?.browserMetadata.device.type} (
-                  {captureData?.browserMetadata.device.screenWidth}x{captureData?.browserMetadata.device.screenHeight} @
-                  {captureData?.browserMetadata.device.pixelRatio}x)
-                </div>
-                <div>
-                  <strong>Viewport:</strong> {captureData?.viewportWidth}x{captureData?.viewportHeight}
-                </div>
-                <div>
-                  <strong>Zoom:</strong> {captureData?.browserMetadata.page.zoomLevel}%
-                </div>
-                <div>
-                  <strong>Color Scheme:</strong> {captureData?.browserMetadata.device.colorScheme}
-                </div>
-                <div>
-                  <strong>Page Title:</strong> {captureData?.browserMetadata.page.title}
-                </div>
-                <div>
-                  <strong>Language:</strong> {captureData?.browserMetadata.page.language}
-                </div>
-                <div>
-                  <strong>Connection:</strong> {captureData?.browserMetadata.network.online ? 'online' : 'offline'}
-                  {captureData?.browserMetadata.network.connectionType
-                    ? ` (${captureData?.browserMetadata.network.connectionType})`
-                    : ''}
-                </div>
-                {captureData?.browserMetadata.shopify && (
-                  <>
-                    <div style={{ marginTop: 8, fontWeight: 600, color: colors.textPrimary }}>Shopify</div>
-                    <div>
-                      <strong>Store:</strong> {captureData?.browserMetadata.shopify.storeName} (
-                      {captureData?.browserMetadata.shopify.storeHandle})
-                    </div>
-                    {captureData?.browserMetadata.shopify.themeName && (
-                      <div>
-                        <strong>Theme:</strong> {captureData?.browserMetadata.shopify.themeName}
-                      </div>
-                    )}
-                    {captureData?.browserMetadata.shopify.themeId && (
-                      <div>
-                        <strong>Theme ID:</strong> {captureData?.browserMetadata.shopify.themeId}
-                      </div>
-                    )}
-                    <div>
-                      <strong>Environment:</strong> {captureData?.browserMetadata.shopify.environment}
-                    </div>
-                    {captureData?.browserMetadata.shopify.buildVersion && (
-                      <div>
-                        <strong>Build:</strong> {captureData?.browserMetadata.shopify.buildVersion}
-                      </div>
-                    )}
-                    {captureData?.browserMetadata.shopify.locale && (
-                      <div>
-                        <strong>Locale:</strong> {captureData?.browserMetadata.shopify.locale}
-                      </div>
-                    )}
-                  </>
-                )}
-                {captureData?.browserMetadata.consoleErrors.length > 0 && (
-                  <>
-                    <div style={{ marginTop: 8, fontWeight: 600, color: colors.textPrimary }}>
-                      Console Errors ({captureData?.browserMetadata.consoleErrors.length})
-                    </div>
-                    {captureData?.browserMetadata.consoleErrors.slice(0, 10).map((err, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          fontFamily: 'monospace',
-                          fontSize: 10,
-                          color: err.level === 'error' ? '#f87171' : '#fbbf24',
-                          whiteSpace: 'pre-wrap',
-                          wordBreak: 'break-all',
-                        }}>
-                        [{err.level}] {new Date(err.timestamp).toLocaleTimeString()} — {err.message}
-                      </div>
-                    ))}
-                    {captureData?.browserMetadata.consoleErrors.length > 10 && (
-                      <div style={{ fontSize: 10, color: colors.textMuted }}>
-                        ...and {captureData?.browserMetadata.consoleErrors.length - 10} more
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );
