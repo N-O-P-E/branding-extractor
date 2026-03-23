@@ -107,18 +107,117 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: 20,
-          gap: 12,
+          padding: '40px 32px',
+          textAlign: 'center',
         }}>
-        <div style={{ fontSize: 40 }}>&#10003;</div>
-        <p style={{ fontSize: 16, color: colors.success, margin: 0, fontWeight: 500 }}>Issue created!</p>
+        {/* Icon */}
+        <div
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: 16,
+            background: 'rgba(139,92,246,0.12)',
+            border: '1px solid rgba(139,92,246,0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: 20,
+          }}>
+          <svg
+            width="32"
+            height="32"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            style={{ color: '#a78bfa' }}>
+            <path
+              d="M10.7998 14.0147L8.78539 13.4853L8.28179 11.8971L6.77099 11.3676L6.53209 10.3631C6.37692 9.71056 5.79399 9.25 5.12329 9.25C4.4703 9.25 3.9 9.68951 3.83879 10.3396C3.7639 11.1349 3.7654 12.2732 4.13328 13.4372C4.85399 15.7174 7.73342 18.25 7.73342 18.25"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M9.41183 21.2998H17.8574C23.1531 14.1426 19.3131 0.0716867 9.73622 3.26372L10.6287 5.39186L10.233 6.69549L11.399 7.65333L10.9023 9.67504L11.8958 11.1912L11.399 14.7292L7.75 18.1078C7.75 20.236 9.41183 21.2998 9.41183 21.2998Z"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M6.89045 3.53518L6.40769 2.28C6.34281 2.11131 6.18074 2 6 2C5.81926 2 5.65719 2.11131 5.59231 2.28L5.10955 3.53518C5.00797 3.79927 4.79927 4.00797 4.53518 4.10955L3.28 4.59231C3.11131 4.65719 3 4.81926 3 5C3 5.18074 3.11131 5.34281 3.28 5.40769L4.53518 5.89045C4.79927 5.99203 5.00797 6.20073 5.10955 6.46482L5.59231 7.72C5.65719 7.88869 5.81926 8 6 8C6.18074 8 6.34281 7.88869 6.40769 7.72L6.89045 6.46482C6.99203 6.20073 7.20073 5.99203 7.46482 5.89045L8.72 5.40769C8.88869 5.34281 9 5.18074 9 5C9 4.81926 8.88869 4.65719 8.72 4.59231L7.46482 4.10955C7.20073 4.00797 6.99203 3.79927 6.89045 3.53518Z"
+              fill="currentColor"
+            />
+          </svg>
+        </div>
+
+        {/* Title */}
+        <h2
+          style={{
+            fontSize: 22,
+            margin: '0 0 8px',
+            color: colors.textPrimary,
+          }}>
+          Issue reported
+        </h2>
+
+        {/* Subtitle */}
+        <p
+          style={{
+            fontSize: 13,
+            color: 'rgba(241,245,249,0.45)',
+            margin: '0 0 24px',
+            lineHeight: 1.5,
+            maxWidth: 260,
+          }}>
+          Now use your favorite claw to fix this issue properly.
+        </p>
+
+        {/* View on GitHub button */}
         <a
           href={successUrl}
           target="_blank"
           rel="noopener noreferrer"
-          style={{ fontSize: 13, color: '#a78bfa', textDecoration: 'underline' }}>
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '10px 20px',
+            background: 'linear-gradient(135deg, #7c3aed, #9333ea)',
+            color: '#fff',
+            borderRadius: 10,
+            fontSize: 14,
+            fontWeight: 600,
+            textDecoration: 'none',
+            transition: 'all 0.15s',
+            boxShadow: '0 4px 16px rgba(139,92,246,0.3)',
+          }}>
           View on GitHub
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M9.75027 5.52371L10.7168 4.55722C13.1264 2.14759 17.0332 2.14759 19.4428 4.55722C21.8524 6.96684 21.8524 10.8736 19.4428 13.2832L18.4742 14.2519M5.52886 9.74513L4.55722 10.7168C2.14759 13.1264 2.1476 17.0332 4.55722 19.4428C6.96684 21.8524 10.8736 21.8524 13.2832 19.4428L14.2478 18.4782M9.5 14.5L14.5 9.5"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+          </svg>
         </a>
+
+        {/* Back link */}
+        <button
+          onClick={onSuccess}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'rgba(241,245,249,0.3)',
+            fontSize: 12,
+            cursor: 'pointer',
+            marginTop: 16,
+            padding: 0,
+            transition: 'all 0.15s',
+          }}>
+          Back to home
+        </button>
       </div>
     );
   }
