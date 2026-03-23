@@ -1,4 +1,4 @@
-# Contributing to Coworker
+# Contributing to Visual Issue Reporter
 
 Thanks for your interest in contributing! Here's how to get started.
 
@@ -14,8 +14,8 @@ Thanks for your interest in contributing! Here's how to get started.
 
 1. Fork and clone the repo:
    ```bash
-   git clone https://github.com/<your-username>/coworker.git
-   cd coworker
+   git clone https://github.com/<your-username>/visual-issue-reporter.git
+   cd visual-issue-reporter
    ```
 2. Install dependencies:
    ```bash
@@ -68,4 +68,4 @@ Chrome Web Store publishing is handled by maintainers and requires access to sto
 
 ## Issues
 
-Found a bug or have an idea? [Open an issue](https://github.com/N-O-P-E/coworker/issues).
+Found a bug or have an idea? [Open an issue](https://github.com/N-O-P-E/visual-issue-reporter/issues).

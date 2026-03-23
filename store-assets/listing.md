@@ -1,13 +1,13 @@
 # Chrome Web Store Listing
 
 ## Extension Name
-Visual GitHub Reporter by Studio N.O.P.E.
+Visual Issue Reporter by Studio N.O.P.E.
 
 ## Short Description (132 chars max)
 Report visual issues directly to GitHub. Capture annotated screenshots, add context, create issues — without leaving the page.
 
 ## Detailed Description
-**Visual GitHub Reporter** makes reporting visual bugs effortless.
+**Visual Issue Reporter** makes reporting visual bugs effortless.
 
 See a bug? Report it in seconds:
 1. Click the extension icon

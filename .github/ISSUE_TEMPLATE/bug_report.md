@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Report a bug in Coworker
+about: Report a bug in Visual Issue Reporter
 title: "[Bug] "
 labels: bug
 assignees: ''

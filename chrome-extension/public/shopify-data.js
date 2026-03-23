@@ -1,6 +1,6 @@
 /* eslint-disable */
 (function () {
-  document.addEventListener('coworker-request-shopify-data', function () {
+  document.addEventListener('vir-request-shopify-data', function () {
     var data = {};
     try {
       if (window.Shopify) {
@@ -21,7 +21,7 @@
       /* ignore */
     }
     document.dispatchEvent(
-      new CustomEvent('coworker-shopify-data', {
+      new CustomEvent('vir-shopify-data', {
         detail: JSON.stringify(data),
       }),
     );

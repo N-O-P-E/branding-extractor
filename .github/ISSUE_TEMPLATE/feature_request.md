@@ -1,6 +1,6 @@
 ---
 name: Feature Request
-about: Suggest a feature for Coworker
+about: Suggest a feature for Visual Issue Reporter
 title: "[Feature] "
 labels: enhancement
 assignees: ''

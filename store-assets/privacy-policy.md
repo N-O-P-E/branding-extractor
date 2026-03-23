@@ -1,12 +1,12 @@
 # Privacy Policy
 
-**Visual GitHub Reporter by Studio N.O.P.E.**
+**Visual Issue Reporter by Studio N.O.P.E.**
 
 Last updated: March 23, 2026
 
 ## Overview
 
-Visual GitHub Reporter is a browser extension that helps you report visual issues to GitHub. We take your privacy seriously and designed this extension to minimize data collection.
+Visual Issue Reporter is a browser extension that helps you report visual issues to GitHub. We take your privacy seriously and designed this extension to minimize data collection.
 
 ## Data Collection
 
@@ -63,4 +63,4 @@ For questions about this privacy policy, contact:
 ## Open Source
 
 This extension is open source. You can review the code at:
-https://github.com/N-O-P-E/visual-github-reporter
+https://github.com/N-O-P-E/visual-issue-reporter

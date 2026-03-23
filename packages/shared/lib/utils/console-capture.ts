@@ -11,8 +11,8 @@
 /** The inline script source to inject into the page's main world */
 export const CONSOLE_CAPTURE_SCRIPT = `
 (function() {
-  if (window.__coworkerConsolePatched) return;
-  window.__coworkerConsolePatched = true;
+  if (window.__virConsolePatched) return;
+  window.__virConsolePatched = true;
 
   var MAX_ENTRIES = 50;
   var MAX_MSG_LENGTH = 500;
@@ -41,8 +41,8 @@ export const CONSOLE_CAPTURE_SCRIPT = `
     return origWarn.apply(console, arguments);
   };
 
-  document.addEventListener('coworker-request-console-errors', function() {
-    document.dispatchEvent(new CustomEvent('coworker-console-errors', {
+  document.addEventListener('vir-request-console-errors', function() {
+    document.dispatchEvent(new CustomEvent('vir-console-errors', {
       detail: JSON.stringify(entries)
     }));
   });
@@ -58,7 +58,7 @@ export const getConsoleErrors = (): Promise<Array<{ level: 'error' | 'warn'; mes
 
     const handler = (event: Event) => {
       clearTimeout(timeout);
-      document.removeEventListener('coworker-console-errors', handler);
+      document.removeEventListener('vir-console-errors', handler);
       try {
         const data = JSON.parse((event as CustomEvent).detail);
         resolve(Array.isArray(data) ? data : []);
@@ -67,6 +67,6 @@ export const getConsoleErrors = (): Promise<Array<{ level: 'error' | 'warn'; mes
       }
     };
 
-    document.addEventListener('coworker-console-errors', handler);
-    document.dispatchEvent(new CustomEvent('coworker-request-console-errors'));
+    document.addEventListener('vir-console-errors', handler);
+    document.dispatchEvent(new CustomEvent('vir-request-console-errors'));
   });

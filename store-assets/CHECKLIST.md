@@ -2,7 +2,7 @@
 
 ## ✅ Ready
 
-- [x] **Extension ZIP** — `visual-github-reporter.zip` (384 KB)
+- [x] **Extension ZIP** — `visual-issue-reporter.zip` (384 KB)
 - [x] **Store listing text** — `listing.md`
 - [x] **Privacy policy** — `privacy-policy.md`
 - [x] **Permissions justification** — `permissions-justification.md`
@@ -38,7 +38,7 @@ Chrome Web Store requires **1-5 screenshots** (1280x800 or 640x400).
 
 | Field | Value |
 |-------|-------|
-| Name | Visual GitHub Reporter by Studio N.O.P.E. |
+| Name | Visual Issue Reporter by Studio N.O.P.E. |
 | Category | Developer Tools |
 | Language | English |
 | Visibility | Public |
@@ -46,7 +46,7 @@ Chrome Web Store requires **1-5 screenshots** (1280x800 or 640x400).
 ## 🔗 URLs Needed
 
 - **Privacy policy URL**: `https://www.studionope.nl/vgr-policy`
-- **Support URL**: `https://github.com/N-O-P-E/visual-github-reporter/issues`
+- **Support URL**: `https://github.com/N-O-P-E/visual-issue-reporter/issues`
 - **Website**: `https://www.studionope.nl`
 
 ## 🚀 Publishing Steps
@@ -54,7 +54,7 @@ Chrome Web Store requires **1-5 screenshots** (1280x800 or 640x400).
 1. Go to [Chrome Developer Dashboard](https://chrome.google.com/webstore/devconsole)
 2. Pay $5 one-time fee (if not done)
 3. Click "New Item"
-4. Upload `visual-github-reporter.zip`
+4. Upload `visual-issue-reporter.zip`
 5. Fill in store listing from `listing.md`
 6. Add privacy policy URL
 7. Upload screenshots

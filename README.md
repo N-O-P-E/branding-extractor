@@ -1,4 +1,4 @@
-# Coworker
+# Visual Issue Reporter
 
 Chrome extension for reporting visual issues on Shopify storefronts. Captures annotated screenshots and creates GitHub issues with full context.
 
@@ -21,7 +21,7 @@ Chrome extension for reporting visual issues on Shopify storefronts. Captures an
 **No coding required** — just download, unzip, and load in Chrome.
 
 1. **Download** the latest release:
-   [coworker-extension.zip](https://github.com/N-O-P-E/coworker/releases/latest/download/coworker-extension.zip)
+   [visual-issue-reporter.zip](https://github.com/N-O-P-E/visual-issue-reporter/releases/latest/download/visual-issue-reporter.zip)
 
 2. **Unzip** the downloaded file
 
@@ -29,10 +29,10 @@ Chrome extension for reporting visual issues on Shopify storefronts. Captures an
    - Open Chrome and go to `chrome://extensions`
    - Enable **Developer mode** (toggle in the top-right corner)
    - Click **Load unpacked**
-   - Select the unzipped `coworker-extension` folder
+   - Select the unzipped folder
 
 4. **Configure:**
-   - Click the Coworker icon in your toolbar
+   - Click the Visual Issue Reporter icon in your toolbar
    - Click the gear icon to open **Settings**
    - Add your **GitHub Personal Access Token**:
      - Go to [github.com/settings/tokens/new](https://github.com/settings/tokens/new)
@@ -47,7 +47,7 @@ Done! You're ready to report issues.
 ## Usage
 
 1. Navigate to the Shopify page where you want to report an issue
-2. Click the Coworker icon and select a target repo
+2. Click the Visual Issue Reporter icon and select a target repo
 3. Click **Report Issue**
 4. Draw a region on the page to highlight the problem area
 5. Use the annotation tools to add context
@@ -71,8 +71,8 @@ For contributors who want to build from source.
 ### Build from source
 
 ```bash
-git clone https://github.com/N-O-P-E/coworker.git
-cd coworker
+git clone https://github.com/N-O-P-E/visual-issue-reporter.git
+cd visual-issue-reporter
 pnpm install
 pnpm build
 ```
@@ -123,4 +123,4 @@ packages/
 
 ## Distribution
 
-Build and share the `dist/` folder, or use `pnpm zip` to create `coworker-extension.zip` for easy distribution.
+Build and share the `dist/` folder, or use `pnpm zip` to create `visual-issue-reporter.zip` for easy distribution.

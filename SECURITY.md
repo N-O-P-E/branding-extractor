@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in Coworker, please report it responsibly.
+If you discover a security vulnerability in Visual Issue Reporter, please report it responsibly.
 
 **Do not open a public issue.** Instead, email us at:
 
@@ -12,7 +12,7 @@ We will acknowledge your report within 48 hours and work with you to understand 
 
 ## Scope
 
-This policy covers the Coworker Chrome extension and its source code. Security concerns related to:
+This policy covers the Visual Issue Reporter Chrome extension and its source code. Security concerns related to:
 
 - GitHub PAT handling and storage
 - Chrome extension permissions

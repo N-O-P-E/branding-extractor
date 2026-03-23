@@ -144,7 +144,7 @@ const getOrCreateScreenshotRelease = async (octokit: Octokit, owner: string, rep
     repo,
     tag_name: RELEASE_TAG,
     name: 'Visual Issue Screenshots',
-    body: 'Screenshots uploaded by Visual GitHub Reporter. Do not delete this release.',
+    body: 'Screenshots uploaded by Visual Issue Reporter. Do not delete this release.',
   });
   return data.id;
 };
@@ -274,7 +274,7 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
     }
     body += `\n## Analysis\n`;
     body += `> Tag \`@claude\` in a comment to analyze this issue against the codebase.\n`;
-    body += `\n---\n*Reported via [Visual GitHub Reporter](https://github.com/N-O-P-E/visual-github-reporter)*\n`;
+    body += `\n---\n*Reported via [Visual Issue Reporter](https://github.com/N-O-P-E/visual-issue-reporter)*\n`;
 
     const title = `[Visual] ${description.slice(0, 80)}${description.length > 80 ? '...' : ''}`;
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Visual GitHub Reporter — Chrome extension (MV3) for visual issue reporting. Distributed via Chrome Web Store by Studio N.O.P.E.
+Visual Issue Reporter — Chrome extension (MV3) for visual issue reporting. Distributed via Chrome Web Store by Studio N.O.P.E.
 
 ## Build & dev
 

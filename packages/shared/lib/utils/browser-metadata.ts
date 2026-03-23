@@ -184,15 +184,15 @@ const extractShopifyContext = async (): Promise<ShopifyContext | undefined> => {
         const timeout = setTimeout(() => resolve({}), 300);
         const handler = (event: Event) => {
           clearTimeout(timeout);
-          document.removeEventListener('coworker-shopify-data', handler);
+          document.removeEventListener('vir-shopify-data', handler);
           try {
             resolve(JSON.parse((event as CustomEvent).detail));
           } catch {
             resolve({});
           }
         };
-        document.addEventListener('coworker-shopify-data', handler);
-        document.dispatchEvent(new CustomEvent('coworker-request-shopify-data'));
+        document.addEventListener('vir-shopify-data', handler);
+        document.dispatchEvent(new CustomEvent('vir-request-shopify-data'));
       });
 
       if (shopifyData.shop && !storeHandle) {

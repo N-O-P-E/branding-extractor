@@ -823,7 +823,7 @@ const App = () => {
     const handleMouseMove = (e: MouseEvent) => {
       // Get element under cursor (skip our own overlay elements)
       const el = document.elementFromPoint(e.clientX, e.clientY);
-      if (!el || el.closest('[data-coworker-inspect]')) {
+      if (!el || el.closest('[data-vir-inspect]')) {
         setInspectHighlight(null);
         setInspectElInfo('');
         inspectHoveredEl.current = null;
@@ -1051,7 +1051,7 @@ const App = () => {
       {/* Inspect mode highlight overlay */}
       {inspectActive && inspectHighlight && (
         <div
-          data-coworker-inspect
+          data-vir-inspect
           style={{
             position: 'fixed',
             left: inspectHighlight.left - 2,
@@ -1069,7 +1069,7 @@ const App = () => {
       )}
       {inspectActive && (
         <div
-          data-coworker-inspect
+          data-vir-inspect
           style={{
             position: 'fixed',
             top: 24,

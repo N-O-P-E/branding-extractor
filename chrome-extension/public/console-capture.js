@@ -1,7 +1,7 @@
 /* eslint-disable */
 (function () {
-  if (window.__coworkerConsolePatched) return;
-  window.__coworkerConsolePatched = true;
+  if (window.__virConsolePatched) return;
+  window.__virConsolePatched = true;
 
   var MAX_ENTRIES = 50;
   var MAX_MSG_LENGTH = 500;
@@ -44,9 +44,9 @@
     return origWarn.apply(console, arguments);
   };
 
-  document.addEventListener('coworker-request-console-errors', function () {
+  document.addEventListener('vir-request-console-errors', function () {
     document.dispatchEvent(
-      new CustomEvent('coworker-console-errors', {
+      new CustomEvent('vir-console-errors', {
         detail: JSON.stringify(entries),
       }),
     );
