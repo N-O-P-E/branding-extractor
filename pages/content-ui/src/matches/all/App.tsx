@@ -605,6 +605,8 @@ const App = () => {
                     pointerEvents: 'none',
                     whiteSpace: 'pre-wrap',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                    lineHeight: '1.3',
+                    boxSizing: 'border-box',
                     lineHeight: 1.3,
                     maxWidth: 300,
                   }}>
