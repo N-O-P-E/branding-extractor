@@ -74,15 +74,22 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
     void fetchIssues();
   }, [fetchIssues]);
 
-  // Re-fetch issues when the active tab URL changes
+  // Re-fetch issues when the active tab URL changes or user switches tabs
   useEffect(() => {
-    const listener = (_tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
+    const onUpdated = (_tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
       if (changeInfo.url || changeInfo.status === 'complete') {
         void fetchIssues();
       }
     };
-    chrome.tabs.onUpdated.addListener(listener);
-    return () => chrome.tabs.onUpdated.removeListener(listener);
+    const onActivated = () => {
+      void fetchIssues();
+    };
+    chrome.tabs.onUpdated.addListener(onUpdated);
+    chrome.tabs.onActivated.addListener(onActivated);
+    return () => {
+      chrome.tabs.onUpdated.removeListener(onUpdated);
+      chrome.tabs.onActivated.removeListener(onActivated);
+    };
   }, [fetchIssues]);
 
   const handleRepoChange = (repo: string) => {
