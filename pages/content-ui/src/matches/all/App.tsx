@@ -187,7 +187,8 @@ const App = () => {
   const inspectHoveredEl = useRef<Element | null>(null);
 
   const backdropRef = useRef<HTMLDivElement>(null);
-  const overlayActiveRef = useRef(false);
+  const stateRef = useRef<OverlayState>('idle');
+  const screenshotUrlRef = useRef<string | null>(null);
 
   const dismiss = useCallback(() => {
     setState('idle');
@@ -222,8 +223,8 @@ const App = () => {
       if (message.type === 'SHOW_SCREENSHOT') {
         const tool = message.payload.tool ?? 'select';
 
-        // If overlay is already active, just switch tool — don't reset the session
-        if (overlayActiveRef.current) {
+        // If overlay is already active with content, just switch the tool
+        if (stateRef.current === 'selecting' && screenshotUrlRef.current) {
           setActiveTool(tool);
           return;
         }
@@ -880,8 +881,9 @@ const App = () => {
   );
 
   strokeColorRef.current = strokeColor;
+  stateRef.current = state;
+  screenshotUrlRef.current = screenshotUrl;
   const overlayActive = state !== 'idle' && screenshotUrl;
-  overlayActiveRef.current = !!overlayActive;
 
   const dragStart = dragStartRef.current;
   const dragCurrent = dragCurrentRef.current;
