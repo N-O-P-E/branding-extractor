@@ -251,6 +251,7 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
         background: colors.bgPrimary,
         color: colors.textPrimary,
         boxSizing: 'border-box',
+        minHeight: '100%',
       }}>
       {/* Header */}
       <div style={{ padding: '28px 20px 0', display: 'flex', alignItems: 'center', gap: 12 }}>
