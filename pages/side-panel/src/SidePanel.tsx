@@ -52,19 +52,38 @@ export default function SidePanel() {
           color: 'rgba(241,245,249,0.3)',
           borderTop: '1px solid rgba(148,163,184,0.08)',
         }}>
-        This tool is{' '}
-        <a
-          href="https://studionope.nl"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            color: 'rgba(241,245,249,0.5)',
-            textDecoration: 'underline',
-            textUnderlineOffset: '2px',
-            fontStyle: 'italic',
-          }}>
-          Not Of Planet Earth
-        </a>
+        <div>
+          <a
+            href="https://github.com/N-O-P-E/coworker/issues"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'rgba(241,245,249,0.4)', textDecoration: 'none' }}>
+            Suggest a feature
+          </a>
+          <span style={{ margin: '0 6px', opacity: 0.3 }}>·</span>
+          <a
+            href="https://github.com/N-O-P-E/coworker"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'rgba(241,245,249,0.4)', textDecoration: 'none' }}>
+            GitHub
+          </a>
+        </div>
+        <div style={{ marginTop: 6 }}>
+          This tool is{' '}
+          <a
+            href="https://studionope.nl"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: 'rgba(241,245,249,0.5)',
+              textDecoration: 'underline',
+              textUnderlineOffset: '2px',
+              fontStyle: 'italic',
+            }}>
+            Not Of Planet Earth
+          </a>
+        </div>
       </div>
     </div>
   );
