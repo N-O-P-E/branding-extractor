@@ -1083,7 +1083,7 @@ const App = () => {
                     draggable={false}
                     style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                   />
-                  {/* Resize handle */}
+                  {/* Resize handle — diagonal grip lines */}
                   <div
                     onMouseDown={e => {
                       e.stopPropagation();
@@ -1093,15 +1093,20 @@ const App = () => {
                     }}
                     style={{
                       position: 'absolute',
-                      right: 0,
-                      bottom: 0,
-                      width: 12,
-                      height: 12,
+                      right: -1,
+                      bottom: -1,
+                      width: 16,
+                      height: 16,
                       cursor: 'nwse-resize',
-                      background: 'rgba(139,92,246,0.6)',
-                      borderRadius: '2px 0 4px 0',
-                    }}
-                  />
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M9 1L1 9" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round" />
+                      <path d="M9 5L5 9" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                  </div>
                 </div>
               ))}
 
