@@ -135,7 +135,7 @@ const renderComments = (ctx: CanvasRenderingContext2D, commentsToDraw: Comment[]
 const App = () => {
   const [state, setState] = useState<OverlayState>('idle');
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
-  const [activeTool, setActiveTool] = useState<'select' | 'pencil'>('select');
+  const [activeTool, setActiveTool] = useState<'select' | 'pencil' | 'inspect'>('select');
   const imgRef = useRef<HTMLImageElement>(null);
   const isDragging = useRef(false);
   const justFinishedDrag = useRef(false);
@@ -157,6 +157,11 @@ const App = () => {
   const [draggingCommentIndex, setDraggingCommentIndex] = useState<number | null>(null);
   const dragCommentOffset = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
 
+  // Inspect tool state
+  const [inspectActive, setInspectActive] = useState(false);
+  const [inspectHighlight, setInspectHighlight] = useState<DOMRect | null>(null);
+  const inspectHoveredEl = useRef<Element | null>(null);
+
   const backdropRef = useRef<HTMLDivElement>(null);
 
   const dismiss = useCallback(() => {
@@ -172,14 +177,29 @@ const App = () => {
     setEditingComment(null);
     setCanvasSubTool('draw');
     setDraggingCommentIndex(null);
+    setInspectActive(false);
+    setInspectHighlight(null);
+    inspectHoveredEl.current = null;
     actionHistory.current = [];
   }, []);
 
   useEffect(() => {
     const listener = (message: ShowScreenshotMessage | ActivateToolMessage) => {
       if (message.type === 'SHOW_SCREENSHOT') {
+        const tool = message.payload.tool ?? 'select';
+        setActiveTool(tool);
+
+        if (tool === 'inspect') {
+          // Inspect mode: no screenshot overlay, work on live page
+          setInspectActive(true);
+          setInspectHighlight(null);
+          inspectHoveredEl.current = null;
+          setScreenshotUrl(message.payload.screenshotDataUrl);
+          return;
+        }
+
         setScreenshotUrl(message.payload.screenshotDataUrl);
-        setActiveTool(message.payload.tool ?? 'select');
+        setInspectActive(false);
         isDragging.current = false;
         dragStartRef.current = null;
         dragCurrentRef.current = null;
@@ -490,6 +510,112 @@ const App = () => {
     };
   }, [draggingCommentIndex]);
 
+  // Inspect tool: highlight elements on hover, capture on click
+  useEffect(() => {
+    if (!inspectActive) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      // Get element under cursor (skip our own overlay elements)
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      if (!el || el.closest('[data-coworker-inspect]')) {
+        setInspectHighlight(null);
+        inspectHoveredEl.current = null;
+        return;
+      }
+      inspectHoveredEl.current = el;
+      setInspectHighlight(el.getBoundingClientRect());
+    };
+
+    const handleClick = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const el = inspectHoveredEl.current;
+      if (!el || !screenshotUrl) return;
+
+      const rect = el.getBoundingClientRect();
+      const region = {
+        x: rect.left,
+        y: rect.top,
+        width: rect.width,
+        height: rect.height,
+      };
+
+      // Get HTML snippet
+      let html = el.outerHTML;
+      if (html.length > 2000) {
+        const tagMatch = html.match(/^<[^>]+>/);
+        if (tagMatch) {
+          html = `${tagMatch[0]}\n  ${el.textContent?.slice(0, 200) ?? ''}...\n</${el.tagName.toLowerCase()}>`;
+        } else {
+          html = html.slice(0, 2000) + '...';
+        }
+      }
+      const snippet = html;
+
+      // Annotate the screenshot with the element highlight
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0);
+
+        const scaleX = img.naturalWidth / window.innerWidth;
+        const scaleY = img.naturalHeight / window.innerHeight;
+        const rx = region.x * scaleX;
+        const ry = region.y * scaleY;
+        const rw = region.width * scaleX;
+        const rh = region.height * scaleY;
+
+        ctx.strokeStyle = '#8B5CF6';
+        ctx.lineWidth = 3 * Math.max(scaleX, scaleY);
+        ctx.setLineDash([]);
+        ctx.strokeRect(rx, ry, rw, rh);
+        ctx.fillStyle = 'rgba(139, 92, 246, 0.15)';
+        ctx.fillRect(rx, ry, rw, rh);
+
+        const annotatedDataUrl = canvas.toDataURL('image/png');
+        const captureMessage: CaptureCompleteMessage = {
+          type: 'CAPTURE_COMPLETE',
+          payload: {
+            screenshotDataUrl: screenshotUrl,
+            annotatedScreenshotDataUrl: annotatedDataUrl,
+            region,
+            pageUrl: window.location.href,
+            viewportWidth: window.innerWidth,
+            viewportHeight: window.innerHeight,
+            htmlSnippet: snippet,
+          },
+        };
+        chrome.runtime.sendMessage(captureMessage);
+        setInspectActive(false);
+        setInspectHighlight(null);
+        inspectHoveredEl.current = null;
+      };
+      img.src = screenshotUrl;
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setInspectActive(false);
+        setInspectHighlight(null);
+        inspectHoveredEl.current = null;
+      }
+    };
+
+    // Use capture phase to intercept before page handlers
+    document.addEventListener('mousemove', handleMouseMove, true);
+    document.addEventListener('click', handleClick, true);
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove, true);
+      document.removeEventListener('click', handleClick, true);
+      document.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [inspectActive, screenshotUrl]);
+
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLImageElement>) => {
       if (state !== 'selecting') return;
@@ -551,6 +677,52 @@ const App = () => {
 
   return (
     <>
+      {/* Inspect mode: inject cursor style on the page */}
+      {inspectActive && <style>{`* { cursor: crosshair !important; }`}</style>}
+
+      {/* Inspect mode highlight overlay */}
+      {inspectActive && inspectHighlight && (
+        <div
+          data-coworker-inspect
+          style={{
+            position: 'fixed',
+            left: inspectHighlight.left - 2,
+            top: inspectHighlight.top - 2,
+            width: inspectHighlight.width + 4,
+            height: inspectHighlight.height + 4,
+            border: '2px solid #8B5CF6',
+            borderRadius: 4,
+            background: 'rgba(139, 92, 246, 0.08)',
+            pointerEvents: 'none',
+            zIndex: 2147483646,
+            transition: 'all 0.1s ease-out',
+          }}
+        />
+      )}
+      {inspectActive && (
+        <div
+          data-coworker-inspect
+          style={{
+            position: 'fixed',
+            top: 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: '#1e293b',
+            border: '1px solid rgba(148,163,184,0.2)',
+            borderRadius: 12,
+            padding: '8px 16px',
+            fontSize: 13,
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+            color: 'rgba(241,245,249,0.6)',
+            zIndex: 2147483647,
+            pointerEvents: 'none',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            whiteSpace: 'nowrap',
+          }}>
+          Click an element to report · <span style={{ opacity: 0.5 }}>Esc to cancel</span>
+        </div>
+      )}
+
       {overlayActive && (
         <div
           ref={backdropRef}

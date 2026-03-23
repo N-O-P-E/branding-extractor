@@ -22,7 +22,7 @@ const colors = {
 export default function HomeView({ onOpenSettings }: HomeViewProps) {
   const [repos, setRepos] = useState<string[]>([]);
   const [selectedRepo, setSelectedRepo] = useState('');
-  const [activeTool, setActiveTool] = useState<'select' | 'pencil' | null>(null);
+  const [activeTool, setActiveTool] = useState<'select' | 'pencil' | 'inspect' | null>(null);
   const [issues, setIssues] = useState<PageIssue[]>([]);
   const [loading, setLoading] = useState(false);
   const [patConnected, setPatConnected] = useState(false);
@@ -67,7 +67,7 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
     chrome.storage.sync.set({ selectedRepo: repo });
   };
 
-  const handleToolClick = (tool: 'select' | 'pencil') => {
+  const handleToolClick = (tool: 'select' | 'pencil' | 'inspect') => {
     setActiveTool(prev => (prev === tool ? null : tool));
     chrome.runtime.sendMessage(
       { type: 'ACTIVATE_TOOL', payload: { tool } },
@@ -151,6 +151,12 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
             label="Canvas"
             active={activeTool === 'pencil'}
             onClick={() => handleToolClick('pencil')}
+          />
+          <ToolButton
+            icon="inspect"
+            label="Inspect"
+            active={activeTool === 'inspect'}
+            onClick={() => handleToolClick('inspect')}
           />
         </div>
       </div>

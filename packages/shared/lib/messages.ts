@@ -13,13 +13,13 @@ export interface ShowScreenshotMessage {
   type: 'SHOW_SCREENSHOT';
   payload: {
     screenshotDataUrl: string;
-    tool: 'select' | 'pencil';
+    tool: 'select' | 'pencil' | 'inspect';
   };
 }
 
 export interface ActivateToolMessage {
   type: 'ACTIVATE_TOOL';
-  payload: { tool: 'select' | 'pencil' };
+  payload: { tool: 'select' | 'pencil' | 'inspect' };
 }
 
 export interface CaptureCompleteMessage {
