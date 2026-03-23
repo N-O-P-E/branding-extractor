@@ -6,7 +6,7 @@ const packageJson = JSON.parse(readFileSync('./package.json', 'utf8'));
 const manifest = {
   manifest_version: 3,
   default_locale: 'en',
-  name: 'N.O.P.E. Co-worker',
+  name: 'Visual Github Reporting - by Studio N.O.P.E.',
   version: packageJson.version,
   description: '__MSG_extensionDescription__',
   host_permissions: ['<all_urls>'],
