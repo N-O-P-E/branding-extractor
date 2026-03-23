@@ -154,6 +154,8 @@ const App = () => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [editingComment, setEditingComment] = useState<{ x: number; y: number } | null>(null);
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
+  const [draggingCommentIndex, setDraggingCommentIndex] = useState<number | null>(null);
+  const dragCommentOffset = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
 
   const backdropRef = useRef<HTMLDivElement>(null);
 
@@ -169,6 +171,7 @@ const App = () => {
     setComments([]);
     setEditingComment(null);
     setCanvasSubTool('draw');
+    setDraggingCommentIndex(null);
     actionHistory.current = [];
   }, []);
 
@@ -306,6 +309,7 @@ const App = () => {
           if (e.key === 'd' || e.key === 'D') {
             e.preventDefault();
             setCanvasSubTool('draw');
+            setEditingComment(null);
             return;
           }
           if (e.key === 't' || e.key === 'T') {
@@ -462,6 +466,30 @@ const App = () => {
     };
   }, [state, activeTool, finishDrag]);
 
+  // Comment dragging
+  useEffect(() => {
+    if (draggingCommentIndex === null) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!imgRef.current) return;
+      const rect = imgRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left - dragCommentOffset.current.dx;
+      const y = e.clientY - rect.top - dragCommentOffset.current.dy;
+      setComments(prev => prev.map((c, i) => (i === draggingCommentIndex ? { ...c, x, y } : c)));
+    };
+
+    const handleMouseUp = () => {
+      setDraggingCommentIndex(null);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove, true);
+    document.addEventListener('mouseup', handleMouseUp, true);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove, true);
+      document.removeEventListener('mouseup', handleMouseUp, true);
+    };
+  }, [draggingCommentIndex]);
+
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLImageElement>) => {
       if (state !== 'selecting') return;
@@ -590,6 +618,15 @@ const App = () => {
               comments.map((comment, i) => (
                 <div
                   key={i}
+                  onMouseDown={e => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    dragCommentOffset.current = {
+                      dx: e.clientX - (imgRef.current?.getBoundingClientRect().left ?? 0) - comment.x,
+                      dy: e.clientY - (imgRef.current?.getBoundingClientRect().top ?? 0) - comment.y,
+                    };
+                    setDraggingCommentIndex(i);
+                  }}
                   style={{
                     position: 'absolute',
                     left: comment.x,
@@ -602,13 +639,14 @@ const App = () => {
                     fontWeight: 500,
                     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                     border: '1px solid rgba(255,255,255,0.3)',
-                    pointerEvents: 'none',
                     whiteSpace: 'pre-wrap',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                    lineHeight: '1.3',
-                    boxSizing: 'border-box',
                     lineHeight: 1.3,
+                    boxSizing: 'border-box',
                     maxWidth: 300,
+                    cursor: draggingCommentIndex === i ? 'grabbing' : 'grab',
+                    userSelect: 'none',
+                    zIndex: draggingCommentIndex === i ? 5 : 1,
                   }}>
                   {comment.text}
                 </div>
@@ -720,7 +758,10 @@ const App = () => {
               {/* Draw / Text toggle */}
               <div style={{ display: 'flex', gap: '2px', alignItems: 'center', padding: '0 2px' }}>
                 <button
-                  onClick={() => setCanvasSubTool('draw')}
+                  onClick={() => {
+                    setCanvasSubTool('draw');
+                    setEditingComment(null);
+                  }}
                   title="Draw (D)"
                   style={{
                     height: 28,
