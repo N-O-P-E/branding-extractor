@@ -1079,7 +1079,17 @@ const App = () => {
                         color: canvasSubTool === 'text' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
                         fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                       }}>
-                      <span style={{ fontSize: '14px', fontWeight: 700, lineHeight: 1 }}>C</span>
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                      </svg>
                       <span
                         style={{
                           fontSize: '10px',
