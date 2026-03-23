@@ -62,7 +62,7 @@ export default function SidePanel() {
               color: '#f1f5f9',
               textDecoration: 'none',
               fontFamily: "'Instrument Serif', serif",
-              fontStyle: 'italic',
+              fontStyle: 'normal',
               fontSize: 13,
             }}>
             Not Of Planet Earth
@@ -74,7 +74,7 @@ export default function SidePanel() {
             target="_blank"
             rel="noopener noreferrer"
             style={{ color: 'rgba(241,245,249,0.3)', textDecoration: 'none' }}>
-            Suggest a feature →
+            Suggest a feature
           </a>
         </div>
       </div>
