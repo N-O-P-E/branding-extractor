@@ -17,6 +17,10 @@ interface Comment {
   color: string;
 }
 
+interface Selection extends Region {
+  color: string;
+}
+
 type CanvasSubTool = 'draw' | 'text';
 
 const isLightColor = (color: string) => color === '#FFFFFF' || color === '#F59E0B';
@@ -122,7 +126,7 @@ const App = () => {
   const dragCommentOffset = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
 
   // Accumulated annotations from select/inspect tools
-  const [selections, setSelections] = useState<Region[]>([]);
+  const [selections, setSelections] = useState<Selection[]>([]);
   const [htmlSnippets, setHtmlSnippets] = useState<string[]>([]);
 
   // Inspect tool state
@@ -258,11 +262,11 @@ const App = () => {
         const ry = region.y * img.naturalHeight;
         const rw = region.width * img.naturalWidth;
         const rh = region.height * img.naturalHeight;
-        ctx.strokeStyle = '#8B5CF6';
+        ctx.strokeStyle = region.color;
         ctx.lineWidth = 3 * Math.max(scaleX, scaleY);
         ctx.setLineDash([8 * scaleX, 4 * scaleX]);
         ctx.strokeRect(rx, ry, rw, rh);
-        ctx.fillStyle = 'rgba(139, 92, 246, 0.15)';
+        ctx.fillStyle = `${region.color}20`;
         ctx.fillRect(rx, ry, rw, rh);
       }
       ctx.setLineDash([]);
@@ -433,6 +437,7 @@ const App = () => {
           y: selectedRegion.y / imgRect.height,
           width: selectedRegion.width / imgRect.width,
           height: selectedRegion.height / imgRect.height,
+          color: strokeColor,
         },
       ]);
       actionHistory.current.push('selection');
@@ -578,6 +583,7 @@ const App = () => {
           y: region.y / window.innerHeight,
           width: region.width / window.innerWidth,
           height: region.height / window.innerHeight,
+          color: strokeColor,
         },
       ]);
       setHtmlSnippets(prev => [...prev, html]);
@@ -795,8 +801,8 @@ const App = () => {
                     top: sel.y * ih,
                     width: sel.width * iw,
                     height: sel.height * ih,
-                    border: '2px dashed #8B5CF6',
-                    backgroundColor: 'rgba(139, 92, 246, 0.15)',
+                    border: `2px dashed ${sel.color}`,
+                    backgroundColor: `${sel.color}20`,
                     pointerEvents: 'none',
                   }}
                 />
@@ -812,8 +818,8 @@ const App = () => {
                   top: dragSelection.y,
                   width: dragSelection.width,
                   height: dragSelection.height,
-                  border: '2px dashed #8B5CF6',
-                  backgroundColor: 'rgba(139, 92, 246, 0.15)',
+                  border: `2px dashed ${strokeColor}`,
+                  backgroundColor: `${strokeColor}20`,
                   pointerEvents: 'none',
                 }}
               />
@@ -940,8 +946,8 @@ const App = () => {
             )}
           </div>
 
-          {/* Pencil floating toolbar — Figma-style */}
-          {isPencilMode && (
+          {/* Floating toolbar — Figma-style (visible in all overlay modes) */}
+          {state === 'selecting' && (
             <div
               style={{
                 position: 'fixed',
@@ -961,120 +967,125 @@ const App = () => {
               }}
               onClick={e => e.stopPropagation()}
               onKeyDown={e => e.stopPropagation()}>
-              {/* Draw / Text toggle */}
-              <div style={{ display: 'flex', gap: '2px', alignItems: 'center', padding: '0 2px' }}>
-                <button
-                  onClick={() => {
-                    setCanvasSubTool('draw');
-                    setEditingComment(null);
-                  }}
-                  title="Draw (D)"
-                  style={{
-                    height: 28,
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: canvasSubTool === 'draw' ? 'rgba(139,92,246,0.25)' : 'transparent',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 4,
-                    transition: 'all 0.15s ease-out',
-                    padding: '0 6px',
-                    color: canvasSubTool === 'draw' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
-                    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-                  }}>
-                  <svg
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round">
-                    <path d="M12 19l7-7 3 3-7 7-3-3z" />
-                    <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
-                  </svg>
-                  <span
-                    style={{
-                      fontSize: '10px',
-                      fontWeight: 500,
-                      opacity: 0.5,
-                      letterSpacing: '0.02em',
-                    }}>
-                    D
-                  </span>
-                </button>
-                <button
-                  onClick={() => setCanvasSubTool('text')}
-                  title="Text comment (T)"
-                  style={{
-                    height: 28,
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: canvasSubTool === 'text' ? 'rgba(139,92,246,0.25)' : 'transparent',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 4,
-                    transition: 'all 0.15s ease-out',
-                    padding: '0 6px',
-                    color: canvasSubTool === 'text' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
-                    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-                  }}>
-                  <span style={{ fontSize: '14px', fontWeight: 700, lineHeight: 1 }}>T</span>
-                  <span
-                    style={{
-                      fontSize: '10px',
-                      fontWeight: 500,
-                      opacity: 0.5,
-                      letterSpacing: '0.02em',
-                    }}>
-                    T
-                  </span>
-                </button>
-              </div>
-
-              {/* Divider */}
-              <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.2)', margin: '0 2px' }} />
-
-              {/* Stroke width presets */}
-              <div style={{ display: 'flex', gap: '2px', alignItems: 'center', padding: '0 4px' }}>
-                {STROKE_WIDTHS.map(sw => (
-                  <button
-                    key={sw.value}
-                    onClick={() => setStrokeWidth(sw.value)}
-                    title={`${sw.label} stroke`}
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: '6px',
-                      border: 'none',
-                      background: strokeWidth === sw.value ? 'rgba(139,92,246,0.25)' : 'transparent',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.15s ease-out',
-                      padding: 0,
-                    }}>
-                    <div
-                      style={{
-                        width: sw.value + 4,
-                        height: sw.value + 4,
-                        borderRadius: '50%',
-                        background: strokeWidth === sw.value ? '#f1f5f9' : 'rgba(148,163,184,0.5)',
-                        transition: 'all 0.15s ease-out',
+              {/* Draw / Text toggle (canvas mode only) */}
+              {isPencilMode && (
+                <>
+                  {/* Draw / Text toggle */}
+                  <div style={{ display: 'flex', gap: '2px', alignItems: 'center', padding: '0 2px' }}>
+                    <button
+                      onClick={() => {
+                        setCanvasSubTool('draw');
+                        setEditingComment(null);
                       }}
-                    />
-                  </button>
-                ))}
-              </div>
+                      title="Draw (D)"
+                      style={{
+                        height: 28,
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: canvasSubTool === 'draw' ? 'rgba(139,92,246,0.25)' : 'transparent',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 4,
+                        transition: 'all 0.15s ease-out',
+                        padding: '0 6px',
+                        color: canvasSubTool === 'draw' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
+                        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                      }}>
+                      <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round">
+                        <path d="M12 19l7-7 3 3-7 7-3-3z" />
+                        <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+                      </svg>
+                      <span
+                        style={{
+                          fontSize: '10px',
+                          fontWeight: 500,
+                          opacity: 0.5,
+                          letterSpacing: '0.02em',
+                        }}>
+                        D
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => setCanvasSubTool('text')}
+                      title="Text comment (T)"
+                      style={{
+                        height: 28,
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: canvasSubTool === 'text' ? 'rgba(139,92,246,0.25)' : 'transparent',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 4,
+                        transition: 'all 0.15s ease-out',
+                        padding: '0 6px',
+                        color: canvasSubTool === 'text' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
+                        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                      }}>
+                      <span style={{ fontSize: '14px', fontWeight: 700, lineHeight: 1 }}>T</span>
+                      <span
+                        style={{
+                          fontSize: '10px',
+                          fontWeight: 500,
+                          opacity: 0.5,
+                          letterSpacing: '0.02em',
+                        }}>
+                        T
+                      </span>
+                    </button>
+                  </div>
 
-              {/* Divider */}
-              <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.2)', margin: '0 4px' }} />
+                  {/* Divider */}
+                  <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.2)', margin: '0 2px' }} />
+
+                  {/* Stroke width presets */}
+                  <div style={{ display: 'flex', gap: '2px', alignItems: 'center', padding: '0 4px' }}>
+                    {STROKE_WIDTHS.map(sw => (
+                      <button
+                        key={sw.value}
+                        onClick={() => setStrokeWidth(sw.value)}
+                        title={`${sw.label} stroke`}
+                        style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: strokeWidth === sw.value ? 'rgba(139,92,246,0.25)' : 'transparent',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.15s ease-out',
+                          padding: 0,
+                        }}>
+                        <div
+                          style={{
+                            width: sw.value + 4,
+                            height: sw.value + 4,
+                            borderRadius: '50%',
+                            background: strokeWidth === sw.value ? '#f1f5f9' : 'rgba(148,163,184,0.5)',
+                            transition: 'all 0.15s ease-out',
+                          }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Divider */}
+                  <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.2)', margin: '0 4px' }} />
+                </>
+              )}
 
               {/* Color swatches */}
               <div style={{ display: 'flex', gap: '3px', alignItems: 'center', padding: '0 4px' }}>
