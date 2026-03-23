@@ -16,12 +16,21 @@ export default function SidePanel() {
     });
   }, []);
 
-  // Listen for CAPTURE_COMPLETE from content-UI
+  // Listen for messages from content-UI
   useEffect(() => {
     const listener = (message: { type: string; payload?: CaptureCompleteMessage['payload'] }) => {
       if (message.type === 'CAPTURE_COMPLETE' && message.payload) {
         setCaptureData(message.payload);
+        // Don't switch view — create-issue view is already showing
+      }
+      // When overlay opens (tool activated), show the create-issue form
+      if (message.type === 'SHOW_SCREENSHOT') {
         setView('create-issue');
+      }
+      // When overlay is closed (dismissed without submitting), go back to home
+      if (message.type === 'TOOL_SWITCHED' && (message as { payload?: { tool: string } }).payload?.tool === '') {
+        setView('home');
+        setCaptureData(null);
       }
     };
     chrome.runtime.onMessage.addListener(listener);
@@ -33,7 +42,7 @@ export default function SidePanel() {
       <div style={{ flex: 1 }}>
         {view === 'setup' && <SetupView onDone={() => setView('home')} />}
         {view === 'home' && <HomeView onOpenSettings={() => setView('setup')} />}
-        {view === 'create-issue' && captureData && (
+        {view === 'create-issue' && (
           <CreateIssueView
             captureData={captureData}
             onBack={() => setView('home')}

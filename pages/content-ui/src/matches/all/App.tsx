@@ -216,6 +216,7 @@ const App = () => {
   const backdropRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<OverlayState>('idle');
   const screenshotUrlRef = useRef<string | null>(null);
+  const handleDoneRef = useRef<(() => void) | null>(null);
   const orderCounter = useRef(0);
 
   const dismiss = useCallback(() => {
@@ -287,6 +288,10 @@ const App = () => {
       }
       if (message.type === 'ACTIVATE_TOOL') {
         setActiveTool(message.payload.tool);
+      }
+      if (message.type === 'REQUEST_CAPTURE') {
+        // Trigger capture and send CAPTURE_COMPLETE, then dismiss
+        handleDoneRef.current?.();
       }
     };
     chrome.runtime.onMessage.addListener(listener);
@@ -957,6 +962,7 @@ const App = () => {
   stateRef.current = state;
   screenshotUrlRef.current = screenshotUrl;
   editingCommentRef.current = editingComment;
+  handleDoneRef.current = handleDone;
   const overlayActive = state !== 'idle' && screenshotUrl;
 
   const dragStart = dragStartRef.current;

@@ -147,6 +147,10 @@ export interface ToolSwitchedMessage {
   payload: { tool: 'select' | 'pencil' | 'inspect' };
 }
 
+export interface RequestCaptureMessage {
+  type: 'REQUEST_CAPTURE';
+}
+
 export interface FetchReposMessage {
   type: 'FETCH_REPOS';
 }
@@ -168,7 +172,8 @@ export type ExtensionMessage =
   | CaptureCompleteMessage
   | FetchLabelsMessage
   | FetchAssigneesMessage
-  | FetchReposMessage;
+  | FetchReposMessage
+  | RequestCaptureMessage;
 
 export interface MessageResponse {
   success: boolean;

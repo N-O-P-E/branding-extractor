@@ -1,6 +1,6 @@
 import AssigneeSelect from '../components/AssigneeSelect';
 import LabelSelect from '../components/LabelSelect';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { BrowserMetadata } from '@extension/shared';
 
 interface CaptureData {
@@ -15,7 +15,7 @@ interface CaptureData {
 }
 
 interface CreateIssueViewProps {
-  captureData: CaptureData;
+  captureData: CaptureData | null;
   onBack: () => void;
   onSuccess: () => void;
 }
@@ -47,24 +47,47 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
     });
   }, []);
 
+  // Keep a ref to the latest captureData for the async submit flow
+  const captureDataRef = useRef(captureData);
+  captureDataRef.current = captureData;
+
   const handleSubmit = useCallback(async () => {
     if (submitting || !selectedRepo) return;
     setSubmitting(true);
     setError('');
 
     try {
+      // If no capture data yet, request it from the content-UI overlay
+      let data = captureDataRef.current;
+      if (!data) {
+        // Request capture — content-UI will send CAPTURE_COMPLETE
+        chrome.runtime.sendMessage({ type: 'REQUEST_CAPTURE' });
+        // Wait for CAPTURE_COMPLETE
+        data = await new Promise<CaptureData>((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error('Capture timed out')), 10000);
+          const listener = (msg: { type: string; payload?: CaptureData }) => {
+            if (msg.type === 'CAPTURE_COMPLETE' && msg.payload) {
+              clearTimeout(timeout);
+              chrome.runtime.onMessage.removeListener(listener);
+              resolve(msg.payload);
+            }
+          };
+          chrome.runtime.onMessage.addListener(listener);
+        });
+      }
+
       const response = (await chrome.runtime.sendMessage({
         type: 'CREATE_ISSUE',
         payload: {
           description,
-          screenshotDataUrl: captureData.screenshotDataUrl,
-          annotatedScreenshotDataUrl: captureData.annotatedScreenshotDataUrl,
-          region: captureData.region,
-          pageUrl: captureData.pageUrl,
-          viewportWidth: captureData.viewportWidth,
-          viewportHeight: captureData.viewportHeight,
-          htmlSnippet: captureData.htmlSnippet,
-          browserMetadata: captureData.browserMetadata,
+          screenshotDataUrl: data.screenshotDataUrl,
+          annotatedScreenshotDataUrl: data.annotatedScreenshotDataUrl,
+          region: data.region,
+          pageUrl: data.pageUrl,
+          viewportWidth: data.viewportWidth,
+          viewportHeight: data.viewportHeight,
+          htmlSnippet: data.htmlSnippet,
+          browserMetadata: data.browserMetadata,
           labels: selectedLabels,
           assignee: selectedAssignee || undefined,
         },
@@ -260,17 +283,19 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
       </div>
 
       <div style={{ padding: '20px' }}>
-        {/* Screenshot preview */}
-        <img
-          src={captureData.annotatedScreenshotDataUrl}
-          alt="Screenshot preview"
-          style={{
-            width: '100%',
-            borderRadius: 8,
-            border: `1px solid ${colors.border}`,
-            display: 'block',
-          }}
-        />
+        {/* Screenshot preview — shown when capture data is available */}
+        {captureData?.annotatedScreenshotDataUrl && (
+          <img
+            src={captureData.annotatedScreenshotDataUrl}
+            alt="Screenshot preview"
+            style={{
+              width: '100%',
+              borderRadius: 8,
+              border: `1px solid ${colors.border}`,
+              display: 'block',
+            }}
+          />
+        )}
 
         {/* Description */}
         <textarea
