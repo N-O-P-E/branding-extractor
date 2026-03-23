@@ -1492,7 +1492,22 @@ const App = () => {
                   justifyContent: 'center',
                   padding: 0,
                 }}>
-                ↩
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M6.49985 5L3.20696 8.29289C2.81643 8.68342 2.81643 9.31658 3.20696 9.70711L6.49985 13"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M4 9H17.25C19.4591 9 21.25 10.7909 21.25 13V14.25C21.25 16.4591 19.4591 18.25 17.25 18.25H11.75"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </button>
 
               {/* Divider */}
