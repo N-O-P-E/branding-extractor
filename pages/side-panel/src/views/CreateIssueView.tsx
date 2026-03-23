@@ -101,6 +101,7 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
       <div
         style={{
           flex: 1,
+          minHeight: 'calc(100vh - 60px)',
           background: colors.bgPrimary,
           color: colors.textPrimary,
           display: 'flex',
