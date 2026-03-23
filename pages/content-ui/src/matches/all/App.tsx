@@ -161,6 +161,7 @@ const App = () => {
   const [canvasSubTool, setCanvasSubTool] = useState<CanvasSubTool>('draw');
   const [comments, setComments] = useState<Comment[]>([]);
   const [editingComment, setEditingComment] = useState<{ x: number; y: number } | null>(null);
+  const editingCommentRef = useRef<{ x: number; y: number } | null>(null);
   const commentInputRef = useRef<HTMLDivElement>(null);
   const [draggingCommentIndex, setDraggingCommentIndex] = useState<number | null>(null);
   const dragCommentOffset = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
@@ -503,9 +504,17 @@ const App = () => {
         return;
       }
 
-      // Check if user is actively typing in a textarea (comment input)
+      // Check if user is actively typing in a textarea or contentEditable (comment input)
       const target = e.target as HTMLElement;
-      const isTyping = target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.isContentEditable;
+      const active = (el.getRootNode() as ShadowRoot)?.activeElement as HTMLElement | null;
+      const isTyping =
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'INPUT' ||
+        target.isContentEditable ||
+        active?.tagName === 'TEXTAREA' ||
+        active?.tagName === 'INPUT' ||
+        active?.isContentEditable ||
+        !!editingCommentRef.current;
 
       // Enter to finish (when not typing)
       if (e.key === 'Enter' && !isTyping) {
@@ -911,6 +920,7 @@ const App = () => {
   strokeColorRef.current = strokeColor;
   stateRef.current = state;
   screenshotUrlRef.current = screenshotUrl;
+  editingCommentRef.current = editingComment;
   const overlayActive = state !== 'idle' && screenshotUrl;
 
   const dragStart = dragStartRef.current;
