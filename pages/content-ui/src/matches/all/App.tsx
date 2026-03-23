@@ -21,7 +21,17 @@ interface Selection extends Region {
   color: string;
 }
 
-type CanvasSubTool = 'draw' | 'text';
+interface PlacedImage {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  dataUrl: string;
+  naturalWidth: number;
+  naturalHeight: number;
+}
+
+type CanvasSubTool = 'draw' | 'text' | 'image';
 
 const isLightColor = (color: string) => color === '#FFFFFF' || color === '#F59E0B';
 
@@ -100,6 +110,32 @@ const renderComments = (ctx: CanvasRenderingContext2D, commentsToDraw: Comment[]
   }
 };
 
+const renderPlacedImages = (
+  ctx: CanvasRenderingContext2D,
+  images: PlacedImage[],
+  scaleX: number,
+  scaleY: number,
+): Promise<void> =>
+  Promise.all(
+    images.map(
+      pi =>
+        new Promise<void>(resolve => {
+          const img = new Image();
+          img.onload = () => {
+            ctx.drawImage(img, pi.x * scaleX, pi.y * scaleY, pi.width * scaleX, pi.height * scaleY);
+            // Border
+            ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+            ctx.lineWidth = 1 * Math.max(scaleX, scaleY);
+            ctx.setLineDash([]);
+            ctx.strokeRect(pi.x * scaleX, pi.y * scaleY, pi.width * scaleX, pi.height * scaleY);
+            resolve();
+          };
+          img.onerror = () => resolve();
+          img.src = pi.dataUrl;
+        }),
+    ),
+  ).then(() => {});
+
 const App = () => {
   const [state, setState] = useState<OverlayState>('idle');
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
@@ -125,6 +161,18 @@ const App = () => {
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
   const [draggingCommentIndex, setDraggingCommentIndex] = useState<number | null>(null);
   const dragCommentOffset = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
+
+  // Placed images state
+  const [placedImages, setPlacedImages] = useState<PlacedImage[]>([]);
+  const [draggingImageIndex, setDraggingImageIndex] = useState<number | null>(null);
+  const dragImageOffset = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
+  const [resizingImageIndex, setResizingImageIndex] = useState<number | null>(null);
+  const resizeStart = useRef<{ mouseX: number; mouseY: number; w: number; h: number }>({
+    mouseX: 0,
+    mouseY: 0,
+    w: 0,
+    h: 0,
+  });
 
   // Accumulated annotations from select/inspect tools
   const [selections, setSelections] = useState<Selection[]>([]);
@@ -157,6 +205,9 @@ const App = () => {
     inspectHoveredEl.current = null;
     setSelections([]);
     setHtmlSnippets([]);
+    setPlacedImages([]);
+    setDraggingImageIndex(null);
+    setResizingImageIndex(null);
     actionHistory.current = [];
 
     // Notify side panel that overlay is closed so buttons reset
@@ -242,7 +293,7 @@ const App = () => {
     }
   }, [strokes, currentStroke, activeTool, state, redrawPencilCanvas]);
 
-  const hasAnyContent = strokes.length > 0 || comments.length > 0 || selections.length > 0;
+  const hasAnyContent = strokes.length > 0 || comments.length > 0 || selections.length > 0 || placedImages.length > 0;
 
   const handleDone = useCallback(() => {
     if (!screenshotUrl || !hasAnyContent) return;
@@ -275,38 +326,40 @@ const App = () => {
       }
       ctx.setLineDash([]);
 
-      // Draw strokes and comments
-      renderPencilStrokes(ctx, strokes, scaleX, scaleY);
-      renderComments(ctx, comments, scaleX, scaleY);
+      // Draw placed images, then strokes and comments on top
+      renderPlacedImages(ctx, placedImages, scaleX, scaleY).then(() => {
+        renderPencilStrokes(ctx, strokes, scaleX, scaleY);
+        renderComments(ctx, comments, scaleX, scaleY);
 
-      const annotatedDataUrl = canvas.toDataURL('image/png');
-      const captureMessage: CaptureCompleteMessage = {
-        type: 'CAPTURE_COMPLETE',
-        payload: {
-          screenshotDataUrl: screenshotUrl,
-          annotatedScreenshotDataUrl: annotatedDataUrl,
-          region: selections[0]
-            ? {
-                x: selections[0].x * window.innerWidth,
-                y: selections[0].y * window.innerHeight,
-                width: selections[0].width * window.innerWidth,
-                height: selections[0].height * window.innerHeight,
-              }
-            : undefined,
-          pageUrl: window.location.href,
-          viewportWidth: window.innerWidth,
-          viewportHeight: window.innerHeight,
-          htmlSnippet: htmlSnippets.length > 0 ? htmlSnippets.join('\n\n---\n\n') : undefined,
-        },
-      };
-      chrome.runtime.sendMessage(captureMessage);
-      dismiss();
+        const annotatedDataUrl = canvas.toDataURL('image/png');
+        const captureMessage: CaptureCompleteMessage = {
+          type: 'CAPTURE_COMPLETE',
+          payload: {
+            screenshotDataUrl: screenshotUrl,
+            annotatedScreenshotDataUrl: annotatedDataUrl,
+            region: selections[0]
+              ? {
+                  x: selections[0].x * window.innerWidth,
+                  y: selections[0].y * window.innerHeight,
+                  width: selections[0].width * window.innerWidth,
+                  height: selections[0].height * window.innerHeight,
+                }
+              : undefined,
+            pageUrl: window.location.href,
+            viewportWidth: window.innerWidth,
+            viewportHeight: window.innerHeight,
+            htmlSnippet: htmlSnippets.length > 0 ? htmlSnippets.join('\n\n---\n\n') : undefined,
+          },
+        };
+        chrome.runtime.sendMessage(captureMessage);
+        dismiss();
+      });
     };
     img.src = screenshotUrl;
-  }, [screenshotUrl, hasAnyContent, strokes, comments, selections, htmlSnippets, dismiss]);
+  }, [screenshotUrl, hasAnyContent, strokes, comments, selections, htmlSnippets, placedImages, dismiss]);
 
   // Track action order for undo: 'stroke' or 'comment'
-  const actionHistory = useRef<Array<'stroke' | 'comment' | 'selection'>>([]);
+  const actionHistory = useRef<Array<'stroke' | 'comment' | 'selection' | 'image'>>([]);
 
   const handleCanvasUndo = useCallback(() => {
     const lastAction = actionHistory.current.pop();
@@ -317,8 +370,68 @@ const App = () => {
     } else if (lastAction === 'selection') {
       setSelections(prev => prev.slice(0, -1));
       setHtmlSnippets(prev => prev.slice(0, -1));
+    } else if (lastAction === 'image') {
+      setPlacedImages(prev => prev.slice(0, -1));
     }
   }, []);
+
+  // Helper to place an image on the canvas
+  const placeImageFromDataUrl = useCallback((dataUrl: string, x?: number, y?: number) => {
+    const img = new Image();
+    img.onload = () => {
+      // Scale down if too large (max 200px wide)
+      const maxW = 200;
+      const scale = img.naturalWidth > maxW ? maxW / img.naturalWidth : 1;
+      const w = img.naturalWidth * scale;
+      const h = img.naturalHeight * scale;
+      setPlacedImages(prev => [
+        ...prev,
+        {
+          x: x ?? 20,
+          y: y ?? 20,
+          width: w,
+          height: h,
+          dataUrl,
+          naturalWidth: img.naturalWidth,
+          naturalHeight: img.naturalHeight,
+        },
+      ]);
+      actionHistory.current.push('image');
+    };
+    img.src = dataUrl;
+  }, []);
+
+  const placeImageFromFile = useCallback(
+    (file: File, x?: number, y?: number) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          placeImageFromDataUrl(reader.result, x, y);
+        }
+      };
+      reader.readAsDataURL(file);
+    },
+    [placeImageFromDataUrl],
+  );
+
+  // Paste handler (Cmd+V)
+  useEffect(() => {
+    if (state !== 'selecting') return;
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (file) placeImageFromFile(file);
+          return;
+        }
+      }
+    };
+    document.addEventListener('paste', handlePaste, true);
+    return () => document.removeEventListener('paste', handlePaste, true);
+  }, [state, placeImageFromFile]);
 
   // Keyboard shortcuts (Escape, Cmd+Z for pencil undo, Enter for pencil done)
   useEffect(() => {
@@ -354,6 +467,13 @@ const App = () => {
           e.preventDefault();
           setActiveTool('pencil');
           setCanvasSubTool('text');
+          chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: 'pencil' } });
+          return;
+        }
+        if (e.key === 'i' || e.key === 'I') {
+          e.preventDefault();
+          setActiveTool('pencil');
+          setCanvasSubTool('image');
           chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: 'pencil' } });
           return;
         }
@@ -536,6 +656,47 @@ const App = () => {
     };
   }, [draggingCommentIndex]);
 
+  // Image dragging
+  useEffect(() => {
+    if (draggingImageIndex === null) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!imgRef.current) return;
+      const rect = imgRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left - dragImageOffset.current.dx;
+      const y = e.clientY - rect.top - dragImageOffset.current.dy;
+      setPlacedImages(prev => prev.map((pi, i) => (i === draggingImageIndex ? { ...pi, x, y } : pi)));
+    };
+    const handleMouseUp = () => setDraggingImageIndex(null);
+    document.addEventListener('mousemove', handleMouseMove, true);
+    document.addEventListener('mouseup', handleMouseUp, true);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove, true);
+      document.removeEventListener('mouseup', handleMouseUp, true);
+    };
+  }, [draggingImageIndex]);
+
+  // Image resizing
+  useEffect(() => {
+    if (resizingImageIndex === null) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      const dx = e.clientX - resizeStart.current.mouseX;
+      // Maintain aspect ratio based on horizontal movement
+      const newW = Math.max(30, resizeStart.current.w + dx);
+      const aspect = resizeStart.current.h / resizeStart.current.w;
+      const newH = newW * aspect;
+      setPlacedImages(prev =>
+        prev.map((pi, i) => (i === resizingImageIndex ? { ...pi, width: newW, height: newH } : pi)),
+      );
+    };
+    const handleMouseUp = () => setResizingImageIndex(null);
+    document.addEventListener('mousemove', handleMouseMove, true);
+    document.addEventListener('mouseup', handleMouseUp, true);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove, true);
+      document.removeEventListener('mouseup', handleMouseUp, true);
+    };
+  }, [resizingImageIndex]);
+
   // Inspect tool: highlight elements on hover, capture on click
   useEffect(() => {
     if (!inspectActive) return;
@@ -598,7 +759,7 @@ const App = () => {
           y: region.y / window.innerHeight,
           width: region.width / window.innerWidth,
           height: region.height / window.innerHeight,
-          color: strokeColor,
+          color: strokeColorRef.current,
         },
       ]);
       setHtmlSnippets(prev => [...prev, html]);
@@ -642,6 +803,18 @@ const App = () => {
       const pos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
 
       if (activeTool === 'pencil') {
+        if (canvasSubTool === 'image') {
+          // Open file picker on click
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = 'image/*';
+          input.onchange = () => {
+            const file = input.files?.[0];
+            if (file) placeImageFromFile(file, pos.x, pos.y);
+          };
+          input.click();
+          return;
+        }
         if (canvasSubTool === 'text') {
           // Place a text comment at click position
           setEditingComment(pos);
@@ -659,7 +832,7 @@ const App = () => {
       dragCurrentRef.current = pos;
       forceRender(n => n + 1);
     },
-    [state, activeTool, strokeColor, strokeWidth, canvasSubTool],
+    [state, activeTool, strokeColor, strokeWidth, canvasSubTool, placeImageFromFile],
   );
 
   strokeColorRef.current = strokeColor;
@@ -773,14 +946,39 @@ const App = () => {
             &times;
           </button>
 
-          <div style={styles.screenshotContainer} onClick={e => e.stopPropagation()} role="presentation">
+          <div
+            style={styles.screenshotContainer}
+            onClick={e => e.stopPropagation()}
+            role="presentation"
+            onDragOver={e => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onDrop={e => {
+              e.preventDefault();
+              e.stopPropagation();
+              const file = e.dataTransfer.files[0];
+              if (file?.type.startsWith('image/')) {
+                const rect = imgRef.current?.getBoundingClientRect();
+                const x = rect ? e.clientX - rect.left : 20;
+                const y = rect ? e.clientY - rect.top : 20;
+                placeImageFromFile(file, x, y);
+              }
+            }}>
             <img
               ref={imgRef}
               src={screenshotUrl}
               alt="Page screenshot"
               style={{
                 ...styles.screenshot,
-                cursor: isPencilMode && canvasSubTool === 'text' ? (editingComment ? 'grab' : 'text') : 'crosshair',
+                cursor:
+                  isPencilMode && canvasSubTool === 'text'
+                    ? editingComment
+                      ? 'grab'
+                      : 'text'
+                    : isPencilMode && canvasSubTool === 'image'
+                      ? 'copy'
+                      : 'crosshair',
               }}
               draggable={false}
               onMouseDown={handleMouseDown}
@@ -840,6 +1038,62 @@ const App = () => {
                 }}
               />
             )}
+
+            {/* Placed images */}
+            {state === 'selecting' &&
+              placedImages.map((pi, i) => (
+                <div
+                  key={`img-${i}`}
+                  onMouseDown={e => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    dragImageOffset.current = {
+                      dx: e.clientX - (imgRef.current?.getBoundingClientRect().left ?? 0) - pi.x,
+                      dy: e.clientY - (imgRef.current?.getBoundingClientRect().top ?? 0) - pi.y,
+                    };
+                    setDraggingImageIndex(i);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    left: pi.x,
+                    top: pi.y,
+                    width: pi.width,
+                    height: pi.height,
+                    cursor: draggingImageIndex === i ? 'grabbing' : 'grab',
+                    userSelect: 'none',
+                    zIndex: draggingImageIndex === i ? 5 : 2,
+                    border: '1px solid rgba(255,255,255,0.4)',
+                    borderRadius: 4,
+                    overflow: 'hidden',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                  }}>
+                  <img
+                    src={pi.dataUrl}
+                    alt=""
+                    draggable={false}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  />
+                  {/* Resize handle */}
+                  <div
+                    onMouseDown={e => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      resizeStart.current = { mouseX: e.clientX, mouseY: e.clientY, w: pi.width, h: pi.height };
+                      setResizingImageIndex(i);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      right: 0,
+                      bottom: 0,
+                      width: 12,
+                      height: 12,
+                      cursor: 'nwse-resize',
+                      background: 'rgba(139,92,246,0.6)',
+                      borderRadius: '2px 0 4px 0',
+                    }}
+                  />
+                </div>
+              ))}
 
             {/* Placed comment bubbles (visible in all modes) */}
             {state === 'selecting' &&
@@ -1103,6 +1357,39 @@ const App = () => {
                         C
                       </span>
                     </button>
+                    <button
+                      onClick={() => setCanvasSubTool('image')}
+                      title="Image (I)"
+                      style={{
+                        height: 28,
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: canvasSubTool === 'image' ? 'rgba(139,92,246,0.25)' : 'transparent',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 4,
+                        transition: 'all 0.15s ease-out',
+                        padding: '0 6px',
+                        color: canvasSubTool === 'image' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
+                        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                      }}>
+                      <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <path d="M21 15l-5-5L5 21" />
+                      </svg>
+                      <span style={{ fontSize: '10px', fontWeight: 500, opacity: 0.5 }}>I</span>
+                    </button>
                   </div>
 
                   {/* Divider */}
@@ -1245,7 +1532,11 @@ const App = () => {
           )}
           {isPencilMode && !hasCanvasContent && !isPencilDrawing.current && !editingComment && (
             <div style={styles.hint}>
-              {canvasSubTool === 'text' ? 'Click to place a comment' : 'Draw on the screenshot to annotate'}
+              {canvasSubTool === 'text'
+                ? 'Click to place a comment'
+                : canvasSubTool === 'image'
+                  ? 'Click to upload, drag & drop, or ⌘V to paste an image'
+                  : 'Draw on the screenshot to annotate'}
             </div>
           )}
         </div>
