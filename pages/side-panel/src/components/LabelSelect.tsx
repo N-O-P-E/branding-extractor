@@ -118,7 +118,21 @@ export default function LabelSelect({ repo, selected, onChange }: LabelSelectPro
                   border: 'none',
                   transition: 'all 0.15s',
                 }}>
-                {label} &times;
+                {label}{' '}
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  style={{ marginLeft: 2 }}>
+                  <path
+                    d="M6.25 6.25L17.75 17.75M17.75 6.25L6.25 17.75"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
               </button>
             ))}
           </div>

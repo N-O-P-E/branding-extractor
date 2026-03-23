@@ -946,7 +946,14 @@ const App = () => {
           onKeyUp={e => e.stopPropagation()}
           onKeyPress={e => e.stopPropagation()}>
           <button style={styles.closeButton} onClick={dismiss} aria-label="Close overlay">
-            &times;
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M6.25 6.25L17.75 17.75M17.75 6.25L6.25 17.75"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
           </button>
 
           <div
