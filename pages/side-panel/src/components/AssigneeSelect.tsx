@@ -24,7 +24,9 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
   const [assignees, setAssignees] = useState<Assignee[]>([]);
   const [open, setOpen] = useState(false);
   const [fallback, setFallback] = useState(false);
+  const [search, setSearch] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!repo) return;
@@ -95,7 +97,14 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
       <button
         id="assignee-select-btn"
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          const next = !open;
+          setOpen(next);
+          if (next) {
+            setSearch('');
+            setTimeout(() => searchRef.current?.focus(), 0);
+          }
+        }}
         style={{
           width: '100%',
           background: colors.inputBg,
@@ -130,76 +139,100 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
             background: colors.dropdownBg,
             border: `1px solid ${colors.border}`,
             borderRadius: 8,
-            maxHeight: 200,
-            overflowY: 'auto',
             zIndex: 10,
             boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            overflow: 'hidden',
           }}>
-          {/* Unassign option */}
-          <button
-            type="button"
-            onClick={() => {
-              onChange('');
-              setOpen(false);
-            }}
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '8px 12px',
-              background: !selected ? 'rgba(139,92,246,0.15)' : 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              color: colors.textMuted,
-              fontSize: 13,
-              textAlign: 'left',
-              fontStyle: 'italic',
-              boxSizing: 'border-box',
-              transition: 'all 0.15s',
-            }}>
-            None
-          </button>
-          {assignees.map(assignee => {
-            const isSelected = selected === assignee.login;
-            return (
-              <button
-                key={assignee.login}
-                type="button"
-                onClick={() => {
-                  onChange(assignee.login);
-                  setOpen(false);
-                }}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '8px 12px',
-                  background: isSelected ? 'rgba(139,92,246,0.15)' : 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: colors.textPrimary,
-                  fontSize: 13,
-                  textAlign: 'left',
-                  boxSizing: 'border-box',
-                  transition: 'all 0.15s',
-                }}>
-                <img
-                  src={assignee.avatar_url}
-                  alt={assignee.login}
-                  style={{
-                    width: 20,
-                    height: 20,
-                    borderRadius: '50%',
-                    flexShrink: 0,
-                  }}
-                />
-                <span style={{ flex: 1 }}>{assignee.login}</span>
-                {isSelected && <span style={{ color: colors.purpleAccent, fontSize: 14 }}>&#10003;</span>}
-              </button>
-            );
-          })}
+          {/* Search input */}
+          <div style={{ padding: '6px 8px', borderBottom: `1px solid ${colors.border}` }}>
+            <input
+              ref={searchRef}
+              type="text"
+              placeholder="Search..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{
+                width: '100%',
+                background: 'rgba(148,163,184,0.06)',
+                border: 'none',
+                borderRadius: 4,
+                padding: '6px 8px',
+                color: colors.textPrimary,
+                fontSize: 12,
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+          </div>
+          <div style={{ maxHeight: 180, overflowY: 'auto' }}>
+            {/* Unassign option */}
+            <button
+              type="button"
+              onClick={() => {
+                onChange('');
+                setOpen(false);
+              }}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 12px',
+                background: !selected ? 'rgba(139,92,246,0.15)' : 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                color: colors.textMuted,
+                fontSize: 13,
+                textAlign: 'left',
+                fontStyle: 'italic',
+                boxSizing: 'border-box',
+                transition: 'all 0.15s',
+              }}>
+              None
+            </button>
+            {assignees
+              .filter(a => a.login.toLowerCase().includes(search.toLowerCase()))
+              .map(assignee => {
+                const isSelected = selected === assignee.login;
+                return (
+                  <button
+                    key={assignee.login}
+                    type="button"
+                    onClick={() => {
+                      onChange(assignee.login);
+                      setOpen(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '8px 12px',
+                      background: isSelected ? 'rgba(139,92,246,0.15)' : 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: colors.textPrimary,
+                      fontSize: 13,
+                      textAlign: 'left',
+                      boxSizing: 'border-box',
+                      transition: 'all 0.15s',
+                    }}>
+                    <img
+                      src={assignee.avatar_url}
+                      alt={assignee.login}
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: '50%',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span style={{ flex: 1 }}>{assignee.login}</span>
+                    {isSelected && <span style={{ color: colors.purpleAccent, fontSize: 14 }}>&#10003;</span>}
+                  </button>
+                );
+              })}
+          </div>
         </div>
       )}
     </div>
