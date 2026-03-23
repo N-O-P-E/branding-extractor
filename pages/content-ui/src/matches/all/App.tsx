@@ -914,6 +914,18 @@ const App = () => {
 
   const isPencilMode = activeTool === 'pencil' && state === 'selecting';
 
+  // Detect Shopify preview bar and adjust toolbar position
+  const hasShopifyPreviewBar =
+    typeof document !== 'undefined' &&
+    !!(
+      document.querySelector('#preview-bar-iframe') ||
+      document.querySelector('#shopify-section-announcement-bar') ||
+      document.querySelector('[id*="preview-bar"]') ||
+      document.querySelector('iframe[src*="preview_bar"]') ||
+      (window.location.search.includes('preview_theme_id') && document.querySelector('body > iframe:last-child'))
+    );
+  const toolbarBottom = hasShopifyPreviewBar ? '72px' : '24px';
+
   // Shared comment pill styles — used by both saved comments and the editing textarea
   const commentPillStyle: React.CSSProperties = {
     padding: '6px 10px',
@@ -1300,7 +1312,7 @@ const App = () => {
             <div
               style={{
                 position: 'fixed',
-                bottom: '24px',
+                bottom: toolbarBottom,
                 left: '50%',
                 transform: 'translateX(-50%)',
                 display: 'flex',
