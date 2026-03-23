@@ -505,7 +505,7 @@ const App = () => {
 
       // Check if user is actively typing in a textarea (comment input)
       const target = e.target as HTMLElement;
-      const isTyping = target.tagName === 'TEXTAREA' || target.tagName === 'INPUT';
+      const isTyping = target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.isContentEditable;
 
       // Enter to finish (when not typing)
       if (e.key === 'Enter' && !isTyping) {

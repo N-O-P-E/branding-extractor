@@ -272,54 +272,6 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
           }}
         />
 
-        {/* Shopify links */}
-        {captureData.browserMetadata?.shopify?.editorUrl && (
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            {captureData.browserMetadata.shopify.editorUrl && (
-              <a
-                href={captureData.browserMetadata.shopify.editorUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  flex: 1,
-                  padding: '8px 12px',
-                  background: 'rgba(167,139,250,0.15)',
-                  border: '1px solid rgba(167,139,250,0.3)',
-                  borderRadius: 8,
-                  color: '#c4b5fd',
-                  fontSize: 12,
-                  fontWeight: 500,
-                  textDecoration: 'none',
-                  textAlign: 'center' as const,
-                  transition: 'all 0.15s',
-                }}>
-                Open in Editor
-              </a>
-            )}
-            {captureData.browserMetadata.shopify.previewUrl && (
-              <a
-                href={captureData.browserMetadata.shopify.previewUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  flex: 1,
-                  padding: '8px 12px',
-                  background: 'rgba(167,139,250,0.15)',
-                  border: '1px solid rgba(167,139,250,0.3)',
-                  borderRadius: 8,
-                  color: '#c4b5fd',
-                  fontSize: 12,
-                  fontWeight: 500,
-                  textDecoration: 'none',
-                  textAlign: 'center' as const,
-                  transition: 'all 0.15s',
-                }}>
-                Preview
-              </a>
-            )}
-          </div>
-        )}
-
         {/* Description */}
         <textarea
           placeholder="Describe the issue..."
