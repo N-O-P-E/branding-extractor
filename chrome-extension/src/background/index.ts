@@ -44,6 +44,15 @@ chrome.runtime.onMessage.addListener(
       handleFetchRepos(sendResponse as (response: FetchReposResponse) => void);
       return true;
     }
+    if (message.type === 'REQUEST_CAPTURE') {
+      // Forward to the active tab's content-UI
+      chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
+        if (tab?.id) {
+          chrome.tabs.sendMessage(tab.id, { type: 'REQUEST_CAPTURE' }).catch(() => {});
+        }
+      });
+      return false;
+    }
     if (message.type === 'SHOW_ISSUES_PANEL') {
       handleShowIssuesPanel(message);
       return true;
