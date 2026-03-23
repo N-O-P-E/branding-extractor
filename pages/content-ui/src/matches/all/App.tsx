@@ -347,7 +347,7 @@ const App = () => {
           chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: 'pencil' } });
           return;
         }
-        if (e.key === 't' || e.key === 'T') {
+        if (e.key === 'c' || e.key === 'C') {
           e.preventDefault();
           setActiveTool('pencil');
           setCanvasSubTool('text');
@@ -911,10 +911,11 @@ const App = () => {
                     outline: 'none',
                     minWidth: 80,
                     width: 'auto',
-                    maxWidth: 300,
                     boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
                     resize: 'none',
                     overflow: 'hidden',
+                    overflowWrap: 'normal',
+                    whiteSpace: 'pre',
                     lineHeight: '1.3',
                     display: 'block',
                     boxSizing: 'border-box',
@@ -924,12 +925,12 @@ const App = () => {
                   }}
                   onInput={e => {
                     const el = e.target as HTMLTextAreaElement;
-                    // Auto-size: reset then measure
+                    // Auto-size height for multi-line (Shift+Enter)
                     el.style.height = 'auto';
                     el.style.height = el.scrollHeight + 'px';
-                    // Auto-width based on content
+                    // Auto-size width to fit text (no wrapping)
                     el.style.width = '80px';
-                    el.style.width = Math.min(300, Math.max(80, el.scrollWidth)) + 'px';
+                    el.style.width = Math.max(80, el.scrollWidth) + 'px';
                   }}
                   onKeyDown={e => {
                     e.stopPropagation();
@@ -1062,7 +1063,7 @@ const App = () => {
                     </button>
                     <button
                       onClick={() => setCanvasSubTool('text')}
-                      title="Text comment (T)"
+                      title="Comment (C)"
                       style={{
                         height: 28,
                         borderRadius: '6px',
@@ -1078,7 +1079,7 @@ const App = () => {
                         color: canvasSubTool === 'text' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
                         fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                       }}>
-                      <span style={{ fontSize: '14px', fontWeight: 700, lineHeight: 1 }}>T</span>
+                      <span style={{ fontSize: '14px', fontWeight: 700, lineHeight: 1 }}>C</span>
                       <span
                         style={{
                           fontSize: '10px',
@@ -1086,7 +1087,7 @@ const App = () => {
                           opacity: 0.5,
                           letterSpacing: '0.02em',
                         }}>
-                        T
+                        C
                       </span>
                     </button>
                   </div>
