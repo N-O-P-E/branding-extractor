@@ -43,6 +43,30 @@ export default function SidePanel() {
     return () => chrome.runtime.onMessage.removeListener(listener);
   }, []);
 
+  // Reset to home when switching tabs or navigating (overlay won't survive)
+  useEffect(() => {
+    const onActivated = () => {
+      if (view === 'create-issue') {
+        setView('home');
+        setCaptureData(null);
+        setBrowserMetadata(null);
+      }
+    };
+    const onUpdated = (_tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
+      if (changeInfo.url && view === 'create-issue') {
+        setView('home');
+        setCaptureData(null);
+        setBrowserMetadata(null);
+      }
+    };
+    chrome.tabs.onActivated.addListener(onActivated);
+    chrome.tabs.onUpdated.addListener(onUpdated);
+    return () => {
+      chrome.tabs.onActivated.removeListener(onActivated);
+      chrome.tabs.onUpdated.removeListener(onUpdated);
+    };
+  }, [view]);
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 1 }}>
