@@ -298,20 +298,6 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
       </div>
 
       <div style={{ padding: '20px' }}>
-        {/* Screenshot preview — shown when capture data is available */}
-        {captureData?.annotatedScreenshotDataUrl && (
-          <img
-            src={captureData.annotatedScreenshotDataUrl}
-            alt="Screenshot preview"
-            style={{
-              width: '100%',
-              borderRadius: 8,
-              border: `1px solid ${colors.border}`,
-              display: 'block',
-            }}
-          />
-        )}
-
         {/* Description */}
         <textarea
           placeholder="Describe the issue..."
