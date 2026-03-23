@@ -74,6 +74,17 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
     void fetchIssues();
   }, [fetchIssues]);
 
+  // Re-fetch issues when the active tab URL changes
+  useEffect(() => {
+    const listener = (_tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
+      if (changeInfo.url || changeInfo.status === 'complete') {
+        void fetchIssues();
+      }
+    };
+    chrome.tabs.onUpdated.addListener(listener);
+    return () => chrome.tabs.onUpdated.removeListener(listener);
+  }, [fetchIssues]);
+
   const handleRepoChange = (repo: string) => {
     setSelectedRepo(repo);
     chrome.storage.sync.set({ selectedRepo: repo });
