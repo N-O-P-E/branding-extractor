@@ -183,6 +183,7 @@ const App = () => {
   const [inspectActive, setInspectActive] = useState(false);
   const [inspectHighlight, setInspectHighlight] = useState<DOMRect | null>(null);
   const [inspectElInfo, setInspectElInfo] = useState('');
+  const [capturedElements, setCapturedElements] = useState<string[]>([]);
   const inspectHoveredEl = useRef<Element | null>(null);
 
   const backdropRef = useRef<HTMLDivElement>(null);
@@ -206,6 +207,7 @@ const App = () => {
     inspectHoveredEl.current = null;
     setSelections([]);
     setHtmlSnippets([]);
+    setCapturedElements([]);
     setPlacedImages([]);
     setDraggingImageIndex(null);
     setResizingImageIndex(null);
@@ -350,7 +352,15 @@ const App = () => {
             pageUrl: window.location.href,
             viewportWidth: window.innerWidth,
             viewportHeight: window.innerHeight,
-            htmlSnippet: htmlSnippets.length > 0 ? htmlSnippets.join('\n\n---\n\n') : undefined,
+            htmlSnippet:
+              htmlSnippets.length > 0
+                ? htmlSnippets
+                    .map((snippet, i) => {
+                      const elInfo = capturedElements[i];
+                      return elInfo ? `<!-- ${elInfo} -->\n${snippet}` : snippet;
+                    })
+                    .join('\n\n---\n\n')
+                : undefined,
             browserMetadata,
           },
         };
@@ -373,6 +383,7 @@ const App = () => {
     } else if (lastAction === 'selection') {
       setSelections(prev => prev.slice(0, -1));
       setHtmlSnippets(prev => prev.slice(0, -1));
+      setCapturedElements(prev => prev.slice(0, -1));
     } else if (lastAction === 'image') {
       setPlacedImages(prev => prev.slice(0, -1));
     }
@@ -788,6 +799,16 @@ const App = () => {
       setHtmlSnippets(prev => [...prev, html]);
       actionHistory.current.push('selection');
 
+      // Store element info for display
+      const tag = el.tagName.toLowerCase();
+      const elId = el.id ? `#${el.id}` : '';
+      const classes = [...el.classList]
+        .slice(0, 3)
+        .map(c => `.${c.length > 25 ? c.slice(0, 25) + '…' : c}`)
+        .join('');
+      const size = `${Math.round(rect.width)}×${Math.round(rect.height)}`;
+      setCapturedElements(prev => [...prev, `${tag}${elId}${classes} · ${size}`]);
+
       // Exit inspect mode, enter canvas overlay so user can add more
       setInspectActive(false);
       setInspectHighlight(null);
@@ -987,6 +1008,41 @@ const App = () => {
               />
             </svg>
           </button>
+
+          {/* Captured element info bar */}
+          {capturedElements.length > 0 && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 16,
+                left: 60,
+                right: 60,
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 6,
+                justifyContent: 'center',
+                zIndex: 2,
+                pointerEvents: 'none',
+              }}>
+              {capturedElements.map((info, i) => (
+                <div
+                  key={i}
+                  style={{
+                    background: '#1e293b',
+                    border: '1px solid rgba(148,163,184,0.2)',
+                    borderRadius: 8,
+                    padding: '5px 12px',
+                    fontSize: 11,
+                    fontFamily: 'monospace, monospace',
+                    color: '#c4b5fd',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+                    whiteSpace: 'nowrap',
+                  }}>
+                  {info}
+                </div>
+              ))}
+            </div>
+          )}
 
           <div
             style={styles.screenshotContainer}
