@@ -1,6 +1,10 @@
 /* eslint-disable */
 (function () {
-  document.addEventListener('vir-request-shopify-data', function () {
+  var nonce = (document.currentScript && document.currentScript.getAttribute('data-vir-nonce')) || '';
+  var requestEvent = 'vir-request-shopify-data' + (nonce ? '-' + nonce : '');
+  var responseEvent = 'vir-shopify-data' + (nonce ? '-' + nonce : '');
+
+  document.addEventListener(requestEvent, function () {
     var data = {};
     try {
       if (window.Shopify) {
@@ -21,7 +25,7 @@
       /* ignore */
     }
     document.dispatchEvent(
-      new CustomEvent('vir-shopify-data', {
+      new CustomEvent(responseEvent, {
         detail: JSON.stringify(data),
       }),
     );

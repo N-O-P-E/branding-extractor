@@ -52,13 +52,18 @@ export const CONSOLE_CAPTURE_SCRIPT = `
 /** Retrieve captured console errors from the main-world script via DOM events */
 export const getConsoleErrors = (): Promise<Array<{ level: 'error' | 'warn'; message: string; timestamp: number }>> =>
   new Promise(resolve => {
+    const nonce = (window as unknown as { __virNonce?: string }).__virNonce ?? '';
+    const suffix = nonce ? `-${nonce}` : '';
+    const requestEventName = `vir-request-console-errors${suffix}`;
+    const responseEventName = `vir-console-errors${suffix}`;
+
     const timeout = setTimeout(() => {
       resolve([]);
     }, 500);
 
     const handler = (event: Event) => {
       clearTimeout(timeout);
-      document.removeEventListener('vir-console-errors', handler);
+      document.removeEventListener(responseEventName, handler);
       try {
         const data = JSON.parse((event as CustomEvent).detail);
         resolve(Array.isArray(data) ? data : []);
@@ -67,6 +72,6 @@ export const getConsoleErrors = (): Promise<Array<{ level: 'error' | 'warn'; mes
       }
     };
 
-    document.addEventListener('vir-console-errors', handler);
-    document.dispatchEvent(new CustomEvent('vir-request-console-errors'));
+    document.addEventListener(responseEventName, handler);
+    document.dispatchEvent(new CustomEvent(requestEventName));
   });

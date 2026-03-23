@@ -3,9 +3,13 @@ name: Publish Extension to Chrome Web Store
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - uses: actions/checkout@v4
 
@@ -22,6 +26,9 @@ jobs:
 
       - name: Zip extension
         run: cd dist && zip -r ../extension.zip .
+
+      - name: Generate checksum
+        run: sha256sum extension.zip | tee extension.zip.sha256
 
       - name: Upload to Chrome Web Store
         uses: mnao305/chrome-extension-upload@v5.0.0
