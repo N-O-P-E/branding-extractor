@@ -22,5 +22,12 @@ tsconfig.tsbuildinfo
 **/.turbo
 *.zip
 
+# local-only
+CLAUDE.md
+.superpowers/
+store-assets/
+.gitguardian.yaml
+packages/env/use-env-example.png
+
 # compiled
 **/tailwind-output.css

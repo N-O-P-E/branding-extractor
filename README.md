@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="header.jpg" alt="Visual Issue Reporter — Create Visual Issues, Made by Studio N.O.P.E." />
+</p>
+
 # Visual Issue Reporter
 
 Chrome extension for reporting visual issues on Shopify storefronts. Captures annotated screenshots and creates GitHub issues with full browser and Shopify context.
