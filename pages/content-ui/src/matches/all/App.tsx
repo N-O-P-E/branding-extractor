@@ -128,6 +128,7 @@ const App = () => {
   // Inspect tool state
   const [inspectActive, setInspectActive] = useState(false);
   const [inspectHighlight, setInspectHighlight] = useState<DOMRect | null>(null);
+  const [inspectElInfo, setInspectElInfo] = useState('');
   const inspectHoveredEl = useRef<Element | null>(null);
 
   const backdropRef = useRef<HTMLDivElement>(null);
@@ -513,11 +514,23 @@ const App = () => {
       const el = document.elementFromPoint(e.clientX, e.clientY);
       if (!el || el.closest('[data-coworker-inspect]')) {
         setInspectHighlight(null);
+        setInspectElInfo('');
         inspectHoveredEl.current = null;
         return;
       }
       inspectHoveredEl.current = el;
-      setInspectHighlight(el.getBoundingClientRect());
+      const rect = el.getBoundingClientRect();
+      setInspectHighlight(rect);
+
+      // Build element info string: tag.class1.class2 · WxH
+      const tag = el.tagName.toLowerCase();
+      const classes = [...el.classList]
+        .slice(0, 3)
+        .map(c => `.${c.length > 20 ? c.slice(0, 20) + '…' : c}`)
+        .join('');
+      const id = el.id ? `#${el.id.length > 20 ? el.id.slice(0, 20) + '…' : el.id}` : '';
+      const size = `${Math.round(rect.width)}×${Math.round(rect.height)}`;
+      setInspectElInfo(`${tag}${id}${classes} · ${size}`);
     };
 
     const handleClick = (e: MouseEvent) => {
@@ -689,7 +702,19 @@ const App = () => {
             boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
             whiteSpace: 'nowrap',
           }}>
-          Click an element to report · <span style={{ opacity: 0.5 }}>Esc to cancel</span>
+          {inspectElInfo ? (
+            <>
+              <span style={{ color: '#c4b5fd', fontFamily: 'monospace, monospace', fontSize: 12 }}>
+                {inspectElInfo}
+              </span>
+              <span style={{ opacity: 0.4, margin: '0 6px' }}>·</span>
+              <span style={{ opacity: 0.5 }}>Click to select · Esc to cancel</span>
+            </>
+          ) : (
+            <>
+              Click an element to report · <span style={{ opacity: 0.5 }}>Esc to cancel</span>
+            </>
+          )}
         </div>
       )}
 
