@@ -72,9 +72,6 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
 
       if (response?.success) {
         setSuccessUrl(response.issueUrl ?? '');
-        setTimeout(() => {
-          onSuccess();
-        }, 2000);
       } else {
         setError(response?.error ?? 'Failed to create issue');
         setSubmitting(false);
@@ -179,6 +176,7 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
           href={successUrl}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => onSuccess()}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -217,7 +215,7 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
             padding: 0,
             transition: 'all 0.15s',
           }}>
-          Back to home
+          Report another issue
         </button>
       </div>
     );
