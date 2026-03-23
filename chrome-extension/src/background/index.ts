@@ -398,7 +398,7 @@ const handleFetchPageIssues = async (
     const { data: issues } = await octokit.issues.listForRepo({
       owner,
       repo,
-      state: 'all',
+      state: 'open',
       sort: 'created',
       direction: 'desc',
       per_page: 100,
