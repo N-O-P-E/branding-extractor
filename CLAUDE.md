@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Coworker — Chrome extension (MV3) for visual issue reporting. Distributed via Chrome Web Store under Studio Nope.
+Visual GitHub Reporter — Chrome extension (MV3) for visual issue reporting. Distributed via Chrome Web Store by Studio N.O.P.E.
 
 ## Build & dev
 
