@@ -20,10 +20,16 @@ const getCleanHtml = (x: number, y: number): string | undefined => {
 };
 
 // Inject console capture into the page's main world
-const script = document.createElement('script');
-script.textContent = CONSOLE_CAPTURE_SCRIPT;
-(document.head || document.documentElement).appendChild(script);
-script.remove();
+// This may fail on pages with strict CSP — that's OK, console errors
+// will just be empty in the report.
+try {
+  const script = document.createElement('script');
+  script.textContent = CONSOLE_CAPTURE_SCRIPT;
+  (document.head || document.documentElement).appendChild(script);
+  script.remove();
+} catch {
+  // CSP blocked inline script injection — silently ignore
+}
 
 chrome.runtime.onMessage.addListener(
   (message: GetHtmlSnippetMessage, _sender, sendResponse: (response: HtmlSnippetResponse) => void) => {
