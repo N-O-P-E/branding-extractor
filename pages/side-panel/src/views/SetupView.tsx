@@ -175,15 +175,38 @@ export default function SetupView({ onDone }: SetupViewProps) {
       }}>
       {/* Header */}
       <div style={{ marginBottom: 32 }}>
-        <h1
-          style={{
-            fontSize: 26,
-            margin: 0,
-            color: colors.textPrimary,
-            lineHeight: 1.2,
-          }}>
-          Setup
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button
+            onClick={onDone}
+            aria-label="Back"
+            style={{
+              background: 'rgba(148,163,184,0.08)',
+              border: '1px solid rgba(148,163,184,0.12)',
+              borderRadius: 8,
+              width: 32,
+              height: 32,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: 'rgba(241,245,249,0.6)',
+              fontSize: 16,
+              padding: 0,
+              flexShrink: 0,
+              transition: 'all 0.15s',
+            }}>
+            ←
+          </button>
+          <h1
+            style={{
+              fontSize: 26,
+              margin: 0,
+              color: colors.textPrimary,
+              lineHeight: 1.2,
+            }}>
+            Setup
+          </h1>
+        </div>
         <p style={{ margin: '6px 0 0', color: colors.textSecondary, fontSize: 13 }}>
           Connect your GitHub account to get started.
         </p>
@@ -205,7 +228,7 @@ export default function SetupView({ onDone }: SetupViewProps) {
             href="https://github.com/settings/tokens/new"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: '#E4FA8B' }}>
+            style={{ color: '#c4b5fd' }}>
             github.com/settings/tokens
           </a>{' '}
           with <code style={{ background: colors.inputBg, padding: '1px 5px', borderRadius: 4 }}>repo</code> scope.

@@ -193,19 +193,28 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
         <div style={{ marginTop: 8 }}>
           <button onClick={onOpenSettings} style={settingsRowStyle}>
             <span>GitHub Token</span>
-            <span style={{ fontSize: 12, color: patConnected ? colors.green : colors.textSecondary }}>
-              {patConnected ? 'Connected' : 'Not connected'}
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 12, color: patConnected ? colors.green : colors.textSecondary }}>
+                {patConnected ? 'Connected' : 'Not connected'}
+              </span>
+              <span style={{ fontSize: 14, color: 'rgba(148,163,184,0.3)' }}>›</span>
             </span>
           </button>
           <button onClick={onOpenSettings} style={settingsRowStyle}>
             <span>Repositories</span>
-            <span style={{ fontSize: 12, color: colors.textSecondary }}>
-              {repos.length} {repos.length === 1 ? 'repo' : 'repos'}
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 12, color: colors.textSecondary }}>
+                {repos.length} {repos.length === 1 ? 'repo' : 'repos'}
+              </span>
+              <span style={{ fontSize: 14, color: 'rgba(148,163,184,0.3)' }}>›</span>
             </span>
           </button>
           <button onClick={onOpenSettings} style={{ ...settingsRowStyle, borderBottom: 'none' }}>
             <span>Default Labels</span>
-            <span style={{ fontSize: 12, color: colors.textSecondary }}>visual-issue</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 12, color: colors.textSecondary }}>visual-issue</span>
+              <span style={{ fontSize: 14, color: 'rgba(148,163,184,0.3)' }}>›</span>
+            </span>
           </button>
         </div>
       </div>
