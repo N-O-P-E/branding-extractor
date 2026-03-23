@@ -278,8 +278,11 @@ export default function SetupView({ onDone }: SetupViewProps) {
         )}
       </section>
 
+      {/* Divider */}
+      <div style={{ borderTop: '1px solid rgba(148,163,184,0.1)', margin: '0 0 24px' }} />
+
       {/* Repositories section */}
-      <section style={{ marginBottom: 40 }}>
+      <section style={{ marginBottom: 24 }}>
         <h2
           style={{
             fontSize: 18,
