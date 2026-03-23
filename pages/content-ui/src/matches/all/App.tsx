@@ -566,12 +566,6 @@ const App = () => {
         active?.isContentEditable ||
         !!editingCommentRef.current;
 
-      // Enter to finish (when not typing)
-      if (e.key === 'Enter' && !isTyping) {
-        e.preventDefault();
-        handleDone();
-        return;
-      }
       // D/S/C/I tool switching (when not typing)
       if (!isTyping) {
         if (e.key === 'd' || e.key === 'D') {
@@ -1434,7 +1428,7 @@ const App = () => {
                 transform: 'translateX(-50%)',
                 display: 'flex',
                 gap: '2px',
-                padding: '6px 8px',
+                padding: '6px 10px',
                 background: '#1e293b',
                 border: '1px solid rgba(148,163,184,0.2)',
                 borderRadius: '12px',
@@ -1715,30 +1709,6 @@ const App = () => {
                     strokeLinejoin="round"
                   />
                 </svg>
-              </button>
-
-              {/* Divider */}
-              <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.2)', margin: '0 4px' }} />
-
-              {/* Done */}
-              <button
-                onClick={handleDone}
-                disabled={!hasCanvasContent}
-                style={{
-                  background: !hasCanvasContent ? 'rgba(124,58,237,0.2)' : 'linear-gradient(135deg, #7c3aed, #9333ea)',
-                  color: !hasCanvasContent ? 'rgba(255,255,255,0.3)' : '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '5px 14px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-                  cursor: !hasCanvasContent ? 'default' : 'pointer',
-                  transition: 'all 0.15s ease-out',
-                  whiteSpace: 'nowrap',
-                  letterSpacing: '0.02em',
-                }}>
-                Done
               </button>
             </div>
           )}
