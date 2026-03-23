@@ -1,3 +1,4 @@
+import { CONSOLE_CAPTURE_SCRIPT } from '@extension/shared/lib/utils/console-capture.js';
 import type { GetHtmlSnippetMessage, HtmlSnippetResponse } from '@extension/shared';
 
 const getCleanHtml = (x: number, y: number): string | undefined => {
@@ -17,6 +18,12 @@ const getCleanHtml = (x: number, y: number): string | undefined => {
   }
   return html;
 };
+
+// Inject console capture into the page's main world
+const script = document.createElement('script');
+script.textContent = CONSOLE_CAPTURE_SCRIPT;
+(document.head || document.documentElement).appendChild(script);
+script.remove();
 
 chrome.runtime.onMessage.addListener(
   (message: GetHtmlSnippetMessage, _sender, sendResponse: (response: HtmlSnippetResponse) => void) => {

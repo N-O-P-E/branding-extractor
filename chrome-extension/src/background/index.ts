@@ -163,6 +163,7 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
       htmlSnippet,
       labels: userLabels,
       assignee,
+      browserMetadata,
     } = message.payload;
 
     const releaseId = await getOrCreateScreenshotRelease(octokit, owner, repo);
@@ -207,18 +208,65 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
 
     const environment = detectEnvironment(pageUrl);
 
-    let body = `## Screenshot\n![Screenshot](${screenshotUrl})\n\n`;
+    let body = '';
+
+    // Links section (Shopify only)
+    if (browserMetadata?.shopify?.editorUrl || browserMetadata?.shopify?.previewUrl) {
+      body += `## Links\n`;
+      if (browserMetadata.shopify.editorUrl) body += `- [Open in Theme Editor](${browserMetadata.shopify.editorUrl})\n`;
+      if (browserMetadata.shopify.previewUrl) body += `- [Preview](${browserMetadata.shopify.previewUrl})\n`;
+      body += `\n`;
+    }
+
+    body += `## Screenshot\n![Screenshot](${screenshotUrl})\n\n`;
     body += `## Description\n${description}\n\n`;
     body += `## Details\n`;
     body += `- **Page:** ${pagePath}\n`;
     body += `- **Store:** ${hostname}\n`;
-    body += `- **Environment:** ${environment}\n`;
+    body += `- **Environment:** ${browserMetadata?.shopify?.environment ?? environment}\n`;
     if (template) body += `- **Template:** ${template}\n`;
     if (themeId) body += `- **Theme ID:** ${themeId}\n`;
     body += `- **Viewport:** ${viewportWidth} x ${viewportHeight}\n`;
     if (region) {
       body += `- **Region:** x:${Math.round(region.x)}, y:${Math.round(region.y)}, width:${Math.round(region.width)}, height:${Math.round(region.height)}\n`;
     }
+
+    // Environment section
+    if (browserMetadata) {
+      body += `\n## Environment\n`;
+      body += `- **Browser:** ${browserMetadata.browser.name} ${browserMetadata.browser.version} (${browserMetadata.browser.engine})\n`;
+      body += `- **OS:** ${browserMetadata.os.name} ${browserMetadata.os.version}\n`;
+      body += `- **Device:** ${browserMetadata.device.type} (${browserMetadata.device.screenWidth}x${browserMetadata.device.screenHeight} @${browserMetadata.device.pixelRatio}x)\n`;
+      body += `- **Viewport:** ${viewportWidth}x${viewportHeight}\n`;
+      body += `- **Zoom:** ${browserMetadata.page.zoomLevel}%\n`;
+      body += `- **Color Scheme:** ${browserMetadata.device.colorScheme}\n`;
+      body += `- **Page Title:** ${browserMetadata.page.title}\n`;
+      body += `- **Language:** ${browserMetadata.page.language}\n`;
+      body += `- **Connection:** ${browserMetadata.network.online ? 'online' : 'offline'}${browserMetadata.network.connectionType ? ` (${browserMetadata.network.connectionType})` : ''}\n`;
+    }
+
+    // Shopify Context section
+    if (browserMetadata?.shopify) {
+      const s = browserMetadata.shopify;
+      body += `\n## Shopify Context\n`;
+      body += `- **Store:** ${s.storeName} (${s.storeHandle})\n`;
+      if (s.themeName) body += `- **Theme:** ${s.themeName}\n`;
+      if (s.themeId) body += `- **Theme ID:** ${s.themeId}\n`;
+      body += `- **Environment:** ${s.environment}\n`;
+      if (s.buildVersion) body += `- **Shopify Build:** ${s.buildVersion}\n`;
+      if (s.locale) body += `- **Locale:** ${s.locale}\n`;
+    }
+
+    // Console Errors section
+    if (browserMetadata?.consoleErrors && browserMetadata.consoleErrors.length > 0) {
+      body += `\n## Console Errors\n\`\`\`log\n`;
+      for (const err of browserMetadata.consoleErrors) {
+        const time = new Date(err.timestamp).toLocaleTimeString();
+        body += `[${err.level}] ${time} — ${err.message}\n`;
+      }
+      body += `\`\`\`\n`;
+    }
+
     if (htmlSnippet) {
       body += `\n## HTML Snippet\n\`\`\`html\n${htmlSnippet}\n\`\`\`\n`;
     }

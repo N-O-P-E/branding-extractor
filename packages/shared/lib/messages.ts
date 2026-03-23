@@ -5,6 +5,35 @@ export interface Region {
   height: number;
 }
 
+export interface ShopifyContext {
+  storeName: string;
+  storeHandle: string;
+  themeName?: string;
+  themeId?: string;
+  environment: 'editor' | 'preview' | 'live' | 'local';
+  buildVersion?: string;
+  locale?: string;
+  editorUrl?: string;
+  previewUrl?: string;
+}
+
+export interface BrowserMetadata {
+  browser: { name: string; version: string; engine: string };
+  os: { name: string; version: string; platform: string };
+  device: {
+    type: 'desktop' | 'tablet' | 'mobile';
+    screenWidth: number;
+    screenHeight: number;
+    pixelRatio: number;
+    colorScheme: 'dark' | 'light' | 'no-preference';
+  };
+  page: { title: string; language: string; zoomLevel: number };
+  network: { online: boolean; connectionType?: string };
+  consoleErrors: Array<{ level: 'error' | 'warn'; message: string; timestamp: number }>;
+  userAgent: string;
+  shopify?: ShopifyContext;
+}
+
 export interface StartReportMessage {
   type: 'START_REPORT';
 }
@@ -32,6 +61,7 @@ export interface CaptureCompleteMessage {
     viewportWidth: number;
     viewportHeight: number;
     htmlSnippet?: string;
+    browserMetadata?: BrowserMetadata;
   };
 }
 
@@ -71,6 +101,7 @@ export interface CreateIssueMessage {
     htmlSnippet?: string;
     labels?: string[];
     assignee?: string;
+    browserMetadata?: BrowserMetadata;
   };
 }
 
