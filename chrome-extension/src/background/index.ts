@@ -211,10 +211,9 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
     let body = '';
 
     // Links section (Shopify only)
-    if (browserMetadata?.shopify?.editorUrl || browserMetadata?.shopify?.previewUrl) {
+    if (browserMetadata?.shopify?.editorUrl) {
       body += `## Links\n`;
-      if (browserMetadata.shopify.editorUrl) body += `- [Open in Theme Editor](${browserMetadata.shopify.editorUrl})\n`;
-      if (browserMetadata.shopify.previewUrl) body += `- [Preview](${browserMetadata.shopify.previewUrl})\n`;
+      body += `- [Open in Theme Editor](${browserMetadata.shopify.editorUrl})\n`;
       body += `\n`;
     }
 
@@ -254,7 +253,6 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
       if (s.themeId) body += `- **Theme ID:** ${s.themeId}\n`;
       body += `- **Environment:** ${s.environment}\n`;
       if (s.editorUrl) body += `- **Editor:** [Open in Editor](${s.editorUrl})\n`;
-      if (s.previewUrl) body += `- **Preview:** [Open Preview](${s.previewUrl})\n`;
       if (s.buildVersion) body += `- **Shopify Build:** ${s.buildVersion}\n`;
       if (s.locale) body += `- **Locale:** ${s.locale}\n`;
     }

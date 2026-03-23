@@ -150,7 +150,9 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
             }}>
             N.O.P.E. Co-worker
           </h1>
-          <p style={{ margin: '6px 0 0', color: colors.textSecondary, fontSize: 13 }}>Visual issue reporting</p>
+          <p style={{ margin: '6px 0 0', color: colors.textSecondary, fontSize: 13 }}>
+            Visual GitHub issue reporting tool.
+          </p>
         </div>
         <button
           onClick={onOpenSettings}

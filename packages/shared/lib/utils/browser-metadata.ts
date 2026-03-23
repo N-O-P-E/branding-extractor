@@ -147,30 +147,15 @@ const extractShopifyContext = (): ShopifyContext | undefined => {
       environment = 'preview';
     }
 
-    // Try to get themeId from the editor URL path if not found yet
-    if (!themeId && isShopifyAdmin) {
-      const editorMatch = url.pathname.match(/\/themes\/(\d+)/);
-      if (editorMatch) {
-        // Already caught above, but just in case
-      }
-      // Try to find it in the page's meta or link tags
-      const themeLink = document.querySelector('link[href*="/themes/"][href*="/editor"]');
-      if (themeLink) {
-        const linkMatch = themeLink.getAttribute('href')?.match(/\/themes\/(\d+)/);
-        if (linkMatch) Object.assign({}, { themeId: linkMatch[1] });
-      }
-    }
-
     let editorUrl: string | undefined;
-    let previewUrl: string | undefined;
 
-    if (storeHandle && themeId) {
+    if (isShopifyAdmin && url.pathname.includes('/editor')) {
+      // Already in the editor — use the exact current URL (preserves template/section context)
+      editorUrl = url.href;
+    } else if (storeHandle && themeId) {
       editorUrl = `https://admin.shopify.com/store/${storeHandle}/themes/${themeId}/editor`;
-      previewUrl = `https://${storeHandle}.myshopify.com${url.pathname !== '/' ? url.pathname : ''}?preview_theme_id=${themeId}`;
     } else if (storeHandle) {
-      // No themeId — link to the admin themes page and plain storefront
       editorUrl = `https://admin.shopify.com/store/${storeHandle}/themes`;
-      previewUrl = `https://${storeHandle}.myshopify.com`;
     }
 
     return {
@@ -182,7 +167,6 @@ const extractShopifyContext = (): ShopifyContext | undefined => {
       buildVersion,
       locale,
       editorUrl,
-      previewUrl,
     };
   } catch {
     return undefined;

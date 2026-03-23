@@ -1,7 +1,7 @@
 {
   "extensionDescription": {
     "description": "Extension description",
-    "message": "Visual issue reporter for any GitHub project"
+    "message": "Report visual issues without switching context. Shorter dev cycles, everyone can contribute — not just developers."
   },
   "extensionName": {
     "description": "Extension name",
