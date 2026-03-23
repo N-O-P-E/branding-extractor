@@ -1,4 +1,3 @@
-import { CONSOLE_CAPTURE_SCRIPT } from '@extension/shared/lib/utils/console-capture.js';
 import type { GetHtmlSnippetMessage, HtmlSnippetResponse } from '@extension/shared';
 
 const getCleanHtml = (x: number, y: number): string | undefined => {
@@ -19,16 +18,15 @@ const getCleanHtml = (x: number, y: number): string | undefined => {
   return html;
 };
 
-// Inject console capture into the page's main world
-// This may fail on pages with strict CSP — that's OK, console errors
-// will just be empty in the report.
+// Inject console capture into the page's main world via external script
+// Using src instead of textContent avoids CSP inline-script violations
 try {
   const script = document.createElement('script');
-  script.textContent = CONSOLE_CAPTURE_SCRIPT;
+  script.src = chrome.runtime.getURL('console-capture.js');
   (document.head || document.documentElement).appendChild(script);
-  script.remove();
+  script.onload = () => script.remove();
 } catch {
-  // CSP blocked inline script injection — silently ignore
+  // Injection failed — console errors will just be empty
 }
 
 chrome.runtime.onMessage.addListener(
