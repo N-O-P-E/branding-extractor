@@ -1,17 +1,16 @@
-# Visual GitHub Reporter
+# Coworker
 
-**by Studio N.O.P.E.**
-
-Chrome extension for reporting visual issues directly to GitHub. Capture annotated screenshots and create issues with full context — no context-switching required.
+Chrome extension for reporting visual issues on Shopify storefronts. Captures annotated screenshots and creates GitHub issues with full context.
 
 ## Features
 
 - Screenshot capture with region selection and annotation
-- Creates GitHub issues with screenshot, description, and environment info
+- Creates GitHub issues with screenshot, description, environment info, and HTML snippet
 - Issues panel: see all reported issues for the current page
-- Detects environment (live, preview, local dev)
+- Detects environment (live, preview, editor, local) and Shopify template
 - Screenshots stored as GitHub Release Assets
 - Inline settings in popup (GitHub token + repo management)
+- Tag `@claude` on any issue to get an AI-powered implementation plan
 
 ---
 
@@ -21,8 +20,8 @@ Chrome extension for reporting visual issues directly to GitHub. Capture annotat
 
 **No coding required** — just download, unzip, and load in Chrome.
 
-1. **Download** the latest release:  
-   👉 [visual-github-reporter.zip](https://github.com/N-O-P-E/visual-github-reporter/releases/latest/download/visual-github-reporter.zip)
+1. **Download** the latest release:
+   [coworker-extension.zip](https://github.com/N-O-P-E/coworker/releases/latest/download/coworker-extension.zip)
 
 2. **Unzip** the downloaded file
 
@@ -30,16 +29,16 @@ Chrome extension for reporting visual issues directly to GitHub. Capture annotat
    - Open Chrome and go to `chrome://extensions`
    - Enable **Developer mode** (toggle in the top-right corner)
    - Click **Load unpacked**
-   - Select the unzipped folder
+   - Select the unzipped `coworker-extension` folder
 
 4. **Configure:**
-   - Click the Visual GitHub Reporter icon in your toolbar
-   - Click the ⚙️ gear icon to open **Settings**
+   - Click the Coworker icon in your toolbar
+   - Click the gear icon to open **Settings**
    - Add your **GitHub Personal Access Token**:
      - Go to [github.com/settings/tokens/new](https://github.com/settings/tokens/new)
      - Select the `repo` scope
      - Generate and paste the token, then click **Validate**
-   - Add one or more **repositories** in `owner/repo` format
+   - Add one or more **repositories** in `owner/repo` format (e.g. `your-org/your-repo`)
 
 Done! You're ready to report issues.
 
@@ -47,15 +46,15 @@ Done! You're ready to report issues.
 
 ## Usage
 
-1. Navigate to the page where you want to report an issue
-2. Click the Visual GitHub Reporter icon and select a target repo
+1. Navigate to the Shopify page where you want to report an issue
+2. Click the Coworker icon and select a target repo
 3. Click **Report Issue**
 4. Draw a region on the page to highlight the problem area
 5. Use the annotation tools to add context
 6. Fill in the issue form with a title and description
 7. Submit — the issue is created on GitHub with the screenshot and details
 
-To view existing issues for the current page, open the popup and check the issues list.
+To view existing issues for the current page, open the popup and check the issues list. Click **Show on page** to see them overlaid.
 
 ---
 
@@ -72,13 +71,13 @@ For contributors who want to build from source.
 ### Build from source
 
 ```bash
-git clone https://github.com/N-O-P-E/visual-github-reporter.git
-cd visual-github-reporter
+git clone https://github.com/N-O-P-E/coworker.git
+cd coworker
 pnpm install
 pnpm build
 ```
 
-Then load the `dist/` folder as an unpacked extension.
+Then load the `dist/` folder as an unpacked extension (see step 3 above).
 
 ### Development commands
 
@@ -90,14 +89,38 @@ pnpm lint      # Lint all packages
 pnpm format    # Format all packages
 ```
 
+After running `pnpm dev`, load the `dist/` folder as an unpacked extension. Changes will hot-reload.
+
+### Project structure
+
+```
+chrome-extension/    Chrome extension manifest and background service worker
+pages/
+  popup/             Extension popup (main UI + inline settings)
+  content-ui/        Content script UI (screenshot overlay, issue form, issues panel)
+  content/           Content script (DOM inspection for HTML snippets)
+packages/
+  shared/            Shared types and utilities
+  ui/                Tailwind config helper
+  i18n/              Locale files (en)
+  env/               Environment variables
+  hmr/               Hot module reload for development
+  dev-utils/         Manifest parser
+  vite-config/       Shared Vite configuration
+  tailwindcss-config/ Shared Tailwind configuration
+```
+
+### Key files
+
+| File | Purpose |
+|------|---------|
+| `chrome-extension/src/background/index.ts` | Background service worker: issue creation, screenshot upload, page issue fetching |
+| `pages/content-ui/src/matches/all/App.tsx` | Content script UI: screenshot overlay, annotation, issue form, issues panel |
+| `pages/popup/src/Popup.tsx` | Popup: repo selector, issue list, inline settings |
+| `packages/shared/lib/messages.ts` | Shared message types between background, popup, and content scripts |
+
 ---
 
 ## Distribution
 
-Build and share the `dist/` folder, or use `pnpm zip` to create `visual-github-reporter.zip` for distribution.
-
----
-
-## License
-
-MIT © Studio N.O.P.E.
+Build and share the `dist/` folder, or use `pnpm zip` to create `coworker-extension.zip` for easy distribution.
