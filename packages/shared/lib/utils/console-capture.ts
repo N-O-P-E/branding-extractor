@@ -50,8 +50,8 @@ export const CONSOLE_CAPTURE_SCRIPT = `
 `;
 
 /** Retrieve captured console errors from the main-world script via DOM events */
-export function getConsoleErrors(): Promise<Array<{ level: 'error' | 'warn'; message: string; timestamp: number }>> {
-  return new Promise(resolve => {
+export const getConsoleErrors = (): Promise<Array<{ level: 'error' | 'warn'; message: string; timestamp: number }>> =>
+  new Promise(resolve => {
     const timeout = setTimeout(() => {
       resolve([]);
     }, 500);
@@ -70,4 +70,3 @@ export function getConsoleErrors(): Promise<Array<{ level: 'error' | 'warn'; mes
     document.addEventListener('coworker-console-errors', handler);
     document.dispatchEvent(new CustomEvent('coworker-request-console-errors'));
   });
-}
