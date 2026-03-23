@@ -891,6 +891,18 @@ const App = () => {
 
   const isPencilMode = activeTool === 'pencil' && state === 'selecting';
 
+  // Shared comment pill styles — used by both saved comments and the editing textarea
+  const commentPillStyle: React.CSSProperties = {
+    padding: '6px 10px',
+    borderRadius: 6,
+    fontSize: 13,
+    fontWeight: 500,
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    border: '1px solid rgba(255,255,255,0.3)',
+    lineHeight: '18px',
+    boxSizing: 'border-box',
+  };
+
   return (
     <>
       {/* Inspect mode: inject cursor style on the page */}
@@ -1145,21 +1157,14 @@ const App = () => {
                     setDraggingCommentIndex(i);
                   }}
                   style={{
+                    ...commentPillStyle,
                     position: 'absolute',
                     left: comment.x,
                     top: comment.y,
                     background: comment.color,
                     color: isLightColor(comment.color) ? '#000' : '#fff',
-                    padding: '6px 10px',
-                    borderRadius: 6,
-                    fontSize: 13,
-                    fontWeight: 500,
-                    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-                    border: '1px solid rgba(255,255,255,0.3)',
                     whiteSpace: 'pre-wrap',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                    lineHeight: 1.3,
-                    boxSizing: 'border-box',
                     maxWidth: 300,
                     cursor: draggingCommentIndex === i ? 'grabbing' : 'grab',
                     userSelect: 'none',
@@ -1192,34 +1197,26 @@ const App = () => {
                   placeholder="Comment…"
                   rows={1}
                   style={{
+                    ...commentPillStyle,
                     background: strokeColor,
                     color: isLightColor(strokeColor) ? '#000' : '#fff',
-                    padding: '6px 10px',
-                    borderRadius: 6,
-                    fontSize: 13,
-                    fontWeight: 500,
-                    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-                    border: '1px solid rgba(255,255,255,0.3)',
                     outline: 'none',
                     minWidth: 80,
                     width: 'auto',
+                    height: 30,
                     boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
                     resize: 'none',
                     overflow: 'hidden',
                     overflowWrap: 'normal',
                     whiteSpace: 'pre',
-                    lineHeight: '1.3',
                     display: 'block',
-                    boxSizing: 'border-box',
-                    // Placeholder color via CSS class won't work in shadow DOM inline,
-                    // so we handle it with a caretColor trick
                     caretColor: isLightColor(strokeColor) ? '#000' : '#fff',
                   }}
                   onInput={e => {
                     const el = e.target as HTMLTextAreaElement;
                     // Auto-size height for multi-line (Shift+Enter)
-                    el.style.height = 'auto';
-                    el.style.height = el.scrollHeight + 'px';
+                    el.style.height = '30px';
+                    el.style.height = Math.max(30, el.scrollHeight) + 'px';
                     // Auto-size width to fit text (no wrapping)
                     el.style.width = '80px';
                     el.style.width = Math.max(80, el.scrollWidth + 2) + 'px';
