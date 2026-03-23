@@ -1316,7 +1316,8 @@ const App = () => {
                     height: 28,
                     borderRadius: '6px',
                     border: 'none',
-                    background: canvasSubTool === 'draw' ? 'rgba(139,92,246,0.25)' : 'transparent',
+                    background:
+                      activeTool === 'pencil' && canvasSubTool === 'draw' ? 'rgba(139,92,246,0.25)' : 'transparent',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -1324,7 +1325,7 @@ const App = () => {
                     gap: 4,
                     transition: 'all 0.15s ease-out',
                     padding: '0 6px',
-                    color: canvasSubTool === 'draw' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
+                    color: activeTool === 'pencil' && canvasSubTool === 'draw' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
                     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                   }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1353,7 +1354,8 @@ const App = () => {
                     height: 28,
                     borderRadius: '6px',
                     border: 'none',
-                    background: canvasSubTool === 'text' ? 'rgba(139,92,246,0.25)' : 'transparent',
+                    background:
+                      activeTool === 'pencil' && canvasSubTool === 'text' ? 'rgba(139,92,246,0.25)' : 'transparent',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -1361,7 +1363,7 @@ const App = () => {
                     gap: 4,
                     transition: 'all 0.15s ease-out',
                     padding: '0 6px',
-                    color: canvasSubTool === 'text' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
+                    color: activeTool === 'pencil' && canvasSubTool === 'text' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
                     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                   }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1390,7 +1392,8 @@ const App = () => {
                     height: 28,
                     borderRadius: '6px',
                     border: 'none',
-                    background: canvasSubTool === 'image' ? 'rgba(139,92,246,0.25)' : 'transparent',
+                    background:
+                      activeTool === 'pencil' && canvasSubTool === 'image' ? 'rgba(139,92,246,0.25)' : 'transparent',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -1398,7 +1401,7 @@ const App = () => {
                     gap: 4,
                     transition: 'all 0.15s ease-out',
                     padding: '0 6px',
-                    color: canvasSubTool === 'image' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
+                    color: activeTool === 'pencil' && canvasSubTool === 'image' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
                     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                   }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
