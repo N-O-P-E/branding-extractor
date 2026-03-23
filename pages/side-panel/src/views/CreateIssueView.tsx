@@ -317,16 +317,7 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
 
       <div style={{ padding: '20px' }}>
         {/* Description */}
-        <span
-          style={{
-            fontSize: 11,
-            fontWeight: 500,
-            letterSpacing: '0.04em',
-            textTransform: 'uppercase' as const,
-            color: 'rgba(241,245,249,0.4)',
-            marginBottom: 6,
-            display: 'block',
-          }}>
+        <span style={{ fontSize: 12, color: 'rgba(241,245,249,0.4)', marginBottom: 6, display: 'block' }}>
           Description
         </span>
         <textarea
@@ -352,7 +343,7 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
 
         {/* Labels & Assignee */}
         {selectedRepo && (
-          <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+          <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
             <LabelSelect repo={selectedRepo} selected={selectedLabels} onChange={setSelectedLabels} />
             <AssigneeSelect repo={selectedRepo} selected={selectedAssignee} onChange={setSelectedAssignee} />
           </div>
@@ -402,12 +393,9 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
           <>
             <span
               style={{
-                fontSize: 11,
-                fontWeight: 500,
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase' as const,
+                fontSize: 12,
                 color: 'rgba(241,245,249,0.4)',
-                marginTop: 12,
+                marginTop: 14,
                 marginBottom: 6,
                 display: 'block',
               }}>
@@ -415,7 +403,6 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
             </span>
             <div
               style={{
-                marginTop: 12,
                 padding: '10px 12px',
                 background: 'rgba(148,163,184,0.05)',
                 border: `1px solid ${colors.border}`,

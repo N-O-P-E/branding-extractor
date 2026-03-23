@@ -78,15 +78,7 @@ export default function LabelSelect({ repo, selected, onChange }: LabelSelectPro
       <div style={{ flex: 1 }}>
         <label
           htmlFor="label-fallback-input"
-          style={{
-            fontSize: 11,
-            fontWeight: 500,
-            letterSpacing: '0.04em',
-            textTransform: 'uppercase' as const,
-            color: 'rgba(241,245,249,0.4)',
-            marginBottom: 6,
-            display: 'block',
-          }}>
+          style={{ fontSize: 12, color: 'rgba(241,245,249,0.4)', marginBottom: 6, display: 'block' }}>
           Labels
         </label>
         <input
