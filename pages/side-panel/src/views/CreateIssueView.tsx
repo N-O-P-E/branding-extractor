@@ -393,7 +393,7 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
         <p style={{ marginTop: 8, fontSize: 12, color: colors.textMuted, textAlign: 'center' }}>{'\u2318'} + Enter</p>
 
         {/* Metadata accordion */}
-        {captureData.browserMetadata && (
+        {captureData?.browserMetadata && (
           <div style={{ marginTop: 16 }}>
             <button
               onClick={() => setMetadataOpen(prev => !prev)}
@@ -430,76 +430,76 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
                   borderRadius: '0 0 8px 8px',
                 }}>
                 <div>
-                  <strong>Browser:</strong> {captureData.browserMetadata.browser.name}{' '}
-                  {captureData.browserMetadata.browser.version} ({captureData.browserMetadata.browser.engine})
+                  <strong>Browser:</strong> {captureData?.browserMetadata.browser.name}{' '}
+                  {captureData?.browserMetadata.browser.version} ({captureData?.browserMetadata.browser.engine})
                 </div>
                 <div>
-                  <strong>OS:</strong> {captureData.browserMetadata.os.name} {captureData.browserMetadata.os.version}
+                  <strong>OS:</strong> {captureData?.browserMetadata.os.name} {captureData?.browserMetadata.os.version}
                 </div>
                 <div>
-                  <strong>Device:</strong> {captureData.browserMetadata.device.type} (
-                  {captureData.browserMetadata.device.screenWidth}x{captureData.browserMetadata.device.screenHeight} @
-                  {captureData.browserMetadata.device.pixelRatio}x)
+                  <strong>Device:</strong> {captureData?.browserMetadata.device.type} (
+                  {captureData?.browserMetadata.device.screenWidth}x{captureData?.browserMetadata.device.screenHeight} @
+                  {captureData?.browserMetadata.device.pixelRatio}x)
                 </div>
                 <div>
-                  <strong>Viewport:</strong> {captureData.viewportWidth}x{captureData.viewportHeight}
+                  <strong>Viewport:</strong> {captureData?.viewportWidth}x{captureData?.viewportHeight}
                 </div>
                 <div>
-                  <strong>Zoom:</strong> {captureData.browserMetadata.page.zoomLevel}%
+                  <strong>Zoom:</strong> {captureData?.browserMetadata.page.zoomLevel}%
                 </div>
                 <div>
-                  <strong>Color Scheme:</strong> {captureData.browserMetadata.device.colorScheme}
+                  <strong>Color Scheme:</strong> {captureData?.browserMetadata.device.colorScheme}
                 </div>
                 <div>
-                  <strong>Page Title:</strong> {captureData.browserMetadata.page.title}
+                  <strong>Page Title:</strong> {captureData?.browserMetadata.page.title}
                 </div>
                 <div>
-                  <strong>Language:</strong> {captureData.browserMetadata.page.language}
+                  <strong>Language:</strong> {captureData?.browserMetadata.page.language}
                 </div>
                 <div>
-                  <strong>Connection:</strong> {captureData.browserMetadata.network.online ? 'online' : 'offline'}
-                  {captureData.browserMetadata.network.connectionType
-                    ? ` (${captureData.browserMetadata.network.connectionType})`
+                  <strong>Connection:</strong> {captureData?.browserMetadata.network.online ? 'online' : 'offline'}
+                  {captureData?.browserMetadata.network.connectionType
+                    ? ` (${captureData?.browserMetadata.network.connectionType})`
                     : ''}
                 </div>
-                {captureData.browserMetadata.shopify && (
+                {captureData?.browserMetadata.shopify && (
                   <>
                     <div style={{ marginTop: 8, fontWeight: 600, color: colors.textPrimary }}>Shopify</div>
                     <div>
-                      <strong>Store:</strong> {captureData.browserMetadata.shopify.storeName} (
-                      {captureData.browserMetadata.shopify.storeHandle})
+                      <strong>Store:</strong> {captureData?.browserMetadata.shopify.storeName} (
+                      {captureData?.browserMetadata.shopify.storeHandle})
                     </div>
-                    {captureData.browserMetadata.shopify.themeName && (
+                    {captureData?.browserMetadata.shopify.themeName && (
                       <div>
-                        <strong>Theme:</strong> {captureData.browserMetadata.shopify.themeName}
+                        <strong>Theme:</strong> {captureData?.browserMetadata.shopify.themeName}
                       </div>
                     )}
-                    {captureData.browserMetadata.shopify.themeId && (
+                    {captureData?.browserMetadata.shopify.themeId && (
                       <div>
-                        <strong>Theme ID:</strong> {captureData.browserMetadata.shopify.themeId}
+                        <strong>Theme ID:</strong> {captureData?.browserMetadata.shopify.themeId}
                       </div>
                     )}
                     <div>
-                      <strong>Environment:</strong> {captureData.browserMetadata.shopify.environment}
+                      <strong>Environment:</strong> {captureData?.browserMetadata.shopify.environment}
                     </div>
-                    {captureData.browserMetadata.shopify.buildVersion && (
+                    {captureData?.browserMetadata.shopify.buildVersion && (
                       <div>
-                        <strong>Build:</strong> {captureData.browserMetadata.shopify.buildVersion}
+                        <strong>Build:</strong> {captureData?.browserMetadata.shopify.buildVersion}
                       </div>
                     )}
-                    {captureData.browserMetadata.shopify.locale && (
+                    {captureData?.browserMetadata.shopify.locale && (
                       <div>
-                        <strong>Locale:</strong> {captureData.browserMetadata.shopify.locale}
+                        <strong>Locale:</strong> {captureData?.browserMetadata.shopify.locale}
                       </div>
                     )}
                   </>
                 )}
-                {captureData.browserMetadata.consoleErrors.length > 0 && (
+                {captureData?.browserMetadata.consoleErrors.length > 0 && (
                   <>
                     <div style={{ marginTop: 8, fontWeight: 600, color: colors.textPrimary }}>
-                      Console Errors ({captureData.browserMetadata.consoleErrors.length})
+                      Console Errors ({captureData?.browserMetadata.consoleErrors.length})
                     </div>
-                    {captureData.browserMetadata.consoleErrors.slice(0, 10).map((err, i) => (
+                    {captureData?.browserMetadata.consoleErrors.slice(0, 10).map((err, i) => (
                       <div
                         key={i}
                         style={{
@@ -512,9 +512,9 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
                         [{err.level}] {new Date(err.timestamp).toLocaleTimeString()} — {err.message}
                       </div>
                     ))}
-                    {captureData.browserMetadata.consoleErrors.length > 10 && (
+                    {captureData?.browserMetadata.consoleErrors.length > 10 && (
                       <div style={{ fontSize: 10, color: colors.textMuted }}>
-                        ...and {captureData.browserMetadata.consoleErrors.length - 10} more
+                        ...and {captureData?.browserMetadata.consoleErrors.length - 10} more
                       </div>
                     )}
                   </>
