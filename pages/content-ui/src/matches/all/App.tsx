@@ -919,11 +919,11 @@ const App = () => {
     if (typeof document === 'undefined') return '24px';
     // Shopify preview bar is typically an iframe or div at the bottom
     const previewBar =
+      document.querySelector('#PBarNextFrameWrapper') ??
       document.querySelector('#preview-bar-iframe') ??
       document.querySelector('[id*="preview-bar"]') ??
       document.querySelector('iframe[src*="preview_bar"]') ??
-      document.querySelector('#shopify-preview-bar') ??
-      document.querySelector('[data-preview-bar]');
+      document.querySelector('iframe[src*="preview-bar"]');
     if (previewBar) {
       const rect = previewBar.getBoundingClientRect();
       if (rect.bottom > window.innerHeight - 120) {
