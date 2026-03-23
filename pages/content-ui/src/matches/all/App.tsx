@@ -450,14 +450,17 @@ const App = () => {
         handleCanvasUndo();
         return;
       }
-      // Enter to finish (when not editing a comment)
-      if (e.key === 'Enter' && !editingComment) {
+      // Enter to finish (when not actively typing in comment)
+      const isTypingComment = editingComment && document.activeElement?.tagName === 'TEXTAREA';
+      if (e.key === 'Enter' && !isTypingComment) {
         e.preventDefault();
         handleDone();
         return;
       }
-      // D for draw, T for text, S for select area (when not editing a comment)
-      if (!editingComment) {
+      // D/S/C/I tool switching — always works unless actively typing in comment textarea
+      // Check if focus is on the comment textarea — if so, don't intercept regular keys
+      const isTypingInComment = editingComment && document.activeElement?.tagName === 'TEXTAREA';
+      if (!isTypingInComment) {
         if (e.key === 'd' || e.key === 'D') {
           e.preventDefault();
           setActiveTool('pencil');
@@ -470,6 +473,7 @@ const App = () => {
           e.preventDefault();
           setActiveTool('pencil');
           setCanvasSubTool('text');
+          setEditingComment(null);
           chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: 'pencil' } });
           return;
         }
@@ -477,6 +481,7 @@ const App = () => {
           e.preventDefault();
           setActiveTool('pencil');
           setCanvasSubTool('image');
+          setEditingComment(null);
           chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: 'pencil' } });
           return;
         }
