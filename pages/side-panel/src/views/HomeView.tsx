@@ -148,7 +148,7 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
               color: colors.textPrimary,
               lineHeight: 1.2,
             }}>
-            N.O.P.E. Co-worker
+            Co-worker
           </h1>
           <p style={{ margin: '6px 0 0', color: colors.textSecondary, fontSize: 13 }}>
             Visual GitHub issue reporting tool.
