@@ -327,7 +327,6 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
           style={{
             width: '100%',
             minHeight: 100,
-            marginTop: 16,
             background: colors.inputBg,
             border: `1px solid ${colors.border}`,
             borderRadius: 8,
