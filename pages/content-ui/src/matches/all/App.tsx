@@ -914,17 +914,29 @@ const App = () => {
 
   const isPencilMode = activeTool === 'pencil' && state === 'selecting';
 
-  // Detect Shopify preview bar and adjust toolbar position
-  const hasShopifyPreviewBar =
-    typeof document !== 'undefined' &&
-    !!(
-      document.querySelector('#preview-bar-iframe') ||
-      document.querySelector('#shopify-section-announcement-bar') ||
-      document.querySelector('[id*="preview-bar"]') ||
-      document.querySelector('iframe[src*="preview_bar"]') ||
-      (window.location.search.includes('preview_theme_id') && document.querySelector('body > iframe:last-child'))
-    );
-  const toolbarBottom = hasShopifyPreviewBar ? '72px' : '24px';
+  // Detect Shopify preview bar and measure its height to position toolbar above it
+  const getToolbarBottom = (): string => {
+    if (typeof document === 'undefined') return '24px';
+    // Shopify preview bar is typically an iframe or div at the bottom
+    const previewBar =
+      document.querySelector('#preview-bar-iframe') ??
+      document.querySelector('[id*="preview-bar"]') ??
+      document.querySelector('iframe[src*="preview_bar"]') ??
+      document.querySelector('#shopify-preview-bar') ??
+      document.querySelector('[data-preview-bar]');
+    if (previewBar) {
+      const rect = previewBar.getBoundingClientRect();
+      if (rect.bottom > window.innerHeight - 120) {
+        return `${window.innerHeight - rect.top + 16}px`;
+      }
+    }
+    // Fallback: if URL has preview_theme_id, assume a bar exists
+    if (window.location.search.includes('preview_theme_id')) {
+      return '110px';
+    }
+    return '24px';
+  };
+  const toolbarBottom = getToolbarBottom();
 
   // Shared comment pill styles — used by both saved comments and the editing textarea
   const commentPillStyle: React.CSSProperties = {
