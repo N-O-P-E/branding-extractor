@@ -1,4 +1,5 @@
 /* eslint-disable jsx-a11y/no-static-element-interactions, jsx-a11y/no-noninteractive-element-interactions */
+import { collectBrowserMetadata } from '@extension/shared/lib/utils/browser-metadata.js';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import type { Region, ShowScreenshotMessage, ActivateToolMessage, CaptureCompleteMessage } from '@extension/shared';
 
@@ -299,7 +300,7 @@ const App = () => {
     if (!screenshotUrl || !hasAnyContent) return;
 
     const img = new Image();
-    img.onload = () => {
+    img.onload = async () => {
       const canvas = document.createElement('canvas');
       canvas.width = img.naturalWidth;
       canvas.height = img.naturalHeight;
@@ -327,11 +328,12 @@ const App = () => {
       ctx.setLineDash([]);
 
       // Draw placed images, then strokes and comments on top
-      renderPlacedImages(ctx, placedImages, scaleX, scaleY).then(() => {
+      renderPlacedImages(ctx, placedImages, scaleX, scaleY).then(async () => {
         renderPencilStrokes(ctx, strokes, scaleX, scaleY);
         renderComments(ctx, comments, scaleX, scaleY);
 
         const annotatedDataUrl = canvas.toDataURL('image/png');
+        const browserMetadata = await collectBrowserMetadata();
         const captureMessage: CaptureCompleteMessage = {
           type: 'CAPTURE_COMPLETE',
           payload: {
@@ -349,6 +351,7 @@ const App = () => {
             viewportWidth: window.innerWidth,
             viewportHeight: window.innerHeight,
             htmlSnippet: htmlSnippets.length > 0 ? htmlSnippets.join('\n\n---\n\n') : undefined,
+            browserMetadata,
           },
         };
         chrome.runtime.sendMessage(captureMessage);
