@@ -930,7 +930,7 @@ const App = () => {
                     el.style.height = el.scrollHeight + 'px';
                     // Auto-size width to fit text (no wrapping)
                     el.style.width = '80px';
-                    el.style.width = Math.max(80, el.scrollWidth) + 'px';
+                    el.style.width = Math.max(80, el.scrollWidth + 2) + 'px';
                   }}
                   onKeyDown={e => {
                     e.stopPropagation();
