@@ -253,6 +253,8 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
       if (s.themeName) body += `- **Theme:** ${s.themeName}\n`;
       if (s.themeId) body += `- **Theme ID:** ${s.themeId}\n`;
       body += `- **Environment:** ${s.environment}\n`;
+      if (s.editorUrl) body += `- **Editor:** [Open in Editor](${s.editorUrl})\n`;
+      if (s.previewUrl) body += `- **Preview:** [Open Preview](${s.previewUrl})\n`;
       if (s.buildVersion) body += `- **Shopify Build:** ${s.buildVersion}\n`;
       if (s.locale) body += `- **Locale:** ${s.locale}\n`;
     }
