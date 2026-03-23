@@ -60,11 +60,25 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
       // If no capture data yet, request it from the content-UI overlay
       let data = captureDataRef.current;
       if (!data) {
-        // Request capture — content-UI will send CAPTURE_COMPLETE
-        chrome.runtime.sendMessage({ type: 'REQUEST_CAPTURE' });
+        // Request capture — background forwards to content-UI, which sends CAPTURE_COMPLETE
+        try {
+          await chrome.runtime.sendMessage({ type: 'REQUEST_CAPTURE' });
+        } catch (sendErr) {
+          throw new Error(
+            `Could not reach the page overlay. Make sure the overlay is open and the page is not a chrome:// page. (${sendErr instanceof Error ? sendErr.message : 'Unknown'})`,
+          );
+        }
         // Wait for CAPTURE_COMPLETE
         data = await new Promise<CaptureData>((resolve, reject) => {
-          const timeout = setTimeout(() => reject(new Error('Capture timed out')), 10000);
+          const timeout = setTimeout(
+            () =>
+              reject(
+                new Error(
+                  'Capture timed out after 10s. The overlay may have been closed or the page may have navigated. Try opening a tool (Select/Canvas) first, then submit.',
+                ),
+              ),
+            10000,
+          );
           const listener = (msg: { type: string; payload?: CaptureData }) => {
             if (msg.type === 'CAPTURE_COMPLETE' && msg.payload) {
               clearTimeout(timeout);
