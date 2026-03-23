@@ -96,7 +96,7 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
     return (
       <div
         style={{
-          minHeight: '100vh',
+          flex: 1,
           background: colors.bgPrimary,
           color: colors.textPrimary,
           display: 'flex',
@@ -122,7 +122,7 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
   return (
     <div
       style={{
-        minHeight: '100vh',
+        flex: 1,
         background: colors.bgPrimary,
         color: colors.textPrimary,
         boxSizing: 'border-box',

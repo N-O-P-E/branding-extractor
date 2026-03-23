@@ -120,7 +120,7 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
   return (
     <div
       style={{
-        minHeight: '100vh',
+        flex: 1,
         background: '#0f172a',
         color: colors.textPrimary,
         boxSizing: 'border-box',

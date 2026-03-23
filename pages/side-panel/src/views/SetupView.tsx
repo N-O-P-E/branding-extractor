@@ -167,7 +167,7 @@ export default function SetupView({ onDone }: SetupViewProps) {
   return (
     <div
       style={{
-        minHeight: '100vh',
+        flex: 1,
         background: colors.bg,
         color: colors.textPrimary,
         padding: '28px 20px 40px',
