@@ -159,7 +159,7 @@ const App = () => {
   const [canvasSubTool, setCanvasSubTool] = useState<CanvasSubTool>('draw');
   const [comments, setComments] = useState<Comment[]>([]);
   const [editingComment, setEditingComment] = useState<{ x: number; y: number } | null>(null);
-  const commentInputRef = useRef<HTMLTextAreaElement>(null);
+  const commentInputRef = useRef<HTMLDivElement>(null);
   const [draggingCommentIndex, setDraggingCommentIndex] = useState<number | null>(null);
   const dragCommentOffset = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
 
@@ -1186,46 +1186,29 @@ const App = () => {
                 onClick={e => e.stopPropagation()}
                 onKeyDown={e => e.stopPropagation()}
                 onMouseDown={e => e.stopPropagation()}>
-                <style>{`
-                  .coworker-comment-input::placeholder {
-                    color: ${isLightColor(strokeColor) ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.5)'};
-                  }
-                `}</style>
-                <textarea
+                <div
                   ref={commentInputRef}
-                  className="coworker-comment-input"
-                  placeholder="Comment…"
-                  rows={1}
+                  contentEditable
+                  suppressContentEditableWarning
+                  data-placeholder="Comment…"
                   style={{
                     ...commentPillStyle,
                     background: strokeColor,
                     color: isLightColor(strokeColor) ? '#000' : '#fff',
                     outline: 'none',
-                    minWidth: 80,
-                    width: 'auto',
-                    height: 30,
+                    minWidth: 60,
                     boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
-                    resize: 'none',
-                    overflow: 'hidden',
-                    overflowWrap: 'normal',
                     whiteSpace: 'pre',
-                    display: 'block',
+                    cursor: 'text',
                     caretColor: isLightColor(strokeColor) ? '#000' : '#fff',
-                  }}
-                  onInput={e => {
-                    const el = e.target as HTMLTextAreaElement;
-                    // Auto-size height for multi-line (Shift+Enter)
-                    el.style.height = '30px';
-                    el.style.height = Math.max(30, el.scrollHeight) + 'px';
-                    // Auto-size width to fit text (no wrapping)
-                    el.style.width = '80px';
-                    el.style.width = Math.max(80, el.scrollWidth + 2) + 'px';
+                    maxWidth: 400,
+                    wordBreak: 'break-word',
                   }}
                   onKeyDown={e => {
                     e.stopPropagation();
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
-                      const val = (e.target as HTMLTextAreaElement).value.trim();
+                      const val = (e.target as HTMLDivElement).textContent?.trim() ?? '';
                       if (val) {
                         setComments(prev => [
                           ...prev,
@@ -1245,6 +1228,13 @@ const App = () => {
                     }
                   }}
                 />
+                <style>{`
+                  [data-placeholder]:empty::before {
+                    content: attr(data-placeholder);
+                    color: ${isLightColor(strokeColor) ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.45)'};
+                    pointer-events: none;
+                  }
+                `}</style>
               </div>
             )}
           </div>
