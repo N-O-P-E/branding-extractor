@@ -455,9 +455,32 @@ const App = () => {
     }
   }, [state]);
 
+  // Block keyboard events on the HOST page when overlay is active.
+  // The shadow DOM init already blocks events FROM the shadow DOM,
+  // but if focus is on the host page, events bypass the shadow DOM entirely.
+  // This catches those and prevents them from triggering host page shortcuts.
+  useEffect(() => {
+    if (state === 'idle') return;
+    const blockHostKeys = (e: KeyboardEvent) => {
+      // Allow browser shortcuts (Cmd+T, Cmd+R, Cmd+W, etc.)
+      if ((e.metaKey || e.ctrlKey) && e.key !== 'z') return;
+      // Allow F-keys
+      if (e.key.startsWith('F') && e.key.length <= 3) return;
+      // Block everything else from reaching host page handlers
+      e.stopPropagation();
+    };
+    // Use bubble phase on document so it fires AFTER the shadow DOM's
+    // capture-phase interception — this only catches events that
+    // originated on the host page (not from shadow DOM)
+    document.addEventListener('keydown', blockHostKeys, false);
+    document.addEventListener('keyup', blockHostKeys, false);
+    return () => {
+      document.removeEventListener('keydown', blockHostKeys, false);
+      document.removeEventListener('keyup', blockHostKeys, false);
+    };
+  }, [state]);
+
   // Keyboard shortcuts — attached to backdrop ref so they work inside shadow DOM
-  // (Shadow DOM intercepts events at window level and re-dispatches non-composed
-  // clones that only bubble within the shadow DOM, not to document)
   useEffect(() => {
     if (state === 'idle') return;
     const el = backdropRef.current;
