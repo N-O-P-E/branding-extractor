@@ -25,6 +25,7 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
   const [open, setOpen] = useState(false);
   const [fallback, setFallback] = useState(false);
   const [search, setSearch] = useState('');
+  const [highlightIndex, setHighlightIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -169,7 +170,27 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
               type="text"
               placeholder="Search..."
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={e => {
+                setSearch(e.target.value);
+                setHighlightIndex(0);
+              }}
+              onKeyDown={e => {
+                const filtered = assignees.filter(a => a.login.toLowerCase().includes(search.toLowerCase()));
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  setHighlightIndex(i => Math.min(i + 1, filtered.length - 1));
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  setHighlightIndex(i => Math.max(i - 1, 0));
+                } else if (e.key === 'Enter') {
+                  e.preventDefault();
+                  const item = filtered[highlightIndex];
+                  if (item) {
+                    onChange(item.login);
+                    setOpen(false);
+                  }
+                }
+              }}
               style={{
                 width: '100%',
                 background: 'rgba(148,163,184,0.06)',
@@ -211,8 +232,9 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
             </button>
             {assignees
               .filter(a => a.login.toLowerCase().includes(search.toLowerCase()))
-              .map(assignee => {
+              .map((assignee, idx) => {
                 const isSelected = selected === assignee.login;
+                const isHighlighted = idx === highlightIndex;
                 return (
                   <button
                     key={assignee.login}
@@ -227,7 +249,11 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
                       alignItems: 'center',
                       gap: 8,
                       padding: '8px 12px',
-                      background: isSelected ? 'rgba(139,92,246,0.15)' : 'transparent',
+                      background: isHighlighted
+                        ? 'rgba(139,92,246,0.2)'
+                        : isSelected
+                          ? 'rgba(139,92,246,0.1)'
+                          : 'transparent',
                       border: 'none',
                       cursor: 'pointer',
                       color: colors.textPrimary,

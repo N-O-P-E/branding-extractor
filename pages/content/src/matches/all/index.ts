@@ -39,15 +39,17 @@ const getCleanHtml = (x: number, y: number): string | undefined => {
   return `<!-- ${selector} -->\n${html}`;
 };
 
-// Inject console capture into the page's main world via external script
+// Inject main-world scripts for data that's only accessible in the page context
 // Using src instead of textContent avoids CSP inline-script violations
-try {
-  const script = document.createElement('script');
-  script.src = chrome.runtime.getURL('console-capture.js');
-  (document.head || document.documentElement).appendChild(script);
-  script.onload = () => script.remove();
-} catch {
-  // Injection failed — console errors will just be empty
+for (const scriptFile of ['console-capture.js', 'shopify-data.js']) {
+  try {
+    const script = document.createElement('script');
+    script.src = chrome.runtime.getURL(scriptFile);
+    (document.head || document.documentElement).appendChild(script);
+    script.onload = () => script.remove();
+  } catch {
+    // Injection failed — silently ignore
+  }
 }
 
 chrome.runtime.onMessage.addListener(

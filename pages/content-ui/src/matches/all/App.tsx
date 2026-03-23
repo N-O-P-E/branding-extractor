@@ -256,6 +256,10 @@ const App = () => {
         // If overlay is already active with content, just switch the tool
         if (stateRef.current === 'selecting' && screenshotUrlRef.current) {
           setActiveTool(tool);
+          // Re-send metadata in case side panel needs it
+          collectBrowserMetadata().then(metadata => {
+            chrome.runtime.sendMessage({ type: 'BROWSER_METADATA', payload: metadata });
+          });
           return;
         }
 
@@ -267,6 +271,10 @@ const App = () => {
           setInspectHighlight(null);
           inspectHoveredEl.current = null;
           setScreenshotUrl(message.payload.screenshotDataUrl);
+          // Send browser metadata for inspect mode too
+          collectBrowserMetadata().then(metadata => {
+            chrome.runtime.sendMessage({ type: 'BROWSER_METADATA', payload: metadata });
+          });
           return;
         }
 

@@ -74,7 +74,7 @@ const detectDeviceType = (): 'desktop' | 'tablet' | 'mobile' => {
   return 'desktop';
 };
 
-const extractShopifyContext = (): ShopifyContext | undefined => {
+const extractShopifyContext = async (): Promise<ShopifyContext | undefined> => {
   try {
     const url = new URL(window.location.href);
     const hostname = url.hostname;
@@ -170,23 +170,43 @@ const extractShopifyContext = (): ShopifyContext | undefined => {
     let themeId: string | undefined =
       url.searchParams.get('preview_theme_id') ?? url.pathname.match(/\/themes\/(\d+)/)?.[1] ?? undefined;
 
-    // Get theme info from Shopify global (works on all environments including localhost)
+    // Get Shopify data from main world via DOM event
+    let template: string | undefined;
     try {
-      const shopify = (window as unknown as { Shopify?: { theme?: { id?: number; name?: string } } }).Shopify;
-      if (shopify?.theme?.id && !themeId) themeId = String(shopify.theme.id);
-      if (shopify?.theme?.name && !themeName) themeName = shopify.theme.name;
+      const shopifyData = await new Promise<{
+        shop?: string;
+        themeId?: string;
+        themeName?: string;
+        locale?: string;
+        template?: string;
+        schemaName?: string;
+      }>(resolve => {
+        const timeout = setTimeout(() => resolve({}), 300);
+        const handler = (event: Event) => {
+          clearTimeout(timeout);
+          document.removeEventListener('coworker-shopify-data', handler);
+          try {
+            resolve(JSON.parse((event as CustomEvent).detail));
+          } catch {
+            resolve({});
+          }
+        };
+        document.addEventListener('coworker-shopify-data', handler);
+        document.dispatchEvent(new CustomEvent('coworker-request-shopify-data'));
+      });
+
+      if (shopifyData.shop && !storeHandle) {
+        storeHandle = shopifyData.shop.replace('.myshopify.com', '');
+      }
+      if (shopifyData.themeId && !themeId) themeId = shopifyData.themeId;
+      if (shopifyData.themeName && !themeName) themeName = shopifyData.themeName;
+      if (shopifyData.locale && !locale) locale = shopifyData.locale;
+      if (shopifyData.template) template = shopifyData.template;
     } catch {
       /* ignore */
     }
 
-    // Extract template name from Theme global or meta
-    let template: string | undefined;
-    try {
-      const themeGlobal = (window as unknown as { Theme?: { template?: { name?: string } } }).Theme;
-      if (themeGlobal?.template?.name) template = themeGlobal.template.name;
-    } catch {
-      /* ignore */
-    }
+    // Fallback: extract template from shop-js-analytics script
     if (!template) {
       const pageType = document.querySelector('script#shop-js-analytics');
       if (pageType?.textContent) {
@@ -268,6 +288,6 @@ export const collectBrowserMetadata = async (): Promise<BrowserMetadata> => {
     },
     consoleErrors,
     userAgent: navigator.userAgent,
-    shopify: extractShopifyContext(),
+    shopify: await extractShopifyContext(),
   };
 };
