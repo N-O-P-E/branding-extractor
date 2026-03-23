@@ -7,19 +7,14 @@ interface RepoSelectorProps {
 export default function RepoSelector({ selectedRepo, repos, onChange }: RepoSelectorProps) {
   return (
     <div>
-      <label
-        htmlFor="repo-selector"
+      <h2
         style={{
-          display: 'block',
-          fontSize: 10,
-          fontWeight: 500,
-          letterSpacing: '0.08em',
-          color: 'rgba(241,245,249,0.45)',
-          marginBottom: 6,
-          textTransform: 'uppercase',
+          fontSize: 18,
+          margin: '0 0 8px',
+          color: '#a78bfa',
         }}>
-        Repository
-      </label>
+        <label htmlFor="repo-selector">Repository</label>
+      </h2>
       <select
         id="repo-selector"
         value={selectedRepo}

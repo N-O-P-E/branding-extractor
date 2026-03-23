@@ -205,7 +205,7 @@ export default function SetupView({ onDone }: SetupViewProps) {
             href="https://github.com/settings/tokens/new"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: colors.purpleAccent }}>
+            style={{ color: '#E4FA8B' }}>
             github.com/settings/tokens
           </a>{' '}
           with <code style={{ background: colors.inputBg, padding: '1px 5px', borderRadius: 4 }}>repo</code> scope.
