@@ -164,7 +164,7 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
               color: colors.textPrimary,
               lineHeight: 1.2,
             }}>
-            Visual Github Issues
+            Visual Github Reporting
           </h1>
           <p style={{ margin: '6px 0 0', color: colors.textSecondary, fontSize: 13 }}>
             Report visual issues without switching context. Shorter dev cycles, everyone can contribute — not just
