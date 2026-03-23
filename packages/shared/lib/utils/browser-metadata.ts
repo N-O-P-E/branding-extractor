@@ -1,5 +1,5 @@
-import type { BrowserMetadata, ShopifyContext } from '../messages';
-import { getConsoleErrors } from './console-capture';
+import { getConsoleErrors } from './console-capture.js';
+import type { BrowserMetadata, ShopifyContext } from '../messages.js';
 
 interface NavigatorUAData {
   brands: Array<{ brand: string; version: string }>;
@@ -7,12 +7,13 @@ interface NavigatorUAData {
   platform: string;
 }
 
-function parseBrowser(): { name: string; version: string; engine: string } {
+const parseBrowser = (): { name: string; version: string; engine: string } => {
   const uaData = (navigator as unknown as { userAgentData?: NavigatorUAData }).userAgentData;
   if (uaData?.brands) {
-    const brand = uaData.brands.find(b => !b.brand.includes('Not'))
-      ?? uaData.brands.find(b => b.brand === 'Chromium')
-      ?? uaData.brands[0];
+    const brand =
+      uaData.brands.find(b => !b.brand.includes('Not')) ??
+      uaData.brands.find(b => b.brand === 'Chromium') ??
+      uaData.brands[0];
     return {
       name: brand?.brand ?? 'Unknown',
       version: brand?.version ?? 'Unknown',
@@ -37,9 +38,9 @@ function parseBrowser(): { name: string; version: string; engine: string } {
     return { name: 'Safari', version: ver, engine: 'WebKit' };
   }
   return { name: 'Unknown', version: 'Unknown', engine: 'Unknown' };
-}
+};
 
-function parseOS(): { name: string; version: string; platform: string } {
+const parseOS = (): { name: string; version: string; platform: string } => {
   const uaData = (navigator as unknown as { userAgentData?: NavigatorUAData }).userAgentData;
   const platform = uaData?.platform ?? navigator.platform ?? 'Unknown';
 
@@ -60,9 +61,9 @@ function parseOS(): { name: string; version: string; platform: string } {
     return { name: 'ChromeOS', version: '', platform };
   }
   return { name: platform, version: '', platform };
-}
+};
 
-function detectDeviceType(): 'desktop' | 'tablet' | 'mobile' {
+const detectDeviceType = (): 'desktop' | 'tablet' | 'mobile' => {
   const uaData = (navigator as unknown as { userAgentData?: NavigatorUAData }).userAgentData;
   if (uaData) {
     return uaData.mobile ? 'mobile' : 'desktop';
@@ -71,9 +72,9 @@ function detectDeviceType(): 'desktop' | 'tablet' | 'mobile' {
   if (w <= 768) return 'mobile';
   if (w <= 1024 && navigator.maxTouchPoints > 0) return 'tablet';
   return 'desktop';
-}
+};
 
-function extractShopifyContext(): ShopifyContext | undefined {
+const extractShopifyContext = (): ShopifyContext | undefined => {
   try {
     const url = new URL(window.location.href);
     const hostname = url.hostname;
@@ -89,7 +90,6 @@ function extractShopifyContext(): ShopifyContext | undefined {
     let themeName: string | undefined;
     let buildVersion: string | undefined;
     let locale: string | undefined;
-    let themeId: string | undefined;
 
     const serverDataEl = document.querySelector('script[data-serialized-id="server-data"]');
     if (serverDataEl?.textContent) {
@@ -97,7 +97,9 @@ function extractShopifyContext(): ShopifyContext | undefined {
         const serverData = JSON.parse(serverDataEl.textContent);
         buildVersion = serverData.buildVersion?.split('.')[0];
         locale = serverData.locale;
-      } catch { /* ignore parse errors */ }
+      } catch {
+        /* ignore parse errors */
+      }
     }
 
     const title = document.title;
@@ -125,14 +127,16 @@ function extractShopifyContext(): ShopifyContext | undefined {
     }
 
     if (!storeName && storeHandle) {
-      storeName = storeHandle.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      storeName = storeHandle
+        .split('-')
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
     }
 
     if (!storeHandle) return undefined;
 
-    themeId = url.searchParams.get('preview_theme_id')
-      ?? url.pathname.match(/\/themes\/(\d+)/)?.[1]
-      ?? undefined;
+    const themeId: string | undefined =
+      url.searchParams.get('preview_theme_id') ?? url.pathname.match(/\/themes\/(\d+)/)?.[1] ?? undefined;
 
     let environment: ShopifyContext['environment'] = 'live';
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
@@ -165,17 +169,17 @@ function extractShopifyContext(): ShopifyContext | undefined {
   } catch {
     return undefined;
   }
-}
+};
 
-export async function collectBrowserMetadata(): Promise<BrowserMetadata> {
+export const collectBrowserMetadata = async (): Promise<BrowserMetadata> => {
   const consoleErrors = await getConsoleErrors();
 
-  const colorScheme: BrowserMetadata['device']['colorScheme'] =
-    window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? 'dark'
-      : window.matchMedia('(prefers-color-scheme: light)').matches
-        ? 'light'
-        : 'no-preference';
+  const colorScheme: BrowserMetadata['device']['colorScheme'] = window.matchMedia('(prefers-color-scheme: dark)')
+    .matches
+    ? 'dark'
+    : window.matchMedia('(prefers-color-scheme: light)').matches
+      ? 'light'
+      : 'no-preference';
 
   const connection = (navigator as unknown as { connection?: { effectiveType?: string } }).connection;
 
@@ -202,4 +206,4 @@ export async function collectBrowserMetadata(): Promise<BrowserMetadata> {
     userAgent: navigator.userAgent,
     shopify: extractShopifyContext(),
   };
-}
+};
