@@ -1,6 +1,7 @@
 import AssigneeSelect from '../components/AssigneeSelect';
 import LabelSelect from '../components/LabelSelect';
 import { useState, useEffect, useCallback } from 'react';
+import type { BrowserMetadata } from '@extension/shared';
 
 interface CaptureData {
   screenshotDataUrl: string;
@@ -10,6 +11,7 @@ interface CaptureData {
   viewportWidth: number;
   viewportHeight: number;
   htmlSnippet?: string;
+  browserMetadata?: BrowserMetadata;
 }
 
 interface CreateIssueViewProps {
@@ -61,6 +63,7 @@ export default function CreateIssueView({ captureData, onBack, onSuccess }: Crea
           viewportWidth: captureData.viewportWidth,
           viewportHeight: captureData.viewportHeight,
           htmlSnippet: captureData.htmlSnippet,
+          browserMetadata: captureData.browserMetadata,
           labels: selectedLabels,
           assignee: selectedAssignee || undefined,
         },
