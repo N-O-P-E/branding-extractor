@@ -179,13 +179,6 @@ const extractShopifyContext = (): ShopifyContext | undefined => {
       /* ignore */
     }
 
-    // Extract theme ID from CDN asset paths: /cdn/shop/t/{id}/assets/
-    if (!themeId) {
-      const cdnLink = document.querySelector('link[href*="/cdn/shop/t/"]');
-      const cdnMatch = cdnLink?.getAttribute('href')?.match(/\/cdn\/shop\/t\/(\d+)\//);
-      if (cdnMatch) themeId = cdnMatch[1];
-    }
-
     // Extract template name from Theme global or meta
     let template: string | undefined;
     try {

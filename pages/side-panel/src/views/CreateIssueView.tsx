@@ -323,7 +323,7 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
 
         {/* Labels & Assignee */}
         {selectedRepo && (
-          <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+          <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
             <LabelSelect repo={selectedRepo} selected={selectedLabels} onChange={setSelectedLabels} />
             <AssigneeSelect repo={selectedRepo} selected={selectedAssignee} onChange={setSelectedAssignee} />
           </div>
@@ -372,8 +372,8 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
         {browserMetadata && (
           <div
             style={{
-              marginTop: 16,
-              padding: '12px 14px',
+              marginTop: 12,
+              padding: '10px 12px',
               background: 'rgba(148,163,184,0.05)',
               border: `1px solid ${colors.border}`,
               borderRadius: 8,
