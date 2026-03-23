@@ -14,7 +14,7 @@ Visual GitHub Reporter is a browser extension that helps you report visual issue
 **Nothing.** This extension does not collect, store, or transmit any data to Studio N.O.P.E. or any third party.
 
 ### What stays on your device
-- Your GitHub Personal Access Token (stored in Chrome's sync storage)
+- Your GitHub Personal Access Token (stored in Chrome's local storage, never synced)
 - Your list of configured repositories
 - Your extension preferences
 
@@ -42,7 +42,7 @@ This extension communicates only with:
 
 ## Data Security
 
-- Your GitHub token is stored in Chrome's encrypted sync storage
+- Your GitHub token is stored in Chrome's local storage (never synced to Google servers)
 - All communication with GitHub uses HTTPS
 - No data is ever sent to Studio N.O.P.E. servers
 

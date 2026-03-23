@@ -92,7 +92,7 @@ const handleStartReport = async (tool: 'select' | 'pencil', sendResponse: (respo
 };
 
 const getOctokit = async (): Promise<Octokit> => {
-  const { githubPat } = await chrome.storage.sync.get('githubPat');
+  const { githubPat } = await chrome.storage.local.get('githubPat');
   if (!githubPat) {
     throw new Error('GitHub token not configured. Go to extension options to set it up.');
   }
@@ -100,7 +100,7 @@ const getOctokit = async (): Promise<Octokit> => {
 };
 
 const getRepoConfig = async (): Promise<{ owner: string; repo: string }> => {
-  const { selectedRepo } = await chrome.storage.sync.get('selectedRepo');
+  const { selectedRepo } = await chrome.storage.local.get('selectedRepo');
   if (!selectedRepo || !selectedRepo.includes('/')) {
     throw new Error('No repository selected. Go to extension options to configure.');
   }
@@ -380,7 +380,7 @@ const handleFetchPageIssues = async (
   try {
     const octokit = await getOctokit();
     const { owner, repo } = await getRepoConfig();
-    const { githubPat } = await chrome.storage.sync.get('githubPat');
+    const { githubPat } = await chrome.storage.local.get('githubPat');
 
     let hostname = '';
     let pathname = '';

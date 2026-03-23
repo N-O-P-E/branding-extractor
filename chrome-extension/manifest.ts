@@ -40,7 +40,7 @@ const manifest = {
   ],
   web_accessible_resources: [
     {
-      resources: ['*.js', '*.css', '*.svg', '*.woff2', '*.woff', 'icon-128.png', 'icon-34.png'],
+      resources: ['console-capture.js', 'shopify-data.js'],
       matches: ['*://*/*'],
     },
   ],

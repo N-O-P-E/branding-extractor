@@ -35,7 +35,7 @@ export default function SetupView({ onDone }: SetupViewProps) {
   const [repoDropdownOpen, setRepoDropdownOpen] = useState(false);
 
   useEffect(() => {
-    chrome.storage.sync.get(['githubPat', 'repoList']).then(result => {
+    chrome.storage.local.get(['githubPat', 'repoList']).then(result => {
       if (result.githubPat) {
         setPat(result.githubPat as string);
         setPatStatus('valid');
@@ -77,10 +77,10 @@ export default function SetupView({ onDone }: SetupViewProps) {
       setRepos(updated);
       setRepoSearch('');
       setRepoDropdownOpen(false);
-      chrome.storage.sync.set({ repoList: updated });
-      chrome.storage.sync.get('selectedRepo').then(result => {
+      chrome.storage.local.set({ repoList: updated });
+      chrome.storage.local.get('selectedRepo').then(result => {
         if (!result.selectedRepo) {
-          chrome.storage.sync.set({ selectedRepo: updated[0] });
+          chrome.storage.local.set({ selectedRepo: updated[0] });
         }
       });
       flashSaved();
@@ -105,7 +105,7 @@ export default function SetupView({ onDone }: SetupViewProps) {
         const user = (await response.json()) as { login: string };
         setPatUser(user.login);
         setPatStatus('valid');
-        await chrome.storage.sync.set({ githubPat: pat.trim() });
+        await chrome.storage.local.set({ githubPat: pat.trim() });
         flashSaved();
       } else {
         setPatStatus('invalid');
@@ -119,11 +119,11 @@ export default function SetupView({ onDone }: SetupViewProps) {
     (repo: string) => {
       const updated = repos.filter(r => r !== repo);
       setRepos(updated);
-      chrome.storage.sync.set({ repoList: updated });
-      chrome.storage.sync.get('selectedRepo').then(result => {
+      chrome.storage.local.set({ repoList: updated });
+      chrome.storage.local.get('selectedRepo').then(result => {
         if (result.selectedRepo === repo) {
           const next = updated[0] ?? '';
-          chrome.storage.sync.set({ selectedRepo: next });
+          chrome.storage.local.set({ selectedRepo: next });
         }
       });
       flashSaved();

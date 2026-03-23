@@ -44,7 +44,7 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
   const [liveBrowserMetadata, setLiveBrowserMetadata] = useState<BrowserMetadata | null>(browserMetadata);
 
   useEffect(() => {
-    chrome.storage.sync.get('selectedRepo').then(result => {
+    chrome.storage.local.get('selectedRepo').then(result => {
       if (result.selectedRepo) setSelectedRepo(result.selectedRepo as string);
     });
   }, []);

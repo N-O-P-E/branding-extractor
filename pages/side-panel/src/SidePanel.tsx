@@ -12,7 +12,7 @@ export default function SidePanel() {
   const [browserMetadata, setBrowserMetadata] = useState<BrowserMetadata | null>(null);
 
   useEffect(() => {
-    chrome.storage.sync.get('githubPat', ({ githubPat }) => {
+    chrome.storage.local.get('githubPat', ({ githubPat }) => {
       if (!githubPat) setView('setup');
     });
   }, []);
