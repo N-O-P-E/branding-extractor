@@ -221,13 +221,6 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
 
     let body = '';
 
-    // Links section (Shopify only)
-    if (browserMetadata?.shopify?.editorUrl) {
-      body += `## Links\n`;
-      body += `- [Open in Theme Editor](${browserMetadata.shopify.editorUrl})\n`;
-      body += `\n`;
-    }
-
     body += `## Screenshot\n![Screenshot](${screenshotUrl})\n\n`;
     body += `## Description\n${description}\n\n`;
     body += `## Details\n`;
