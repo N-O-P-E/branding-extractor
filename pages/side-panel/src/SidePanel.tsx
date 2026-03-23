@@ -112,8 +112,7 @@ export default function SidePanel() {
             rel="noopener noreferrer"
             style={{
               color: '#f1f5f9',
-              textDecoration: 'underline',
-              textUnderlineOffset: '3px',
+              textDecoration: 'none',
             }}>
             Studio N.O.P.E.
           </a>

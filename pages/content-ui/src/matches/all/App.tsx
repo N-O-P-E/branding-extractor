@@ -1427,11 +1427,11 @@ const App = () => {
                 left: '50%',
                 transform: 'translateX(-50%)',
                 display: 'flex',
-                gap: '2px',
-                padding: '6px 10px',
+                gap: '4px',
+                padding: '8px 14px',
                 background: '#1e293b',
                 border: '1px solid rgba(148,163,184,0.2)',
-                borderRadius: '12px',
+                borderRadius: '14px',
                 boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.1)',
                 fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                 zIndex: 2147483647,
@@ -1450,8 +1450,8 @@ const App = () => {
                   }}
                   title="Select area (S)"
                   style={{
-                    height: 28,
-                    borderRadius: '6px',
+                    height: 34,
+                    borderRadius: '8px',
                     border: 'none',
                     background: activeTool === 'select' ? 'rgba(139,92,246,0.25)' : 'transparent',
                     cursor: 'pointer',
@@ -1464,7 +1464,7 @@ const App = () => {
                     color: activeTool === 'select' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
                     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                   }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path
                       d="M5.7 3.75V3.75C4.62304 3.75 3.75 4.62305 3.75 5.7V5.75M18.25 3.75V3.75C19.3546 3.75 20.25 4.64543 20.25 5.75V5.75M3.75 18.25V18.3C3.75 19.377 4.62304 20.25 5.7 20.25V20.25M18.25 20.25V20.25C19.3546 20.25 20.25 19.3546 20.25 18.25V18.25M10.25 3.75H13.75M20.25 10.25V13.75M13.75 20.25H10.25M3.75 13.75V10.25"
                       stroke="currentColor"
@@ -1473,7 +1473,7 @@ const App = () => {
                       strokeLinejoin="round"
                     />
                   </svg>
-                  <span style={{ fontSize: '10px', fontWeight: 500, opacity: 0.5 }}>S</span>
+                  <span style={{ fontSize: '11px', fontWeight: 500, opacity: 0.5 }}>S</span>
                 </button>
                 <button
                   onClick={() => {
@@ -1482,8 +1482,8 @@ const App = () => {
                   }}
                   title="Draw (D)"
                   style={{
-                    height: 28,
-                    borderRadius: '6px',
+                    height: 34,
+                    borderRadius: '8px',
                     border: 'none',
                     background:
                       activeTool === 'pencil' && canvasSubTool === 'draw' ? 'rgba(139,92,246,0.25)' : 'transparent',
@@ -1497,7 +1497,7 @@ const App = () => {
                     color: activeTool === 'pencil' && canvasSubTool === 'draw' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
                     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                   }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path
                       d="M2.74609 13.5C10.9181 5.42183 14.2879 2.28083 16.2674 4.38617C19.0814 7.37874 4.62803 16.4615 8.62659 18.7676C11.9582 20.6876 17.3347 10.2123 19.5427 12.899C20.8453 14.4822 16.2674 17.9913 17.4862 19.7373C18.3221 20.9346 20.1133 19.7937 21.2468 18.7714"
                       stroke="currentColor"
@@ -1520,8 +1520,8 @@ const App = () => {
                   onClick={() => setCanvasSubTool('text')}
                   title="Comment (C)"
                   style={{
-                    height: 28,
-                    borderRadius: '6px',
+                    height: 34,
+                    borderRadius: '8px',
                     border: 'none',
                     background:
                       activeTool === 'pencil' && canvasSubTool === 'text' ? 'rgba(139,92,246,0.25)' : 'transparent',
@@ -1558,8 +1558,8 @@ const App = () => {
                   onClick={() => setCanvasSubTool('image')}
                   title="Image (I)"
                   style={{
-                    height: 28,
-                    borderRadius: '6px',
+                    height: 34,
+                    borderRadius: '8px',
                     border: 'none',
                     background:
                       activeTool === 'pencil' && canvasSubTool === 'image' ? 'rgba(139,92,246,0.25)' : 'transparent',
@@ -1573,7 +1573,7 @@ const App = () => {
                     color: activeTool === 'pencil' && canvasSubTool === 'image' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
                     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                   }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path
                       d="M11.25 20.25H5.75C4.64543 20.25 3.75 19.3546 3.75 18.25V5.75C3.75 4.64543 4.64543 3.75 5.75 3.75H18.25C19.3546 3.75 20.25 4.64543 20.25 5.75V11.25"
                       stroke="currentColor"
@@ -1594,12 +1594,12 @@ const App = () => {
                     <path d="M15.75 18.5H21.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                     <path d="M18.5 15.75V21.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                   </svg>
-                  <span style={{ fontSize: '10px', fontWeight: 500, opacity: 0.5 }}>I</span>
+                  <span style={{ fontSize: '11px', fontWeight: 500, opacity: 0.5 }}>I</span>
                 </button>
               </div>
 
               {/* Divider */}
-              <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.2)', margin: '0 4px' }} />
+              <div style={{ width: 1, height: 24, background: 'rgba(148,163,184,0.2)', margin: '0 6px' }} />
 
               {/* Stroke width presets */}
               <div style={{ display: 'flex', gap: '2px', alignItems: 'center', padding: '0 4px' }}>
@@ -1635,7 +1635,7 @@ const App = () => {
               </div>
 
               {/* Divider */}
-              <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.2)', margin: '0 4px' }} />
+              <div style={{ width: 1, height: 24, background: 'rgba(148,163,184,0.2)', margin: '0 6px' }} />
 
               {/* Color swatches */}
               <div style={{ display: 'flex', gap: '3px', alignItems: 'center', padding: '0 4px' }}>
@@ -1645,8 +1645,8 @@ const App = () => {
                     onClick={() => setStrokeColor(color)}
                     title={color}
                     style={{
-                      width: 20,
-                      height: 20,
+                      width: 24,
+                      height: 24,
                       borderRadius: '50%',
                       border:
                         strokeColor === color
@@ -1670,7 +1670,7 @@ const App = () => {
               </div>
 
               {/* Divider */}
-              <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.2)', margin: '0 4px' }} />
+              <div style={{ width: 1, height: 24, background: 'rgba(148,163,184,0.2)', margin: '0 6px' }} />
 
               {/* Undo */}
               <button
@@ -1681,9 +1681,9 @@ const App = () => {
                   background: 'transparent',
                   color: !hasCanvasContent ? 'rgba(148,163,184,0.25)' : 'rgba(203,213,225,0.9)',
                   border: 'none',
-                  borderRadius: '6px',
-                  width: 28,
-                  height: 28,
+                  borderRadius: '8px',
+                  width: 34,
+                  height: 34,
                   fontSize: '15px',
                   fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                   cursor: !hasCanvasContent ? 'default' : 'pointer',
@@ -1693,7 +1693,7 @@ const App = () => {
                   justifyContent: 'center',
                   padding: 0,
                 }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M6.49985 5L3.20696 8.29289C2.81643 8.68342 2.81643 9.31658 3.20696 9.70711L6.49985 13"
                     stroke="currentColor"
