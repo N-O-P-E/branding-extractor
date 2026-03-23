@@ -156,6 +156,7 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
             icon="inspect"
             label="Inspect"
             active={activeTool === 'inspect'}
+            disabled={activeTool !== null && activeTool !== 'inspect'}
             onClick={() => handleToolClick('inspect')}
           />
         </div>

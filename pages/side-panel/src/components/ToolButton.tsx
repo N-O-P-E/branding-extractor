@@ -4,6 +4,7 @@ interface ToolButtonProps {
   icon: 'select' | 'pencil' | 'inspect';
   label: string;
   active: boolean;
+  disabled?: boolean;
   onClick: () => void;
 }
 
@@ -38,14 +39,15 @@ const InspectIcon = () => (
 
 const icons = { select: SelectIcon, pencil: PencilIcon, inspect: InspectIcon };
 
-export default function ToolButton({ icon, label, active, onClick }: ToolButtonProps) {
+export default function ToolButton({ icon, label, active, disabled, onClick }: ToolButtonProps) {
   const [hovered, setHovered] = useState(false);
   const Icon = icons[icon];
 
   return (
     <button
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      onMouseEnter={() => !disabled && setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
         flex: 1,
@@ -55,14 +57,20 @@ export default function ToolButton({ icon, label, active, onClick }: ToolButtonP
         gap: 8,
         padding: '12px 0',
         borderRadius: 10,
-        border: `1px solid ${active ? 'rgba(139,92,246,0.5)' : hovered ? 'rgba(139,92,246,0.4)' : 'rgba(139,92,246,0.3)'}`,
-        background: active ? 'rgba(139,92,246,0.2)' : hovered ? 'rgba(139,92,246,0.08)' : 'transparent',
-        color: active ? '#a78bfa' : hovered ? '#c4b5fd' : '#f1f5f9',
+        border: `1px solid ${disabled ? 'rgba(148,163,184,0.1)' : active ? 'rgba(139,92,246,0.5)' : hovered ? 'rgba(139,92,246,0.4)' : 'rgba(139,92,246,0.3)'}`,
+        background: disabled
+          ? 'transparent'
+          : active
+            ? 'rgba(139,92,246,0.2)'
+            : hovered
+              ? 'rgba(139,92,246,0.08)'
+              : 'transparent',
+        color: disabled ? 'rgba(148,163,184,0.25)' : active ? '#a78bfa' : hovered ? '#c4b5fd' : '#f1f5f9',
         fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
         fontSize: 13,
         minWidth: 0,
         fontWeight: 500,
-        cursor: 'pointer',
+        cursor: disabled ? 'not-allowed' : 'pointer',
         boxShadow: active
           ? '0 0 16px rgba(139,92,246,0.25), inset 0 0 12px rgba(139,92,246,0.1)'
           : hovered
