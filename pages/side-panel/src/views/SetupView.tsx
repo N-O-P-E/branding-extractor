@@ -204,7 +204,7 @@ export default function SetupView({ onDone }: SetupViewProps) {
               color: colors.textPrimary,
               lineHeight: 1.2,
             }}>
-            Setup
+            Settings
           </h1>
         </div>
         <p style={{ margin: '6px 0 0', color: colors.textSecondary, fontSize: 13 }}>

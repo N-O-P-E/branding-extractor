@@ -138,17 +138,52 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
         boxSizing: 'border-box',
       }}>
       {/* Header */}
-      <div style={{ padding: '28px 20px 0' }}>
-        <h1
+      <div
+        style={{ padding: '28px 20px 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <div>
+          <h1
+            style={{
+              fontSize: 26,
+              margin: 0,
+              color: colors.textPrimary,
+              lineHeight: 1.2,
+            }}>
+            Coworker
+          </h1>
+          <p style={{ margin: '6px 0 0', color: colors.textSecondary, fontSize: 13 }}>Visual issue reporting</p>
+        </div>
+        <button
+          onClick={onOpenSettings}
+          title="Settings"
           style={{
-            fontSize: 26,
-            margin: 0,
-            color: colors.textPrimary,
-            lineHeight: 1.2,
+            background: 'rgba(148,163,184,0.08)',
+            border: '1px solid rgba(148,163,184,0.12)',
+            borderRadius: 8,
+            width: 32,
+            height: 32,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: 'rgba(241,245,249,0.5)',
+            padding: 0,
+            flexShrink: 0,
+            transition: 'all 0.15s',
+            marginTop: 4,
           }}>
-          Coworker
-        </h1>
-        <p style={{ margin: '6px 0 0', color: colors.textSecondary, fontSize: 13 }}>Visual issue reporting</p>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        </button>
       </div>
 
       {/* Repository section */}
