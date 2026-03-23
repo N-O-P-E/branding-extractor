@@ -315,7 +315,7 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
         </h1>
       </div>
 
-      <div style={{ padding: '20px' }}>
+      <div style={{ padding: '12px 20px 20px' }}>
         {/* Description */}
         <span style={{ fontSize: 12, color: 'rgba(241,245,249,0.4)', marginBottom: 6, display: 'block' }}>
           Description

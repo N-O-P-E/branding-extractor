@@ -93,10 +93,7 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
       <label
         htmlFor="assignee-select-btn"
         style={{
-          fontSize: 11,
-          fontWeight: 500,
-          letterSpacing: '0.04em',
-          textTransform: 'uppercase' as const,
+          fontSize: 12,
           color: 'rgba(241,245,249,0.4)',
           marginBottom: 6,
           display: 'block',
