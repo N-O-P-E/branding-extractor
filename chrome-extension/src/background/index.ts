@@ -221,10 +221,21 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
     body += `## Description\n${description}\n\n`;
     body += `## Details\n`;
     body += `- **Page:** [${pageUrl}](${pageUrl})\n`;
-    body += `- **Store:** ${hostname}\n`;
-    body += `- **Environment:** ${browserMetadata?.shopify?.environment ?? environment}\n`;
-    if (template) body += `- **Template:** ${template}\n`;
-    if (themeId) body += `- **Theme ID:** ${themeId}\n`;
+    const shopify = browserMetadata?.shopify;
+    if (shopify) {
+      body += `- **Store:** ${shopify.storeName} (${shopify.storeHandle})\n`;
+      body += `- **Environment:** ${shopify.environment}\n`;
+      if (shopify.template) body += `- **Template:** ${shopify.template}\n`;
+      if (shopify.themeName) body += `- **Theme:** ${shopify.themeName}\n`;
+      if (shopify.themeId) body += `- **Theme ID:** ${shopify.themeId}\n`;
+      if (shopify.editorUrl) body += `- **Editor:** [Open in Theme Editor](${shopify.editorUrl})\n`;
+      if (shopify.locale) body += `- **Locale:** ${shopify.locale}\n`;
+    } else {
+      body += `- **Store:** ${hostname}\n`;
+      body += `- **Environment:** ${environment}\n`;
+      if (template) body += `- **Template:** ${template}\n`;
+      if (themeId) body += `- **Theme ID:** ${themeId}\n`;
+    }
     body += `- **Viewport:** ${viewportWidth} x ${viewportHeight}\n`;
     if (region) {
       body += `- **Region:** x:${Math.round(region.x)}, y:${Math.round(region.y)}, width:${Math.round(region.width)}, height:${Math.round(region.height)}\n`;
@@ -242,19 +253,6 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
       body += `- **Page Title:** ${browserMetadata.page.title}\n`;
       body += `- **Language:** ${browserMetadata.page.language}\n`;
       body += `- **Connection:** ${browserMetadata.network.online ? 'online' : 'offline'}${browserMetadata.network.connectionType ? ` (${browserMetadata.network.connectionType})` : ''}\n`;
-    }
-
-    // Shopify Context section
-    if (browserMetadata?.shopify) {
-      const s = browserMetadata.shopify;
-      body += `\n## Shopify Context\n`;
-      body += `- **Store:** ${s.storeName} (${s.storeHandle})\n`;
-      if (s.themeName) body += `- **Theme:** ${s.themeName}\n`;
-      if (s.themeId) body += `- **Theme ID:** ${s.themeId}\n`;
-      body += `- **Environment:** ${s.environment}\n`;
-      if (s.editorUrl) body += `- **Editor:** [Open in Editor](${s.editorUrl})\n`;
-      if (s.buildVersion) body += `- **Shopify Build:** ${s.buildVersion}\n`;
-      if (s.locale) body += `- **Locale:** ${s.locale}\n`;
     }
 
     // Console Errors section

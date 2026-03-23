@@ -10,11 +10,11 @@ export interface ShopifyContext {
   storeHandle: string;
   themeName?: string;
   themeId?: string;
+  template?: string;
   environment: 'editor' | 'preview' | 'live' | 'local';
   buildVersion?: string;
   locale?: string;
   editorUrl?: string;
-  previewUrl?: string;
 }
 
 export interface BrowserMetadata {

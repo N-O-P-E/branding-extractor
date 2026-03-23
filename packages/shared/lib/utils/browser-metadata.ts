@@ -170,14 +170,39 @@ const extractShopifyContext = (): ShopifyContext | undefined => {
     let themeId: string | undefined =
       url.searchParams.get('preview_theme_id') ?? url.pathname.match(/\/themes\/(\d+)/)?.[1] ?? undefined;
 
-    // On localhost, try to get theme info from Shopify global
-    if (!themeId && isShopifyLocal) {
-      try {
-        const shopify = (window as unknown as { Shopify?: { theme?: { id?: number; name?: string } } }).Shopify;
-        if (shopify?.theme?.id) themeId = String(shopify.theme.id);
-        if (shopify?.theme?.name && !themeName) themeName = shopify.theme.name;
-      } catch {
-        /* ignore */
+    // Get theme info from Shopify global (works on all environments including localhost)
+    try {
+      const shopify = (window as unknown as { Shopify?: { theme?: { id?: number; name?: string } } }).Shopify;
+      if (shopify?.theme?.id && !themeId) themeId = String(shopify.theme.id);
+      if (shopify?.theme?.name && !themeName) themeName = shopify.theme.name;
+    } catch {
+      /* ignore */
+    }
+
+    // Extract theme ID from CDN asset paths: /cdn/shop/t/{id}/assets/
+    if (!themeId) {
+      const cdnLink = document.querySelector('link[href*="/cdn/shop/t/"]');
+      const cdnMatch = cdnLink?.getAttribute('href')?.match(/\/cdn\/shop\/t\/(\d+)\//);
+      if (cdnMatch) themeId = cdnMatch[1];
+    }
+
+    // Extract template name from Theme global or meta
+    let template: string | undefined;
+    try {
+      const themeGlobal = (window as unknown as { Theme?: { template?: { name?: string } } }).Theme;
+      if (themeGlobal?.template?.name) template = themeGlobal.template.name;
+    } catch {
+      /* ignore */
+    }
+    if (!template) {
+      const pageType = document.querySelector('script#shop-js-analytics');
+      if (pageType?.textContent) {
+        try {
+          const data = JSON.parse(pageType.textContent);
+          if (data.pageType) template = data.pageType;
+        } catch {
+          /* ignore */
+        }
       }
     }
 
@@ -206,6 +231,7 @@ const extractShopifyContext = (): ShopifyContext | undefined => {
       storeHandle,
       themeName,
       themeId,
+      template,
       environment,
       buildVersion,
       locale,
