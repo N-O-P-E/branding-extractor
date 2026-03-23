@@ -841,14 +841,21 @@ const App = () => {
         height: rect.height,
       };
 
-      // Get HTML snippet
-      let html = el.outerHTML;
-      if (html.length > 2000) {
+      // Get HTML snippet (minified)
+      const tag = el.tagName.toLowerCase();
+      let html = el.outerHTML
+        .replace(/\n\s*\n/g, '\n')
+        .replace(/^\s+/gm, '  ')
+        .replace(/\s{2,}/g, ' ')
+        .replace(/>\s+</g, '>\n  <')
+        .trim();
+      if (html.length > 1500) {
         const tagMatch = html.match(/^<[^>]+>/);
         if (tagMatch) {
-          html = `${tagMatch[0]}\n  ${el.textContent?.slice(0, 200) ?? ''}...\n</${el.tagName.toLowerCase()}>`;
+          const inner = (el.textContent ?? '').trim().slice(0, 200);
+          html = `${tagMatch[0]}\n  ${inner}${inner.length >= 200 ? '...' : ''}\n</${tag}>`;
         } else {
-          html = html.slice(0, 2000) + '...';
+          html = html.slice(0, 1500) + '...';
         }
       }
       // Store the selection as viewport-fraction coords (0-1 range)

@@ -82,8 +82,17 @@ const extractShopifyContext = (): ShopifyContext | undefined => {
     const isShopifyAdmin = hostname === 'admin.shopify.com';
     const isMyShopify = hostname.endsWith('.myshopify.com');
     const hasAdminPath = url.pathname.includes('/admin/');
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
 
-    if (!isShopifyAdmin && !isMyShopify && !hasAdminPath) return undefined;
+    // Detect Shopify dev server (shopify theme dev) by checking for Shopify globals/meta
+    const hasShopifyMeta =
+      !!document.querySelector('meta[name="shopify-checkout-api-token"]') ||
+      !!document.querySelector('script[src*="cdn.shopify.com"]') ||
+      !!document.querySelector('link[href*="cdn.shopify.com"]') ||
+      !!(window as unknown as { Shopify?: unknown }).Shopify;
+    const isShopifyLocal = isLocalhost && hasShopifyMeta;
+
+    if (!isShopifyAdmin && !isMyShopify && !hasAdminPath && !isShopifyLocal) return undefined;
 
     let storeName = '';
     let storeHandle = '';
@@ -126,6 +135,29 @@ const extractShopifyContext = (): ShopifyContext | undefined => {
       storeHandle = hostname.replace('.myshopify.com', '');
     }
 
+    // On localhost dev server, extract store info from Shopify global or meta tags
+    if (!storeHandle && isShopifyLocal) {
+      try {
+        const shopify = (window as unknown as { Shopify?: { shop?: string } }).Shopify;
+        if (shopify?.shop) {
+          storeHandle = shopify.shop.replace('.myshopify.com', '');
+        }
+      } catch {
+        /* ignore */
+      }
+      // Try from canonical link
+      if (!storeHandle) {
+        const canonical = document.querySelector('link[rel="canonical"]');
+        const canonicalHref = canonical?.getAttribute('href') ?? '';
+        const canonMatch = canonicalHref.match(/\/\/([^.]+)\.myshopify\.com/);
+        if (canonMatch) storeHandle = canonMatch[1];
+      }
+      // Fallback: use page title
+      if (!storeHandle) {
+        storeHandle = 'local-dev';
+      }
+    }
+
     if (!storeName && storeHandle) {
       storeName = storeHandle
         .split('-')
@@ -135,8 +167,19 @@ const extractShopifyContext = (): ShopifyContext | undefined => {
 
     if (!storeHandle) return undefined;
 
-    const themeId: string | undefined =
+    let themeId: string | undefined =
       url.searchParams.get('preview_theme_id') ?? url.pathname.match(/\/themes\/(\d+)/)?.[1] ?? undefined;
+
+    // On localhost, try to get theme info from Shopify global
+    if (!themeId && isShopifyLocal) {
+      try {
+        const shopify = (window as unknown as { Shopify?: { theme?: { id?: number; name?: string } } }).Shopify;
+        if (shopify?.theme?.id) themeId = String(shopify.theme.id);
+        if (shopify?.theme?.name && !themeName) themeName = shopify.theme.name;
+      } catch {
+        /* ignore */
+      }
+    }
 
     let environment: ShopifyContext['environment'] = 'live';
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
