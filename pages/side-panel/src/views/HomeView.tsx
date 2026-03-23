@@ -148,7 +148,7 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
               color: colors.textPrimary,
               lineHeight: 1.2,
             }}>
-            Coworker
+            N.O.P.E. Co-worker
           </h1>
           <p style={{ margin: '6px 0 0', color: colors.textSecondary, fontSize: 13 }}>Visual issue reporting</p>
         </div>

@@ -66,7 +66,7 @@ const handleStartReport = async (tool: 'select' | 'pencil', sendResponse: (respo
       return;
     }
 
-    const screenshotDataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' });
+    const screenshotDataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 80 });
 
     const payload: ShowScreenshotMessage = {
       type: 'SHOW_SCREENSHOT',
@@ -133,7 +133,7 @@ const getOrCreateScreenshotRelease = async (octokit: Octokit, owner: string, rep
     repo,
     tag_name: RELEASE_TAG,
     name: 'Visual Issue Screenshots',
-    body: 'Screenshots uploaded by Coworker by Studio N.O.P.E.. Do not delete this release.',
+    body: 'Screenshots uploaded by N.O.P.E. Co-worker. Do not delete this release.',
   });
   return data.id;
 };
@@ -168,7 +168,7 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
 
     const releaseId = await getOrCreateScreenshotRelease(octokit, owner, repo);
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `issue-${timestamp}.png`;
+    const filename = `issue-${timestamp}.jpg`;
 
     const asset = await octokit.repos.uploadReleaseAsset({
       owner,
@@ -177,7 +177,7 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
       name: filename,
       // @ts-expect-error — Octokit types expect string but ArrayBuffer works at runtime
       data: dataUrlToArrayBuffer(annotatedScreenshotDataUrl),
-      headers: { 'content-type': 'image/png' },
+      headers: { 'content-type': 'image/jpeg' },
     });
 
     const screenshotUrl = asset.data.browser_download_url;
@@ -221,7 +221,7 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
     body += `## Screenshot\n![Screenshot](${screenshotUrl})\n\n`;
     body += `## Description\n${description}\n\n`;
     body += `## Details\n`;
-    body += `- **Page:** ${pagePath}\n`;
+    body += `- **Page:** [${pageUrl}](${pageUrl})\n`;
     body += `- **Store:** ${hostname}\n`;
     body += `- **Environment:** ${browserMetadata?.shopify?.environment ?? environment}\n`;
     if (template) body += `- **Template:** ${template}\n`;
@@ -272,7 +272,7 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
     }
     body += `\n## Analysis\n`;
     body += `> Tag \`@claude\` in a comment to analyze this issue against the codebase.\n`;
-    body += `\n---\n*Reported via Coworker by Studio N.O.P.E.*\n`;
+    body += `\n---\n*Reported via [N.O.P.E. Co-worker](https://github.com/N-O-P-E/coworker)*\n`;
 
     const title = `[Visual] ${description.slice(0, 80)}${description.length > 80 ? '...' : ''}`;
 

@@ -334,7 +334,7 @@ const App = () => {
         renderPencilStrokes(ctx, strokes, scaleX, scaleY);
         renderComments(ctx, comments, scaleX, scaleY);
 
-        const annotatedDataUrl = canvas.toDataURL('image/png');
+        const annotatedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
         const browserMetadata = await collectBrowserMetadata();
         const captureMessage: CaptureCompleteMessage = {
           type: 'CAPTURE_COMPLETE',
