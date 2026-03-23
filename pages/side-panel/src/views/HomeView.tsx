@@ -137,7 +137,10 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
           }}>
           Coworker
         </h1>
-        <p style={{ margin: '6px 0 0', color: colors.textSecondary, fontSize: 13 }}>Visual issue reporting</p>
+        <p style={{ margin: '6px 0 0', color: colors.textSecondary, fontSize: 13 }}>
+          A Coworker so good, it&apos;s{' '}
+          <span style={{ fontFamily: "'Instrument Serif', serif", color: '#f1f5f9' }}>Not Of Planet Earth.</span>
+        </p>
       </div>
 
       {/* Repository section */}
