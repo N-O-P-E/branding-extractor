@@ -90,13 +90,22 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
     chrome.storage.sync.set({ selectedRepo: repo });
   };
 
+  const [toolError, setToolError] = useState('');
+
   const handleToolClick = (tool: 'select' | 'pencil' | 'inspect') => {
     setActiveTool(tool);
+    setToolError('');
     chrome.runtime.sendMessage(
       { type: 'ACTIVATE_TOOL', payload: { tool } },
       (response: { success: boolean; error?: string }) => {
-        if (response && !response.success) {
-          console.error('ACTIVATE_TOOL failed:', response.error);
+        if (chrome.runtime.lastError || (response && !response.success)) {
+          setActiveTool(null);
+          const msg = response?.error ?? chrome.runtime.lastError?.message ?? 'Unknown error';
+          if (msg.includes('Receiving end does not exist')) {
+            setToolError('Refresh the page first, then try again.');
+          } else {
+            setToolError(msg);
+          }
         }
       },
     );
@@ -223,6 +232,7 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
             onClick={() => handleToolClick('inspect')}
           />
         </div>
+        {toolError && <p style={{ margin: '8px 0 0', fontSize: 12, color: '#f87171' }}>{toolError}</p>}
       </div>
 
       {/* Divider */}
