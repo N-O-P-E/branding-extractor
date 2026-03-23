@@ -104,8 +104,8 @@ export default function SidePanel() {
           borderTop: '1px solid rgba(148,163,184,0.08)',
           marginTop: 8,
         }}>
-        <div>
-          This tool is{' '}
+        <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 13 }}>
+          Built by{' '}
           <a
             href="https://studionope.nl"
             target="_blank"
@@ -114,11 +114,8 @@ export default function SidePanel() {
               color: '#f1f5f9',
               textDecoration: 'underline',
               textUnderlineOffset: '3px',
-              fontFamily: "'Instrument Serif', serif",
-              fontStyle: 'normal',
-              fontSize: 13,
             }}>
-            Not Of Planet Earth
+            Studio N.O.P.E.
           </a>
         </div>
       </div>
