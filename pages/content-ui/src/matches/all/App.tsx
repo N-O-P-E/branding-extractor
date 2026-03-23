@@ -418,6 +418,8 @@ const App = () => {
         },
       ]);
       actionHistory.current.push('image');
+      // Pre-select comment tool after placing image
+      setCanvasSubTool('text');
     };
     img.src = dataUrl;
   }, []);
@@ -589,6 +591,8 @@ const App = () => {
         if (prev && prev.points.length >= 2) {
           setStrokes(s => [...s, prev]);
           actionHistory.current.push('stroke');
+          // Pre-select comment tool after drawing
+          setCanvasSubTool('text');
         }
         return null;
       });
@@ -665,8 +669,9 @@ const App = () => {
         // Snippet extraction is optional
       }
 
-      // Switch to canvas mode so user can add more annotations
+      // Switch to canvas mode with comment tool pre-selected
       setActiveTool('pencil');
+      setCanvasSubTool('text');
       forceRender(n => n + 1);
 
       // Notify side panel to switch its button state to canvas
@@ -847,11 +852,12 @@ const App = () => {
       const size = `${Math.round(rect.width)}×${Math.round(rect.height)}`;
       setCapturedElements(prev => [...prev, `${tag}${elId}${classes} · ${size}`]);
 
-      // Exit inspect mode, enter canvas overlay so user can add more
+      // Exit inspect mode, enter canvas overlay with comment tool pre-selected
       setInspectActive(false);
       setInspectHighlight(null);
       inspectHoveredEl.current = null;
       setActiveTool('pencil');
+      setCanvasSubTool('text');
       setState('selecting');
 
       // Notify side panel to switch its button state to canvas
