@@ -117,6 +117,7 @@ const App = () => {
   const pencilCanvasRef = useRef<HTMLCanvasElement>(null);
   const isPencilDrawing = useRef(false);
   const [strokeColor, setStrokeColor] = useState('#8B5CF6');
+  const strokeColorRef = useRef('#8B5CF6');
   const [strokeWidth, setStrokeWidth] = useState(4);
   const [canvasSubTool, setCanvasSubTool] = useState<CanvasSubTool>('draw');
   const [comments, setComments] = useState<Comment[]>([]);
@@ -233,7 +234,7 @@ const App = () => {
 
   // Redraw when strokes change (e.g. after undo)
   useEffect(() => {
-    if (activeTool === 'pencil' && state === 'selecting') {
+    if (state === 'selecting') {
       redrawPencilCanvas(strokes, currentStroke);
     }
   }, [strokes, currentStroke, activeTool, state, redrawPencilCanvas]);
@@ -448,7 +449,7 @@ const App = () => {
           y: selectedRegion.y / imgRect.height,
           width: selectedRegion.width / imgRect.width,
           height: selectedRegion.height / imgRect.height,
-          color: strokeColor,
+          color: strokeColorRef.current,
         },
       ]);
       actionHistory.current.push('selection');
@@ -658,6 +659,7 @@ const App = () => {
     [state, activeTool, strokeColor, strokeWidth, canvasSubTool],
   );
 
+  strokeColorRef.current = strokeColor;
   const overlayActive = state !== 'idle' && screenshotUrl;
   overlayActiveRef.current = !!overlayActive;
 
@@ -782,8 +784,8 @@ const App = () => {
               onLoad={() => forceRender(n => n + 1)}
             />
 
-            {/* Pencil overlay canvas */}
-            {isPencilMode && (
+            {/* Drawing overlay canvas (visible in all modes to show strokes) */}
+            {state === 'selecting' && (
               <canvas
                 ref={pencilCanvasRef}
                 style={{
@@ -836,8 +838,8 @@ const App = () => {
               />
             )}
 
-            {/* Placed comment bubbles */}
-            {isPencilMode &&
+            {/* Placed comment bubbles (visible in all modes) */}
+            {state === 'selecting' &&
               comments.map((comment, i) => (
                 <div
                   key={i}
@@ -876,7 +878,7 @@ const App = () => {
               ))}
 
             {/* Editing comment input */}
-            {isPencilMode && editingComment && (
+            {state === 'selecting' && editingComment && (
               <div
                 style={{
                   position: 'absolute',
@@ -1215,8 +1217,8 @@ const App = () => {
             </div>
           )}
 
-          {/* Cancel pill - shown for select tool or pencil with no strokes */}
-          {(!isPencilMode || !hasCanvasContent) && (
+          {/* Cancel pill - shown when no content yet */}
+          {!hasCanvasContent && (
             <div style={styles.pillContainer}>
               <button style={styles.pill} onClick={dismiss}>
                 Cancel · Esc
@@ -1224,7 +1226,9 @@ const App = () => {
             </div>
           )}
 
-          {!isDragging.current && !isPencilMode && <div style={styles.hint}>Click and drag to select a region</div>}
+          {activeTool === 'select' && !isDragging.current && !hasCanvasContent && (
+            <div style={styles.hint}>Click and drag to select a region</div>
+          )}
           {isPencilMode && !hasCanvasContent && !isPencilDrawing.current && !editingComment && (
             <div style={styles.hint}>
               {canvasSubTool === 'text' ? 'Click to place a comment' : 'Draw on the screenshot to annotate'}
