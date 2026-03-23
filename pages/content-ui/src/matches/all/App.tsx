@@ -1271,170 +1271,161 @@ const App = () => {
                   </svg>
                   <span style={{ fontSize: '10px', fontWeight: 500, opacity: 0.5 }}>S</span>
                 </button>
+                <button
+                  onClick={() => {
+                    setCanvasSubTool('draw');
+                    setEditingComment(null);
+                  }}
+                  title="Draw (D)"
+                  style={{
+                    height: 28,
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: canvasSubTool === 'draw' ? 'rgba(139,92,246,0.25)' : 'transparent',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 4,
+                    transition: 'all 0.15s ease-out',
+                    padding: '0 6px',
+                    color: canvasSubTool === 'draw' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
+                    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                  }}>
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round">
+                    <path d="M12 19l7-7 3 3-7 7-3-3z" />
+                    <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+                  </svg>
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      fontWeight: 500,
+                      opacity: 0.5,
+                      letterSpacing: '0.02em',
+                    }}>
+                    D
+                  </span>
+                </button>
+                <button
+                  onClick={() => setCanvasSubTool('text')}
+                  title="Comment (C)"
+                  style={{
+                    height: 28,
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: canvasSubTool === 'text' ? 'rgba(139,92,246,0.25)' : 'transparent',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 4,
+                    transition: 'all 0.15s ease-out',
+                    padding: '0 6px',
+                    color: canvasSubTool === 'text' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
+                    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                  }}>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      fontWeight: 500,
+                      opacity: 0.5,
+                      letterSpacing: '0.02em',
+                    }}>
+                    C
+                  </span>
+                </button>
+                <button
+                  onClick={() => setCanvasSubTool('image')}
+                  title="Image (I)"
+                  style={{
+                    height: 28,
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: canvasSubTool === 'image' ? 'rgba(139,92,246,0.25)' : 'transparent',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 4,
+                    transition: 'all 0.15s ease-out',
+                    padding: '0 6px',
+                    color: canvasSubTool === 'image' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
+                    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                  }}>
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <path d="M21 15l-5-5L5 21" />
+                  </svg>
+                  <span style={{ fontSize: '10px', fontWeight: 500, opacity: 0.5 }}>I</span>
+                </button>
               </div>
 
-              {/* Draw / Text toggle (canvas mode only) */}
-              {isPencilMode && (
-                <>
-                  {/* Draw / Text toggle */}
-                  <div style={{ display: 'flex', gap: '2px', alignItems: 'center', padding: '0 2px' }}>
-                    <button
-                      onClick={() => {
-                        setCanvasSubTool('draw');
-                        setEditingComment(null);
+              {/* Divider */}
+              <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.2)', margin: '0 4px' }} />
+
+              {/* Stroke width presets */}
+              <div style={{ display: 'flex', gap: '2px', alignItems: 'center', padding: '0 4px' }}>
+                {STROKE_WIDTHS.map(sw => (
+                  <button
+                    key={sw.value}
+                    onClick={() => setStrokeWidth(sw.value)}
+                    title={`${sw.label} stroke`}
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: strokeWidth === sw.value ? 'rgba(139,92,246,0.25)' : 'transparent',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.15s ease-out',
+                      padding: 0,
+                    }}>
+                    <div
+                      style={{
+                        width: sw.value + 4,
+                        height: sw.value + 4,
+                        borderRadius: '50%',
+                        background: strokeWidth === sw.value ? '#f1f5f9' : 'rgba(148,163,184,0.5)',
+                        transition: 'all 0.15s ease-out',
                       }}
-                      title="Draw (D)"
-                      style={{
-                        height: 28,
-                        borderRadius: '6px',
-                        border: 'none',
-                        background: canvasSubTool === 'draw' ? 'rgba(139,92,246,0.25)' : 'transparent',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 4,
-                        transition: 'all 0.15s ease-out',
-                        padding: '0 6px',
-                        color: canvasSubTool === 'draw' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
-                        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-                      }}>
-                      <svg
-                        width="13"
-                        height="13"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round">
-                        <path d="M12 19l7-7 3 3-7 7-3-3z" />
-                        <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
-                      </svg>
-                      <span
-                        style={{
-                          fontSize: '10px',
-                          fontWeight: 500,
-                          opacity: 0.5,
-                          letterSpacing: '0.02em',
-                        }}>
-                        D
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => setCanvasSubTool('text')}
-                      title="Comment (C)"
-                      style={{
-                        height: 28,
-                        borderRadius: '6px',
-                        border: 'none',
-                        background: canvasSubTool === 'text' ? 'rgba(139,92,246,0.25)' : 'transparent',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 4,
-                        transition: 'all 0.15s ease-out',
-                        padding: '0 6px',
-                        color: canvasSubTool === 'text' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
-                        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-                      }}>
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                      </svg>
-                      <span
-                        style={{
-                          fontSize: '10px',
-                          fontWeight: 500,
-                          opacity: 0.5,
-                          letterSpacing: '0.02em',
-                        }}>
-                        C
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => setCanvasSubTool('image')}
-                      title="Image (I)"
-                      style={{
-                        height: 28,
-                        borderRadius: '6px',
-                        border: 'none',
-                        background: canvasSubTool === 'image' ? 'rgba(139,92,246,0.25)' : 'transparent',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 4,
-                        transition: 'all 0.15s ease-out',
-                        padding: '0 6px',
-                        color: canvasSubTool === 'image' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
-                        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-                      }}>
-                      <svg
-                        width="13"
-                        height="13"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                        <circle cx="8.5" cy="8.5" r="1.5" />
-                        <path d="M21 15l-5-5L5 21" />
-                      </svg>
-                      <span style={{ fontSize: '10px', fontWeight: 500, opacity: 0.5 }}>I</span>
-                    </button>
-                  </div>
+                    />
+                  </button>
+                ))}
+              </div>
 
-                  {/* Divider */}
-                  <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.2)', margin: '0 2px' }} />
-
-                  {/* Stroke width presets */}
-                  <div style={{ display: 'flex', gap: '2px', alignItems: 'center', padding: '0 4px' }}>
-                    {STROKE_WIDTHS.map(sw => (
-                      <button
-                        key={sw.value}
-                        onClick={() => setStrokeWidth(sw.value)}
-                        title={`${sw.label} stroke`}
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: '6px',
-                          border: 'none',
-                          background: strokeWidth === sw.value ? 'rgba(139,92,246,0.25)' : 'transparent',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          transition: 'all 0.15s ease-out',
-                          padding: 0,
-                        }}>
-                        <div
-                          style={{
-                            width: sw.value + 4,
-                            height: sw.value + 4,
-                            borderRadius: '50%',
-                            background: strokeWidth === sw.value ? '#f1f5f9' : 'rgba(148,163,184,0.5)',
-                            transition: 'all 0.15s ease-out',
-                          }}
-                        />
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Divider */}
-                  <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.2)', margin: '0 4px' }} />
-                </>
-              )}
+              {/* Divider */}
+              <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.2)', margin: '0 4px' }} />
 
               {/* Color swatches */}
               <div style={{ display: 'flex', gap: '3px', alignItems: 'center', padding: '0 4px' }}>
@@ -1496,7 +1487,7 @@ const App = () => {
               </button>
 
               {/* Divider */}
-              <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.2)', margin: '0 2px' }} />
+              <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.2)', margin: '0 4px' }} />
 
               {/* Done */}
               <button
