@@ -316,9 +316,9 @@ const App = () => {
         }
       }
     };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [state, activeTool, dismiss, handleCanvasUndo, handlePencilDone]);
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => document.removeEventListener('keydown', handleKeyDown, true);
+  }, [state, activeTool, dismiss, handleCanvasUndo, handlePencilDone, editingComment]);
 
   // Pencil tool mouse handlers
   useEffect(() => {
