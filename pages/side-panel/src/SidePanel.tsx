@@ -45,10 +45,20 @@ export default function SidePanel() {
         {view === 'create-issue' && (
           <CreateIssueView
             captureData={captureData}
-            onBack={() => setView('home')}
+            onBack={() => {
+              setView('home');
+              // Dismiss the overlay on the page
+              chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
+                if (tab?.id) chrome.tabs.sendMessage(tab.id, { type: 'DISMISS_OVERLAY' }).catch(() => {});
+              });
+            }}
             onSuccess={() => {
               setView('home');
               setCaptureData(null);
+              // Dismiss the overlay on the page
+              chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
+                if (tab?.id) chrome.tabs.sendMessage(tab.id, { type: 'DISMISS_OVERLAY' }).catch(() => {});
+              });
             }}
           />
         )}

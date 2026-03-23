@@ -216,7 +216,7 @@ const App = () => {
   const backdropRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<OverlayState>('idle');
   const screenshotUrlRef = useRef<string | null>(null);
-  const handleDoneRef = useRef<(() => void) | null>(null);
+  const handleDoneRef = useRef<((shouldDismiss?: boolean) => void) | null>(null);
   const orderCounter = useRef(0);
 
   const dismiss = useCallback(() => {
@@ -290,8 +290,11 @@ const App = () => {
         setActiveTool(message.payload.tool);
       }
       if (message.type === 'REQUEST_CAPTURE') {
-        // Trigger capture and send CAPTURE_COMPLETE, then dismiss
-        handleDoneRef.current?.();
+        // Trigger capture and send CAPTURE_COMPLETE without dismissing overlay
+        handleDoneRef.current?.(false);
+      }
+      if (message.type === 'DISMISS_OVERLAY') {
+        dismiss();
       }
     };
     chrome.runtime.onMessage.addListener(listener);
@@ -333,78 +336,81 @@ const App = () => {
 
   const hasAnyContent = strokes.length > 0 || comments.length > 0 || selections.length > 0 || placedImages.length > 0;
 
-  const handleDone = useCallback(() => {
-    if (!screenshotUrl || !hasAnyContent) return;
+  const handleDone = useCallback(
+    (shouldDismiss = true) => {
+      if (!screenshotUrl) return;
 
-    const img = new Image();
-    img.onload = async () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      const ctx = canvas.getContext('2d')!;
-      ctx.drawImage(img, 0, 0);
+      const img = new Image();
+      img.onload = async () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0);
 
-      const displayedImg = imgRef.current;
-      const displayRect = displayedImg?.getBoundingClientRect();
-      const scaleX = displayRect ? img.naturalWidth / displayRect.width : window.devicePixelRatio;
-      const scaleY = displayRect ? img.naturalHeight / displayRect.height : window.devicePixelRatio;
+        const displayedImg = imgRef.current;
+        const displayRect = displayedImg?.getBoundingClientRect();
+        const scaleX = displayRect ? img.naturalWidth / displayRect.width : window.devicePixelRatio;
+        const scaleY = displayRect ? img.naturalHeight / displayRect.height : window.devicePixelRatio;
 
-      // Draw selection rectangles (stored as fractions 0-1, scale to full image)
-      for (const region of selections) {
-        const rx = region.x * img.naturalWidth;
-        const ry = region.y * img.naturalHeight;
-        const rw = region.width * img.naturalWidth;
-        const rh = region.height * img.naturalHeight;
-        ctx.strokeStyle = region.color;
-        ctx.lineWidth = 3 * Math.max(scaleX, scaleY);
-        ctx.setLineDash([8 * scaleX, 4 * scaleX]);
-        ctx.strokeRect(rx, ry, rw, rh);
-        ctx.fillStyle = `${region.color}20`;
-        ctx.fillRect(rx, ry, rw, rh);
-      }
-      ctx.setLineDash([]);
+        // Draw selection rectangles (stored as fractions 0-1, scale to full image)
+        for (const region of selections) {
+          const rx = region.x * img.naturalWidth;
+          const ry = region.y * img.naturalHeight;
+          const rw = region.width * img.naturalWidth;
+          const rh = region.height * img.naturalHeight;
+          ctx.strokeStyle = region.color;
+          ctx.lineWidth = 3 * Math.max(scaleX, scaleY);
+          ctx.setLineDash([8 * scaleX, 4 * scaleX]);
+          ctx.strokeRect(rx, ry, rw, rh);
+          ctx.fillStyle = `${region.color}20`;
+          ctx.fillRect(rx, ry, rw, rh);
+        }
+        ctx.setLineDash([]);
 
-      // Draw placed images, then strokes and comments on top
-      renderPlacedImages(ctx, placedImages, scaleX, scaleY).then(async () => {
-        renderPencilStrokes(ctx, strokes, scaleX, scaleY);
-        renderComments(ctx, comments, scaleX, scaleY);
+        // Draw placed images, then strokes and comments on top
+        renderPlacedImages(ctx, placedImages, scaleX, scaleY).then(async () => {
+          renderPencilStrokes(ctx, strokes, scaleX, scaleY);
+          renderComments(ctx, comments, scaleX, scaleY);
 
-        const annotatedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
-        const browserMetadata = await collectBrowserMetadata();
-        const captureMessage: CaptureCompleteMessage = {
-          type: 'CAPTURE_COMPLETE',
-          payload: {
-            screenshotDataUrl: screenshotUrl,
-            annotatedScreenshotDataUrl: annotatedDataUrl,
-            region: selections[0]
-              ? {
-                  x: selections[0].x * window.innerWidth,
-                  y: selections[0].y * window.innerHeight,
-                  width: selections[0].width * window.innerWidth,
-                  height: selections[0].height * window.innerHeight,
-                }
-              : undefined,
-            pageUrl: window.location.href,
-            viewportWidth: window.innerWidth,
-            viewportHeight: window.innerHeight,
-            htmlSnippet:
-              htmlSnippets.length > 0
-                ? htmlSnippets
-                    .map((snippet, i) => {
-                      const elInfo = capturedElements[i];
-                      return elInfo ? `<!-- ${elInfo} -->\n${snippet}` : snippet;
-                    })
-                    .join('\n\n---\n\n')
+          const annotatedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+          const browserMetadata = await collectBrowserMetadata();
+          const captureMessage: CaptureCompleteMessage = {
+            type: 'CAPTURE_COMPLETE',
+            payload: {
+              screenshotDataUrl: screenshotUrl,
+              annotatedScreenshotDataUrl: annotatedDataUrl,
+              region: selections[0]
+                ? {
+                    x: selections[0].x * window.innerWidth,
+                    y: selections[0].y * window.innerHeight,
+                    width: selections[0].width * window.innerWidth,
+                    height: selections[0].height * window.innerHeight,
+                  }
                 : undefined,
-            browserMetadata,
-          },
-        };
-        chrome.runtime.sendMessage(captureMessage);
-        dismiss();
-      });
-    };
-    img.src = screenshotUrl;
-  }, [screenshotUrl, hasAnyContent, strokes, comments, selections, htmlSnippets, placedImages, dismiss]);
+              pageUrl: window.location.href,
+              viewportWidth: window.innerWidth,
+              viewportHeight: window.innerHeight,
+              htmlSnippet:
+                htmlSnippets.length > 0
+                  ? htmlSnippets
+                      .map((snippet, i) => {
+                        const elInfo = capturedElements[i];
+                        return elInfo ? `<!-- ${elInfo} -->\n${snippet}` : snippet;
+                      })
+                      .join('\n\n---\n\n')
+                  : undefined,
+              browserMetadata,
+            },
+          };
+          chrome.runtime.sendMessage(captureMessage);
+          if (shouldDismiss) dismiss();
+        });
+      };
+      img.src = screenshotUrl;
+    },
+    [screenshotUrl, hasAnyContent, strokes, comments, selections, htmlSnippets, placedImages, dismiss],
+  );
 
   // Track action order for undo: 'stroke' or 'comment'
   const actionHistory = useRef<Array<'stroke' | 'comment' | 'selection' | 'image'>>([]);
