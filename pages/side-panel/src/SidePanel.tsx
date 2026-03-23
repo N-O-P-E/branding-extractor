@@ -29,19 +29,43 @@ export default function SidePanel() {
   }, []);
 
   return (
-    <div style={{ minHeight: '100vh' }}>
-      {view === 'setup' && <SetupView onDone={() => setView('home')} />}
-      {view === 'home' && <HomeView onOpenSettings={() => setView('setup')} />}
-      {view === 'create-issue' && captureData && (
-        <CreateIssueView
-          captureData={captureData}
-          onBack={() => setView('home')}
-          onSuccess={() => {
-            setView('home');
-            setCaptureData(null);
-          }}
-        />
-      )}
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1 }}>
+        {view === 'setup' && <SetupView onDone={() => setView('home')} />}
+        {view === 'home' && <HomeView onOpenSettings={() => setView('setup')} />}
+        {view === 'create-issue' && captureData && (
+          <CreateIssueView
+            captureData={captureData}
+            onBack={() => setView('home')}
+            onSuccess={() => {
+              setView('home');
+              setCaptureData(null);
+            }}
+          />
+        )}
+      </div>
+      <div
+        style={{
+          padding: '16px 20px',
+          textAlign: 'center',
+          fontSize: 12,
+          color: 'rgba(241,245,249,0.3)',
+          borderTop: '1px solid rgba(148,163,184,0.08)',
+        }}>
+        This tool is{' '}
+        <a
+          href="https://studionope.nl"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            color: 'rgba(241,245,249,0.5)',
+            textDecoration: 'underline',
+            textUnderlineOffset: '2px',
+            fontStyle: 'italic',
+          }}>
+          Not Of Planet Earth
+        </a>
+      </div>
     </div>
   );
 }
