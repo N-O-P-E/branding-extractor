@@ -1,6 +1,7 @@
 import 'webextension-polyfill';
 import { Octokit } from '@octokit/rest';
 import type {
+  AutoFixSettings,
   CheckTokenStatusResponse,
   CreateIssueMessage,
   ExtensionMessage,
@@ -242,6 +243,7 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
       labels: userLabels,
       assignee,
       browserMetadata,
+      autoFix,
     } = message.payload;
 
     const releaseId = await getOrCreateScreenshotRelease(octokit, owner, repo);
@@ -371,6 +373,16 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
       screenshot_url: screenshotUrl,
     });
 
+    // Handle auto-fix with Claude
+    if (autoFix) {
+      try {
+        await setupAutoFix(octokit, owner, repo, issue.data.number);
+      } catch (autoFixErr) {
+        // Log but don't fail the issue creation
+        console.error('Auto-fix setup failed:', autoFixErr);
+      }
+    }
+
     sendResponse({
       success: true,
       issueUrl: issue.data.html_url,
@@ -379,6 +391,107 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
   } catch (err) {
     sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
   }
+};
+
+// Auto-fix with Claude workflow template
+const AUTO_FIX_WORKFLOW = `name: Claude Auto-Fix
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  auto-fix:
+    if: github.event.label.name == 'auto-fix'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: \${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            You are an AI assistant that fixes visual issues reported via the Visual Issue Reporter extension.
+
+            When you receive an issue:
+            1. Read the issue description and examine any attached screenshot
+            2. The purple highlighted area shows the problem location
+            3. Identify the relevant code files
+            4. Create a minimal fix that addresses only the reported issue
+            5. Open a PR with your changes
+
+            Keep changes minimal. Don't refactor. Don't add features. Just fix the reported issue.
+`;
+
+const setupAutoFix = async (octokit: Octokit, owner: string, repo: string, issueNumber: number): Promise<void> => {
+  // 1. Ensure the auto-fix label exists
+  try {
+    await octokit.issues.getLabel({ owner, repo, name: 'auto-fix' });
+  } catch {
+    // Label doesn't exist, create it
+    await octokit.issues.createLabel({
+      owner,
+      repo,
+      name: 'auto-fix',
+      color: 'a78bfa',
+      description: 'Auto-fix with Claude AI',
+    });
+  }
+
+  // 2. Ensure the GitHub Action workflow exists
+  const workflowPath = '.github/workflows/claude-auto-fix.yml';
+  try {
+    await octokit.repos.getContent({ owner, repo, path: workflowPath });
+    // Workflow exists, no need to create
+  } catch {
+    // Workflow doesn't exist, try to create it
+    try {
+      // Get the default branch
+      const { data: repoData } = await octokit.repos.get({ owner, repo });
+      const defaultBranch = repoData.default_branch;
+
+      // Get the custom system prompt if set
+      const { autoFixSettings } = await chrome.storage.local.get('autoFixSettings');
+      let workflowContent = AUTO_FIX_WORKFLOW;
+      if (autoFixSettings?.systemPrompt) {
+        // Replace the default prompt with custom one
+        workflowContent = workflowContent.replace(
+          /prompt: \|[\s\S]*$/,
+          `prompt: |\n            ${(autoFixSettings as AutoFixSettings).systemPrompt?.split('\n').join('\n            ')}\n`,
+        );
+      }
+
+      await octokit.repos.createOrUpdateFileContents({
+        owner,
+        repo,
+        path: workflowPath,
+        message: 'Add Claude auto-fix workflow',
+        content: btoa(workflowContent),
+        branch: defaultBranch,
+      });
+    } catch (createErr) {
+      console.error('Failed to create workflow file:', createErr);
+      // Continue anyway - user may need to add manually
+    }
+  }
+
+  // 3. Add the auto-fix label to trigger the action
+  await octokit.issues.addLabels({
+    owner,
+    repo,
+    issue_number: issueNumber,
+    labels: ['auto-fix'],
+  });
 };
 
 const handleFetchLabels = async (

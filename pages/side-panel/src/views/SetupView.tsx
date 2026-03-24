@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import type { AutoFixSettings } from '@extension/shared';
 
 interface SetupViewProps {
   onDone: () => void;
@@ -15,6 +16,17 @@ const colors = {
   border: 'rgba(148,163,184,0.15)',
   error: '#f87171',
 } as const;
+
+const DEFAULT_SYSTEM_PROMPT = `You are an AI assistant that fixes visual issues reported via the Visual Issue Reporter extension.
+
+When you receive an issue:
+1. Read the issue description and examine any attached screenshot
+2. The purple highlighted area shows the problem location
+3. Identify the relevant code files
+4. Create a minimal fix that addresses only the reported issue
+5. Open a PR with your changes
+
+Keep changes minimal. Don't refactor. Don't add features. Just fix the reported issue.`;
 
 interface GitHubRepo {
   full_name: string;
@@ -34,6 +46,12 @@ export default function SetupView({ onDone }: SetupViewProps) {
   const [repoSearch, setRepoSearch] = useState('');
   const [repoDropdownOpen, setRepoDropdownOpen] = useState(false);
 
+  // Auto-fix settings
+  const [autoFixEnabled, setAutoFixEnabled] = useState(false);
+  const [anthropicApiKey, setAnthropicApiKey] = useState('');
+  const [systemPrompt, setSystemPrompt] = useState(DEFAULT_SYSTEM_PROMPT);
+  const [autoFixExpanded, setAutoFixExpanded] = useState(false);
+
   useEffect(() => {
     // Check token status via background — never read the raw PAT
     chrome.runtime.sendMessage({ type: 'CHECK_TOKEN_STATUS' }, (response: { connected: boolean; login?: string }) => {
@@ -47,7 +65,27 @@ export default function SetupView({ onDone }: SetupViewProps) {
         setRepos(result.repoList as string[]);
       }
     });
+    // Load auto-fix settings
+    chrome.storage.local.get(['autoFixSettings']).then(result => {
+      if (result.autoFixSettings) {
+        const settings = result.autoFixSettings as AutoFixSettings;
+        setAutoFixEnabled(settings.enabled);
+        if (settings.anthropicApiKey) setAnthropicApiKey(settings.anthropicApiKey);
+        if (settings.systemPrompt) setSystemPrompt(settings.systemPrompt);
+        if (settings.enabled) setAutoFixExpanded(true);
+      }
+    });
   }, []);
+
+  const saveAutoFixSettings = useCallback(() => {
+    const settings: AutoFixSettings = {
+      enabled: autoFixEnabled,
+      anthropicApiKey: anthropicApiKey || undefined,
+      systemPrompt: systemPrompt !== DEFAULT_SYSTEM_PROMPT ? systemPrompt : undefined,
+    };
+    chrome.storage.local.set({ autoFixSettings: settings });
+    flashSaved();
+  }, [autoFixEnabled, anthropicApiKey, systemPrompt]);
 
   // Fetch available repos when token is valid
   const fetchAvailableRepos = useCallback(() => {
@@ -487,6 +525,177 @@ export default function SetupView({ onDone }: SetupViewProps) {
         )}
         {patStatus !== 'valid' && (
           <p style={{ marginTop: 10, fontSize: 13, color: colors.textSecondary }}>Connect your GitHub token first.</p>
+        )}
+      </section>
+
+      {/* Divider */}
+      <div style={{ borderTop: '1px solid rgba(148,163,184,0.1)', margin: '0 0 24px' }} />
+
+      {/* Auto-fix with Claude section */}
+      <section style={{ marginBottom: 24 }}>
+        <button
+          onClick={() => setAutoFixExpanded(!autoFixExpanded)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            marginBottom: autoFixExpanded ? 12 : 0,
+          }}>
+          <h2
+            style={{
+              fontSize: 18,
+              margin: 0,
+              color: colors.purpleAccent,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}>
+            <span>✨</span> Auto-fix with Claude
+          </h2>
+          <span style={{ color: colors.textSecondary, fontSize: 18 }}>{autoFixExpanded ? '−' : '+'}</span>
+        </button>
+
+        {autoFixExpanded && (
+          <>
+            <p style={{ margin: '0 0 12px', color: colors.textSecondary, fontSize: 13, lineHeight: 1.5 }}>
+              Automatically create a PR to fix reported issues using Claude AI.
+            </p>
+
+            {/* Enable toggle */}
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                marginBottom: 16,
+                cursor: 'pointer',
+              }}>
+              <input
+                type="checkbox"
+                checked={autoFixEnabled}
+                onChange={e => {
+                  setAutoFixEnabled(e.target.checked);
+                  setTimeout(saveAutoFixSettings, 0);
+                }}
+                style={{
+                  width: 18,
+                  height: 18,
+                  accentColor: colors.purpleAccent,
+                  cursor: 'pointer',
+                }}
+              />
+              <span style={{ color: colors.textPrimary, fontSize: 14 }}>Enable auto-fix feature</span>
+            </label>
+
+            {autoFixEnabled && (
+              <>
+                {/* Anthropic API Key */}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block' }}>
+                    <span style={{ display: 'block', fontSize: 12, color: colors.textSecondary, marginBottom: 6 }}>
+                      Anthropic API Key
+                    </span>
+                    <input
+                      type="password"
+                      placeholder="sk-ant-..."
+                      value={anthropicApiKey}
+                      onChange={e => setAnthropicApiKey(e.target.value)}
+                      onBlur={saveAutoFixSettings}
+                      style={{
+                        ...inputStyle,
+                        width: '100%',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </label>
+                  <p style={{ margin: '6px 0 0', fontSize: 11, color: colors.textMuted }}>
+                    Get your key from{' '}
+                    <a
+                      href="https://console.anthropic.com/settings/keys"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#c4b5fd' }}>
+                      console.anthropic.com
+                    </a>
+                  </p>
+                </div>
+
+                {/* System Prompt */}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block' }}>
+                    <span style={{ display: 'block', fontSize: 12, color: colors.textSecondary, marginBottom: 6 }}>
+                      System Prompt
+                    </span>
+                    <textarea
+                      value={systemPrompt}
+                      onChange={e => setSystemPrompt(e.target.value)}
+                      onBlur={saveAutoFixSettings}
+                      placeholder="Instructions for Claude when fixing issues..."
+                      style={{
+                        width: '100%',
+                        minHeight: 120,
+                        background: colors.inputBg,
+                        border: `1px solid ${colors.border}`,
+                        borderRadius: 8,
+                        padding: '10px 14px',
+                        color: colors.textPrimary,
+                        fontSize: 13,
+                        fontFamily: 'monospace',
+                        outline: 'none',
+                        resize: 'vertical',
+                        boxSizing: 'border-box',
+                        transition: 'all 0.15s',
+                      }}
+                    />
+                  </label>
+                  <button
+                    onClick={() => {
+                      setSystemPrompt(DEFAULT_SYSTEM_PROMPT);
+                      setTimeout(saveAutoFixSettings, 0);
+                    }}
+                    style={{
+                      marginTop: 6,
+                      background: 'none',
+                      border: 'none',
+                      color: colors.textMuted,
+                      fontSize: 11,
+                      cursor: 'pointer',
+                      padding: 0,
+                      textDecoration: 'underline',
+                    }}>
+                    Reset to default
+                  </button>
+                </div>
+
+                {/* Info box */}
+                <div
+                  style={{
+                    padding: '12px 14px',
+                    background: 'rgba(139,92,246,0.08)',
+                    border: '1px solid rgba(139,92,246,0.2)',
+                    borderRadius: 8,
+                    fontSize: 12,
+                    color: colors.textSecondary,
+                    lineHeight: 1.5,
+                  }}>
+                  <strong style={{ color: '#c4b5fd' }}>How it works:</strong>
+                  <ol style={{ margin: '8px 0 0', paddingLeft: 18 }}>
+                    <li>Check "Auto-fix with Claude" when creating an issue</li>
+                    <li>A GitHub Action workflow will be added to your repo (if needed)</li>
+                    <li>Claude reads the issue and creates a PR with the fix</li>
+                  </ol>
+                  <p style={{ margin: '8px 0 0', fontSize: 11, color: colors.textMuted }}>
+                    Note: The Anthropic API key will be stored as a GitHub secret in your repository.
+                  </p>
+                </div>
+              </>
+            )}
+          </>
         )}
       </section>
 

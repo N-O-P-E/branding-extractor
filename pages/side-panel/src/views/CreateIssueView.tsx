@@ -1,7 +1,7 @@
 import AssigneeSelect from '../components/AssigneeSelect';
 import LabelSelect from '../components/LabelSelect';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { BrowserMetadata } from '@extension/shared';
+import type { BrowserMetadata, AutoFixSettings } from '@extension/shared';
 
 interface CaptureData {
   screenshotDataUrl: string;
@@ -41,11 +41,22 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
   const [error, setError] = useState('');
   const [successUrl, setSuccessUrl] = useState('');
 
+  // Auto-fix state
+  const [autoFixAvailable, setAutoFixAvailable] = useState(false);
+  const [autoFixChecked, setAutoFixChecked] = useState(false);
+
   const [liveBrowserMetadata, setLiveBrowserMetadata] = useState<BrowserMetadata | null>(browserMetadata);
 
   useEffect(() => {
     chrome.storage.local.get('selectedRepo').then(result => {
       if (result.selectedRepo) setSelectedRepo(result.selectedRepo as string);
+    });
+    // Check if auto-fix is available
+    chrome.storage.local.get('autoFixSettings').then(result => {
+      if (result.autoFixSettings) {
+        const settings = result.autoFixSettings as AutoFixSettings;
+        setAutoFixAvailable(settings.enabled && !!settings.anthropicApiKey);
+      }
     });
   }, []);
 
@@ -122,6 +133,7 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
           browserMetadata: data.browserMetadata,
           labels: selectedLabels,
           assignee: selectedAssignee || undefined,
+          autoFix: autoFixChecked && autoFixAvailable,
         },
       })) as { success: boolean; issueUrl?: string; error?: string };
 
@@ -135,7 +147,7 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
       setError(err instanceof Error ? err.message : 'Failed to create issue');
       setSubmitting(false);
     }
-  }, [submitting, selectedRepo, description, captureData, selectedLabels, selectedAssignee, onSuccess]);
+  }, [submitting, selectedRepo, description, selectedLabels, selectedAssignee, autoFixChecked, autoFixAvailable]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -490,6 +502,44 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
               )}
             </div>
           </>
+        )}
+
+        {/* Auto-fix checkbox */}
+        {autoFixAvailable && (
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              marginTop: 16,
+              padding: '12px 14px',
+              background: autoFixChecked ? 'rgba(139,92,246,0.12)' : 'rgba(148,163,184,0.05)',
+              border: `1px solid ${autoFixChecked ? 'rgba(139,92,246,0.3)' : colors.border}`,
+              borderRadius: 8,
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}>
+            <input
+              type="checkbox"
+              checked={autoFixChecked}
+              onChange={e => setAutoFixChecked(e.target.checked)}
+              aria-label="Auto-fix with Claude"
+              style={{
+                width: 18,
+                height: 18,
+                accentColor: '#a78bfa',
+                cursor: 'pointer',
+              }}
+            />
+            <span>
+              <span style={{ display: 'block', color: colors.textPrimary, fontSize: 14, fontWeight: 500 }}>
+                ✨ Auto-fix with Claude
+              </span>
+              <span style={{ display: 'block', margin: '2px 0 0', fontSize: 11, color: colors.textSecondary }}>
+                Claude will analyze this issue and create a PR with a fix
+              </span>
+            </span>
+          </label>
         )}
 
         {/* Submit button */}
