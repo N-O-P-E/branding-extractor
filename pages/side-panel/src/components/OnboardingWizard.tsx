@@ -141,11 +141,15 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
   }, [currentStep, animateToStep]);
 
   const handleBack = useCallback(() => {
+    if (chapter === 2 && currentStep === CHAPTER_2_START) {
+      onClose();
+      return;
+    }
     const minStep = chapter === 2 ? CHAPTER_2_START : 1;
     if (currentStep > minStep) {
       animateToStep(currentStep - 1);
     }
-  }, [currentStep, chapter, animateToStep]);
+  }, [currentStep, chapter, animateToStep, onClose]);
 
   // Step 2: Validate token
   const handleValidateToken = useCallback(() => {
@@ -184,9 +188,9 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
 
       // Save to storage
       const repoList = updated.map(r => r.full_name);
-      chrome.storage.sync.set({ repoList });
+      chrome.storage.local.set({ repoList });
       if (updated.length === 1) {
-        chrome.storage.sync.set({ selectedRepo: repo.full_name });
+        chrome.storage.local.set({ selectedRepo: repo.full_name });
       }
     },
     [repos],
@@ -198,12 +202,12 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
       setRepos(updated);
 
       const repoList = updated.map(r => r.full_name);
-      chrome.storage.sync.set({ repoList });
+      chrome.storage.local.set({ repoList });
 
       // If we removed the selected repo, select the first remaining one
-      chrome.storage.sync.get('selectedRepo', result => {
+      chrome.storage.local.get('selectedRepo', result => {
         if (result.selectedRepo === fullName) {
-          chrome.storage.sync.set({ selectedRepo: updated.length > 0 ? updated[0].full_name : '' });
+          chrome.storage.local.set({ selectedRepo: updated.length > 0 ? updated[0].full_name : '' });
         }
       });
     },
@@ -341,9 +345,24 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
     });
   }, []);
 
+  // Keyboard support
+  useEffect(() => {
+    if (!open) return;
+    const stepsWithCustomButtons = [1, 4, 8];
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      } else if (e.key === 'Enter' && canProceed && !stepsWithCustomButtons.includes(currentStep)) {
+        handleNext();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, canProceed, currentStep, handleNext, onClose]);
+
   if (!open) return null;
 
-  const isFirstStepOfChapter = chapter === 1 ? currentStep === 1 : currentStep === CHAPTER_2_START;
+  const isFirstStepOfChapter = chapter === 1 && currentStep === 1;
   const hideNav = currentStep === 1 || currentStep === 4 || currentStep === 8;
 
   // Determine canProceed for each step
@@ -1304,38 +1323,44 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
             marginBottom: 20,
             paddingTop: 4,
           }}>
-          {Array.from({ length: TOTAL_STEPS }, (_, i) => {
-            const stepNum = i + 1;
-            const isFilled = stepNum <= currentStep;
-            const isCurrent = stepNum === currentStep;
-            const isChapterGap = stepNum === CHAPTER_2_START;
+          {(() => {
+            const dotsStart = chapter === 2 ? CHAPTER_2_START : 1;
+            const dotsEnd = chapter === 1 ? TOTAL_STEPS : TOTAL_STEPS;
+            const dots = [];
+            for (let stepNum = dotsStart; stepNum <= dotsEnd; stepNum++) {
+              const isFilled = stepNum <= currentStep;
+              const isCurrent = stepNum === currentStep;
+              const isChapterGap = chapter === 1 && stepNum === CHAPTER_2_START;
+              const isGreyed = chapter === 1 && stepNum > 4 && currentStep <= 4;
 
-            return (
-              <div key={stepNum} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                {isChapterGap && (
+              dots.push(
+                <div key={stepNum} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {isChapterGap && (
+                    <div
+                      style={{
+                        width: 8,
+                        height: 1,
+                        background: 'rgba(148,163,184,0.15)',
+                        marginRight: 0,
+                      }}
+                    />
+                  )}
                   <div
                     style={{
-                      width: 8,
-                      height: 1,
-                      background: 'rgba(148,163,184,0.15)',
-                      marginRight: 0,
+                      width: isCurrent ? 10 : 8,
+                      height: isCurrent ? 10 : 8,
+                      borderRadius: '50%',
+                      background: isGreyed ? 'transparent' : isFilled ? '#a78bfa' : 'transparent',
+                      border: `2px solid ${isGreyed ? 'rgba(148,163,184,0.12)' : isFilled ? '#a78bfa' : 'rgba(148,163,184,0.3)'}`,
+                      transition: 'all 0.2s cubic-bezier(0.25, 1, 0.5, 1)',
+                      flexShrink: 0,
                     }}
                   />
-                )}
-                <div
-                  style={{
-                    width: isCurrent ? 10 : 8,
-                    height: isCurrent ? 10 : 8,
-                    borderRadius: '50%',
-                    background: isFilled ? '#a78bfa' : 'transparent',
-                    border: `2px solid ${isFilled ? '#a78bfa' : 'rgba(148,163,184,0.3)'}`,
-                    transition: 'all 0.2s cubic-bezier(0.25, 1, 0.5, 1)',
-                    flexShrink: 0,
-                  }}
-                />
-              </div>
-            );
-          })}
+                </div>,
+              );
+            }
+            return dots;
+          })()}
         </div>
 
         {/* Step content */}

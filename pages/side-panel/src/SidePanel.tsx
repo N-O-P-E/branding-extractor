@@ -14,6 +14,7 @@ export default function SidePanel() {
   const [settingsSection, setSettingsSection] = useState<string | undefined>();
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardChapter, setWizardChapter] = useState<1 | 2>(1);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const openWizard = (chapter: 1 | 2) => {
     setWizardChapter(chapter);
@@ -84,10 +85,16 @@ export default function SidePanel() {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 1 }}>
         {view === 'setup' && (
-          <SetupView onDone={() => setView('home')} openSection={settingsSection} onOpenWizard={openWizard} />
+          <SetupView
+            key={refreshKey}
+            onDone={() => setView('home')}
+            openSection={settingsSection}
+            onOpenWizard={openWizard}
+          />
         )}
         {view === 'home' && (
           <HomeView
+            key={refreshKey}
             onOpenSettings={(section?: string) => {
               setSettingsSection(section);
               setView('setup');
@@ -143,7 +150,14 @@ export default function SidePanel() {
         }}>
         Built by <strong>Studio N.O.P.E.</strong>
       </a>
-      <OnboardingWizard open={wizardOpen} chapter={wizardChapter} onClose={() => setWizardOpen(false)} />
+      <OnboardingWizard
+        open={wizardOpen}
+        chapter={wizardChapter}
+        onClose={() => {
+          setWizardOpen(false);
+          setRefreshKey(k => k + 1);
+        }}
+      />
     </div>
   );
 }
