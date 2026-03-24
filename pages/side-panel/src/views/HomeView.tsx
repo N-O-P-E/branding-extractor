@@ -29,10 +29,12 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
 
   // Load settings from storage
   useEffect(() => {
-    chrome.storage.local.get(['repoList', 'selectedRepo', 'githubPat']).then(result => {
+    chrome.storage.local.get(['repoList', 'selectedRepo']).then(result => {
       if (result.repoList) setRepos(result.repoList as string[]);
       if (result.selectedRepo) setSelectedRepo(result.selectedRepo as string);
-      setPatConnected(!!result.githubPat);
+    });
+    chrome.runtime.sendMessage({ type: 'CHECK_TOKEN_STATUS' }, (response: { connected: boolean }) => {
+      setPatConnected(!!response?.connected);
     });
   }, []);
 

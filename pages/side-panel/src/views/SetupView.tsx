@@ -35,11 +35,14 @@ export default function SetupView({ onDone }: SetupViewProps) {
   const [repoDropdownOpen, setRepoDropdownOpen] = useState(false);
 
   useEffect(() => {
-    chrome.storage.local.get(['githubPat', 'repoList']).then(result => {
-      if (result.githubPat) {
-        setPat(result.githubPat as string);
+    // Check token status via background — never read the raw PAT
+    chrome.runtime.sendMessage({ type: 'CHECK_TOKEN_STATUS' }, (response: { connected: boolean; login?: string }) => {
+      if (response?.connected) {
         setPatStatus('valid');
+        if (response.login) setPatUser(response.login);
       }
+    });
+    chrome.storage.local.get(['repoList']).then(result => {
       if (result.repoList) {
         setRepos(result.repoList as string[]);
       }
@@ -118,7 +121,6 @@ export default function SetupView({ onDone }: SetupViewProps) {
       setPatUser('');
       setRepos([]);
       setAvailableRepos([]);
-      chrome.storage.local.remove(['repoList', 'selectedRepo']);
     });
   }, []);
 

@@ -1,6 +1,7 @@
 import 'webextension-polyfill';
 import { Octokit } from '@octokit/rest';
 import type {
+  CheckTokenStatusResponse,
   CreateIssueMessage,
   ExtensionMessage,
   FetchAssigneesMessage,
@@ -66,6 +67,10 @@ chrome.runtime.onMessage.addListener(
       handleRemoveToken(sendResponse);
       return true;
     }
+    if (message.type === 'CHECK_TOKEN_STATUS') {
+      handleCheckTokenStatus(sendResponse as (response: CheckTokenStatusResponse) => void);
+      return true;
+    }
     if (message.type === 'REQUEST_CAPTURE') {
       // Forward to the active tab's content-UI
       chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
@@ -123,11 +128,11 @@ const getOctokit = async (): Promise<Octokit> => {
 
 const getRepoConfig = async (): Promise<{ owner: string; repo: string }> => {
   const { selectedRepo } = await chrome.storage.local.get('selectedRepo');
-  if (!selectedRepo || !selectedRepo.includes('/')) {
+  const parsed = selectedRepo ? parseRepoName(selectedRepo) : null;
+  if (!parsed) {
     throw new Error('No repository selected. Go to extension options to configure.');
   }
-  const [owner, repo] = selectedRepo.split('/');
-  return { owner, repo };
+  return parsed;
 };
 
 // In-memory cache of recently created issues so they appear immediately
@@ -150,7 +155,7 @@ const handleValidateToken = async (
     });
     if (response.ok) {
       const user = (await response.json()) as { login: string };
-      await chrome.storage.local.set({ githubPat: token });
+      await chrome.storage.local.set({ githubPat: token, githubPatUser: user.login });
       sendResponse({ success: true, login: user.login });
     } else {
       sendResponse({ success: false, error: 'Invalid token — check scopes and try again.' });
@@ -161,8 +166,17 @@ const handleValidateToken = async (
 };
 
 const handleRemoveToken = async (sendResponse: (response: MessageResponse) => void) => {
-  await chrome.storage.local.remove(['githubPat']);
+  await chrome.storage.local.remove(['githubPat', 'githubPatUser', 'repoList', 'selectedRepo']);
+  recentIssuesCache.clear();
   sendResponse({ success: true });
+};
+
+const handleCheckTokenStatus = async (sendResponse: (response: CheckTokenStatusResponse) => void) => {
+  const { githubPat, githubPatUser } = await chrome.storage.local.get(['githubPat', 'githubPatUser']);
+  sendResponse({
+    connected: !!githubPat,
+    login: (githubPatUser as string) || undefined,
+  });
 };
 
 const RELEASE_TAG = 'visual-issues';
@@ -536,11 +550,11 @@ const handleFetchPageIssues = async (
         if (url.includes('/releases/download/')) {
           const filename = url.split('/').pop();
           const apiUrl = filename ? releaseAssetMap.get(filename) : undefined;
-          if (apiUrl && githubPat) {
+          if (apiUrl && githubPat && apiUrl.startsWith('https://api.github.com/')) {
             try {
               const controller = new AbortController();
               const res = await fetch(apiUrl, {
-                headers: { Authorization: `token ${githubPat}`, Accept: 'application/octet-stream' },
+                headers: { Authorization: `Bearer ${githubPat}`, Accept: 'application/octet-stream' },
                 signal: controller.signal,
               });
               // response.url is the final URL after redirect — a signed CDN URL
