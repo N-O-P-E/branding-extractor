@@ -35,11 +35,14 @@ export default function SetupView({ onDone }: SetupViewProps) {
   const [repoDropdownOpen, setRepoDropdownOpen] = useState(false);
 
   useEffect(() => {
-    chrome.storage.local.get(['githubPat', 'repoList']).then(result => {
-      if (result.githubPat) {
-        setPat(result.githubPat as string);
+    // Check token status via background — never read the raw PAT
+    chrome.runtime.sendMessage({ type: 'CHECK_TOKEN_STATUS' }, (response: { connected: boolean; login?: string }) => {
+      if (response?.connected) {
         setPatStatus('valid');
+        if (response.login) setPatUser(response.login);
       }
+    });
+    chrome.storage.local.get(['repoList']).then(result => {
       if (result.repoList) {
         setRepos(result.repoList as string[]);
       }
@@ -93,27 +96,33 @@ export default function SetupView({ onDone }: SetupViewProps) {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const validateToken = useCallback(async () => {
+  const validateToken = useCallback(() => {
     if (!pat.trim()) return;
     setPatStatus('validating');
     setPatUser('');
-    try {
-      const response = await fetch('https://api.github.com/user', {
-        headers: { Authorization: `Bearer ${pat.trim()}` },
-      });
-      if (response.ok) {
-        const user = (await response.json()) as { login: string };
-        setPatUser(user.login);
-        setPatStatus('valid');
-        await chrome.storage.local.set({ githubPat: pat.trim() });
-        flashSaved();
-      } else {
-        setPatStatus('invalid');
-      }
-    } catch {
-      setPatStatus('invalid');
-    }
+    chrome.runtime.sendMessage(
+      { type: 'VALIDATE_TOKEN', payload: { token: pat.trim() } },
+      (response: { success: boolean; login?: string; error?: string }) => {
+        if (response?.success && response.login) {
+          setPatUser(response.login);
+          setPatStatus('valid');
+          flashSaved();
+        } else {
+          setPatStatus('invalid');
+        }
+      },
+    );
   }, [pat]);
+
+  const disconnectToken = useCallback(() => {
+    chrome.runtime.sendMessage({ type: 'REMOVE_TOKEN' }, () => {
+      setPat('');
+      setPatStatus('idle');
+      setPatUser('');
+      setRepos([]);
+      setAvailableRepos([]);
+    });
+  }, []);
 
   const removeRepo = useCallback(
     (repo: string) => {
@@ -223,15 +232,17 @@ export default function SetupView({ onDone }: SetupViewProps) {
           GitHub Token
         </h2>
         <p style={{ margin: '0 0 12px', color: colors.textSecondary, fontSize: 13, lineHeight: 1.5 }}>
-          Create a token at{' '}
+          Create a{' '}
           <a
-            href="https://github.com/settings/tokens/new"
+            href="https://github.com/settings/personal-access-tokens/new"
             target="_blank"
             rel="noopener noreferrer"
             style={{ color: '#c4b5fd' }}>
-            github.com/settings/tokens
+            fine-grained token
           </a>{' '}
-          with <code style={{ background: colors.inputBg, padding: '1px 5px', borderRadius: 4 }}>repo</code> scope.
+          with <code style={{ background: colors.inputBg, padding: '1px 5px', borderRadius: 4 }}>Issues</code> (write)
+          and <code style={{ background: colors.inputBg, padding: '1px 5px', borderRadius: 4 }}>Contents</code> (write)
+          permissions on the repositories you need.
         </p>
         <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
           <input
@@ -257,18 +268,39 @@ export default function SetupView({ onDone }: SetupViewProps) {
         </div>
         {patStatus === 'valid' && (
           <div
-            style={{ marginTop: 8, fontSize: 13, color: colors.green, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span
+            style={{
+              marginTop: 8,
+              fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}>
+            <span style={{ color: colors.green, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: colors.green,
+                  display: 'inline-block',
+                  flexShrink: 0,
+                }}
+              />
+              Connected{patUser ? ` as ${patUser}` : ''}
+            </span>
+            <button
+              onClick={disconnectToken}
               style={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: colors.green,
-                display: 'inline-block',
-                flexShrink: 0,
-              }}
-            />
-            Connected{patUser ? ` as ${patUser}` : ''}
+                background: 'none',
+                border: 'none',
+                color: colors.error,
+                fontSize: 12,
+                cursor: 'pointer',
+                padding: '2px 6px',
+                transition: 'all 0.15s',
+              }}>
+              Disconnect
+            </button>
           </div>
         )}
         {patStatus === 'invalid' && (

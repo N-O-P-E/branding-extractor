@@ -11,6 +11,9 @@ const manifest = {
   description: '__MSG_extensionDescription__',
   host_permissions: ['<all_urls>'],
   permissions: ['activeTab', 'storage', 'sidePanel'],
+  content_security_policy: {
+    extension_pages: "script-src 'self'; object-src 'self'",
+  },
   background: {
     service_worker: 'background.js',
     type: 'module',
@@ -41,9 +44,12 @@ const manifest = {
   web_accessible_resources: [
     {
       resources: ['console-capture.js', 'shopify-data.js'],
-      matches: ['*://*/*'],
+      matches: ['http://*/*', 'https://*/*'],
     },
   ],
-} as ManifestType & { side_panel: { default_path: string } };
+} as ManifestType & {
+  side_panel: { default_path: string };
+  content_security_policy: { extension_pages: string };
+};
 
 export default manifest;

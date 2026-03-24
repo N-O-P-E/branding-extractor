@@ -170,7 +170,9 @@ const extractShopifyContext = async (): Promise<ShopifyContext | undefined> => {
     let themeId: string | undefined =
       url.searchParams.get('preview_theme_id') ?? url.pathname.match(/\/themes\/(\d+)/)?.[1] ?? undefined;
 
-    // Get Shopify data from main world via DOM event
+    // Get Shopify data from main world via DOM event (nonce-authenticated)
+    const nonce = (window as unknown as { __virNonce?: string }).__virNonce ?? '';
+    const nonceSuffix = nonce ? `-${nonce}` : '';
     let template: string | undefined;
     try {
       const shopifyData = await new Promise<{
@@ -182,17 +184,18 @@ const extractShopifyContext = async (): Promise<ShopifyContext | undefined> => {
         schemaName?: string;
       }>(resolve => {
         const timeout = setTimeout(() => resolve({}), 300);
+        const responseEvent = `vir-shopify-data${nonceSuffix}`;
         const handler = (event: Event) => {
           clearTimeout(timeout);
-          document.removeEventListener('vir-shopify-data', handler);
+          document.removeEventListener(responseEvent, handler);
           try {
             resolve(JSON.parse((event as CustomEvent).detail));
           } catch {
             resolve({});
           }
         };
-        document.addEventListener('vir-shopify-data', handler);
-        document.dispatchEvent(new CustomEvent('vir-request-shopify-data'));
+        document.addEventListener(responseEvent, handler);
+        document.dispatchEvent(new CustomEvent(`vir-request-shopify-data${nonceSuffix}`));
       });
 
       if (shopifyData.shop && !storeHandle) {

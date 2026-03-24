@@ -21,6 +21,8 @@ tsconfig.tsbuildinfo
 .idea
 **/.turbo
 *.zip
+package-lock.json
+yarn.lock
 
 # local-only
 CLAUDE.md

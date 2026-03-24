@@ -1,11 +1,14 @@
 /* eslint-disable */
 (function () {
+  var nonce = (document.currentScript && document.currentScript.getAttribute('data-vir-nonce')) || '';
   if (window.__virConsolePatched) return;
   window.__virConsolePatched = true;
 
   var MAX_ENTRIES = 50;
   var MAX_MSG_LENGTH = 500;
   var entries = [];
+  var requestEvent = 'vir-request-console-errors' + (nonce ? '-' + nonce : '');
+  var responseEvent = 'vir-console-errors' + (nonce ? '-' + nonce : '');
 
   var origError = console.error;
   var origWarn = console.warn;
@@ -44,9 +47,9 @@
     return origWarn.apply(console, arguments);
   };
 
-  document.addEventListener('vir-request-console-errors', function () {
+  document.addEventListener(requestEvent, function () {
     document.dispatchEvent(
-      new CustomEvent('vir-console-errors', {
+      new CustomEvent(responseEvent, {
         detail: JSON.stringify(entries),
       }),
     );

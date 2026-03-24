@@ -11,9 +11,18 @@ const rootDir = resolve(import.meta.dirname);
 const srcDir = resolve(rootDir, 'src');
 
 const outDir = resolve(rootDir, '..', 'dist');
+// Only expose known env vars to the bundle — prevents accidental secret leakage
+const safeEnv = {
+  CEB_EXAMPLE: env.CEB_EXAMPLE,
+  CEB_DEV_LOCALE: env.CEB_DEV_LOCALE,
+  CLI_CEB_DEV: env.CLI_CEB_DEV,
+  CLI_CEB_FIREFOX: env.CLI_CEB_FIREFOX,
+  CEB_NODE_ENV: env.CEB_NODE_ENV,
+};
+
 export default defineConfig({
   define: {
-    'process.env': env,
+    'process.env': safeEnv,
   },
   resolve: {
     alias: {
@@ -29,7 +38,7 @@ export default defineConfig({
     watchPublicPlugin(),
     makeManifestPlugin({ outDir }),
     IS_DEV && watchRebuildPlugin({ reload: true, id: 'chrome-extension-hmr' }),
-    nodePolyfills(),
+    nodePolyfills({ include: ['buffer', 'process'] }),
   ],
   publicDir: resolve(rootDir, 'public'),
   build: {

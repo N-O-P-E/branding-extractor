@@ -1,6 +1,9 @@
-name: Formating validation
+name: Formatting validation
 
-on: [ pull_request_target ]
+on: [pull_request]
+
+permissions:
+  contents: read
 
 jobs:
   prettier:
@@ -8,18 +11,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Run Prettier
-        id: prettier-run
-        uses: rutajdash/prettier-cli-action@v1.0.2
-        with:
-          config_path: ./.prettierrc
-          file_pattern: "*.{js,jsx,ts,tsx,json}"
-
-      - name: Prettier Output
-        if: ${{ failure() }}
-        shell: bash
-        run: |
-          echo "The following files aren't formatted properly:"
-          echo "${{steps.prettier-run.outputs.prettier_output}}"
+        run: pnpm prettier --check "**/*.{js,jsx,ts,tsx,json}"

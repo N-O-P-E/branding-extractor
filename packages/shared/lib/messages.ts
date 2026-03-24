@@ -161,6 +161,30 @@ export interface FetchReposResponse {
   error?: string;
 }
 
+export interface ValidateTokenMessage {
+  type: 'VALIDATE_TOKEN';
+  payload: { token: string };
+}
+
+export interface ValidateTokenResponse {
+  success: boolean;
+  login?: string;
+  error?: string;
+}
+
+export interface RemoveTokenMessage {
+  type: 'REMOVE_TOKEN';
+}
+
+export interface CheckTokenStatusMessage {
+  type: 'CHECK_TOKEN_STATUS';
+}
+
+export interface CheckTokenStatusResponse {
+  connected: boolean;
+  login?: string;
+}
+
 export type ExtensionMessage =
   | StartReportMessage
   | ShowScreenshotMessage
@@ -173,7 +197,10 @@ export type ExtensionMessage =
   | FetchLabelsMessage
   | FetchAssigneesMessage
   | FetchReposMessage
-  | RequestCaptureMessage;
+  | RequestCaptureMessage
+  | ValidateTokenMessage
+  | RemoveTokenMessage
+  | CheckTokenStatusMessage;
 
 export interface MessageResponse {
   success: boolean;

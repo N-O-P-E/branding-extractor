@@ -12,8 +12,8 @@ export default function SidePanel() {
   const [browserMetadata, setBrowserMetadata] = useState<BrowserMetadata | null>(null);
 
   useEffect(() => {
-    chrome.storage.local.get('githubPat', ({ githubPat }) => {
-      if (!githubPat) setView('setup');
+    chrome.runtime.sendMessage({ type: 'CHECK_TOKEN_STATUS' }, (response: { connected: boolean }) => {
+      if (!response?.connected) setView('setup');
     });
   }, []);
 
