@@ -19,6 +19,38 @@ const STORAGE_KEY = 'onboardingProgress';
 
 const getInitialStep = (chapter: 1 | 2): number => (chapter === 1 ? 1 : CHAPTER_2_START);
 
+const WORKFLOW_YAML = `name: Visual Issue Claude Fix
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  auto-fix:
+    if: github.event.label.name == 'auto-fix'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: \${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            You fix visual issues reported via the Visual Issue Reporter Chrome extension.
+            Read the issue description, study the annotated screenshot, cross-reference with
+            HTML snippets and console errors, identify the relevant source files, and create
+            a minimal targeted fix. Open a PR referencing the issue.`;
+
 const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => {
   const [currentStep, setCurrentStep] = useState(() => getInitialStep(chapter));
   const [stepOpacity, setStepOpacity] = useState(1);
@@ -29,6 +61,22 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
   const [patStatus, setPatStatus] = useState<'idle' | 'validating' | 'success' | 'error'>('idle');
   const [patLogin, setPatLogin] = useState('');
   const [patError, setPatError] = useState('');
+
+  // Step 5 state: Anthropic key
+  const [anthropicApiKey, setAnthropicApiKey] = useState('');
+  const [anthropicKeyStatus, setAnthropicKeyStatus] = useState<'idle' | 'validating' | 'success' | 'error'>('idle');
+  const [anthropicKeyError, setAnthropicKeyError] = useState('');
+
+  // Step 6 state: Repo secrets
+  const [repoSecretStatus, setRepoSecretStatus] = useState<Record<string, 'checking' | 'exists' | 'missing'>>({});
+  const [copiedApiKey, setCopiedApiKey] = useState(false);
+
+  // Step 7 state: Repo workflows
+  const [repoWorkflowStatus, setRepoWorkflowStatus] = useState<Record<string, 'checking' | 'exists' | 'missing'>>({});
+  const [copiedYaml, setCopiedYaml] = useState(false);
+
+  // Steps 6/7 shared: repo list from storage
+  const [storedRepos, setStoredRepos] = useState<string[]>([]);
 
   // Step 3 state: Repos
   const [repos, setRepos] = useState<Array<{ full_name: string; description: string | null }>>([]);
@@ -176,13 +224,149 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
     });
   }, [currentStep]);
 
+  // Step 5: Validate Anthropic key
+  const handleValidateAnthropicKey = useCallback(() => {
+    const trimmed = anthropicApiKey.trim();
+    if (!trimmed) return;
+    setAnthropicKeyStatus('validating');
+    setAnthropicKeyError('');
+    fetch('https://api.anthropic.com/v1/models', {
+      headers: {
+        'x-api-key': trimmed,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+    })
+      .then(res => {
+        if (res.ok) {
+          setAnthropicKeyStatus('success');
+          chrome.storage.local.set({ autoFixSettings: { enabled: true, anthropicApiKey: trimmed } });
+        } else {
+          setAnthropicKeyStatus('error');
+          setAnthropicKeyError('Invalid API key');
+        }
+      })
+      .catch(() => {
+        setAnthropicKeyStatus('error');
+        setAnthropicKeyError('Network error — check your connection');
+      });
+  }, [anthropicApiKey]);
+
+  // Steps 6/7: Load repos from storage when reaching those steps
+  useEffect(() => {
+    if (currentStep === 6 || currentStep === 7) {
+      chrome.storage.local.get('repoList', result => {
+        const list = (result.repoList as string[]) ?? [];
+        setStoredRepos(list);
+      });
+    }
+  }, [currentStep]);
+
+  // Step 6: Check secrets for all repos
+  const checkAllSecrets = useCallback(() => {
+    const init: Record<string, 'checking'> = {};
+    storedRepos.forEach(repo => {
+      init[repo] = 'checking';
+    });
+    setRepoSecretStatus(init);
+    storedRepos.forEach(repo => {
+      chrome.runtime.sendMessage(
+        { type: 'CHECK_REPO_SECRET', payload: { repo, secretName: 'ANTHROPIC_API_KEY' } },
+        response => {
+          setRepoSecretStatus(prev => ({
+            ...prev,
+            [repo]: response?.success && response.exists ? 'exists' : 'missing',
+          }));
+        },
+      );
+    });
+  }, [storedRepos]);
+
+  useEffect(() => {
+    if (currentStep === 6 && storedRepos.length > 0) {
+      checkAllSecrets();
+    }
+  }, [currentStep, storedRepos, checkAllSecrets]);
+
+  // Step 7: Check workflows for all repos
+  const checkAllWorkflows = useCallback(() => {
+    const init: Record<string, 'checking'> = {};
+    storedRepos.forEach(repo => {
+      init[repo] = 'checking';
+    });
+    setRepoWorkflowStatus(init);
+    storedRepos.forEach(repo => {
+      chrome.runtime.sendMessage({ type: 'CHECK_REPO_WORKFLOW', payload: { repo } }, response => {
+        setRepoWorkflowStatus(prev => ({
+          ...prev,
+          [repo]: response?.success && response.exists ? 'exists' : 'missing',
+        }));
+      });
+    });
+  }, [storedRepos]);
+
+  useEffect(() => {
+    if (currentStep === 7 && storedRepos.length > 0) {
+      checkAllWorkflows();
+    }
+  }, [currentStep, storedRepos, checkAllWorkflows]);
+
+  // Step 8: Finish chapter 2
+  const handleFinishChapter2 = useCallback(() => {
+    chrome.storage.local.get(STORAGE_KEY, result => {
+      const prev = (result[STORAGE_KEY] as OnboardingProgress) || {
+        chapter1Complete: false,
+        chapter2Complete: false,
+        lastStep: currentStep,
+      };
+      chrome.storage.local.set({
+        [STORAGE_KEY]: { ...prev, chapter2Complete: true },
+      });
+    });
+    onClose();
+  }, [currentStep, onClose]);
+
+  // Copy helpers
+  const handleCopyApiKey = useCallback(() => {
+    navigator.clipboard.writeText(anthropicApiKey.trim()).then(() => {
+      setCopiedApiKey(true);
+      setTimeout(() => setCopiedApiKey(false), 2000);
+    });
+  }, [anthropicApiKey]);
+
+  const handleCopyYaml = useCallback(() => {
+    navigator.clipboard.writeText(WORKFLOW_YAML).then(() => {
+      setCopiedYaml(true);
+      setTimeout(() => setCopiedYaml(false), 2000);
+    });
+  }, []);
+
   if (!open) return null;
 
   const isFirstStepOfChapter = chapter === 1 ? currentStep === 1 : currentStep === CHAPTER_2_START;
-  const hideNav = currentStep === 1 || currentStep === 4;
+  const hideNav = currentStep === 1 || currentStep === 4 || currentStep === 8;
 
   // Determine canProceed for each step
-  const canProceed = currentStep === 2 ? patStatus === 'success' : currentStep === 3 ? repos.length > 0 : true;
+  const canProceed =
+    currentStep === 2
+      ? patStatus === 'success'
+      : currentStep === 3
+        ? repos.length > 0
+        : currentStep === 5
+          ? anthropicKeyStatus === 'success'
+          : true;
+
+  // Steps 6/7: check if all repos are green
+  const allSecretsReady = storedRepos.length > 0 && storedRepos.every(r => repoSecretStatus[r] === 'exists');
+  const allWorkflowsReady = storedRepos.length > 0 && storedRepos.every(r => repoWorkflowStatus[r] === 'exists');
+
+  // Dynamic next button text
+  const nextButtonText =
+    currentStep === 6 && !allSecretsReady
+      ? 'Continue anyway'
+      : currentStep === 7 && !allWorkflowsReady
+        ? 'Continue anyway'
+        : 'Next';
 
   // Filtered repos for dropdown
   const filteredRepos = allRepos.filter(
@@ -612,8 +796,438 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
           </div>
         );
 
+      case 5:
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%' }}>
+            <div>
+              <div style={{ color: '#f1f5f9', fontSize: 16, fontWeight: 600, marginBottom: 6 }}>Connect Anthropic</div>
+              <div style={{ color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
+                Enter your API key to enable Claude Code.
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                type="password"
+                value={anthropicApiKey}
+                onChange={e => {
+                  setAnthropicApiKey(e.target.value);
+                  if (anthropicKeyStatus !== 'idle') {
+                    setAnthropicKeyStatus('idle');
+                    setAnthropicKeyError('');
+                  }
+                }}
+                placeholder="sk-ant-xxxxxxxxxxxx"
+                style={{
+                  flex: 1,
+                  height: 36,
+                  borderRadius: 8,
+                  border: '1px solid rgba(148,163,184,0.15)',
+                  background: 'rgba(148,163,184,0.08)',
+                  color: '#f1f5f9',
+                  fontSize: 13,
+                  padding: '0 12px',
+                  outline: 'none',
+                  fontFamily: 'monospace',
+                }}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = '#a78bfa';
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = 'rgba(148,163,184,0.15)';
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') handleValidateAnthropicKey();
+                }}
+              />
+              <button
+                onClick={handleValidateAnthropicKey}
+                disabled={!anthropicApiKey.trim() || anthropicKeyStatus === 'validating'}
+                style={{
+                  height: 36,
+                  borderRadius: 8,
+                  border: 'none',
+                  background:
+                    !anthropicApiKey.trim() || anthropicKeyStatus === 'validating'
+                      ? 'rgba(148,163,184,0.15)'
+                      : 'linear-gradient(135deg, #7c3aed, #9333ea)',
+                  color:
+                    !anthropicApiKey.trim() || anthropicKeyStatus === 'validating'
+                      ? 'rgba(241,245,249,0.3)'
+                      : '#ffffff',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  padding: '0 14px',
+                  cursor: !anthropicApiKey.trim() || anthropicKeyStatus === 'validating' ? 'not-allowed' : 'pointer',
+                  whiteSpace: 'nowrap',
+                  transition: 'opacity 0.15s cubic-bezier(0.25, 1, 0.5, 1)',
+                }}>
+                Validate
+              </button>
+            </div>
+            {anthropicKeyStatus === 'validating' && (
+              <div style={{ color: 'rgba(241,245,249,0.45)', fontSize: 12 }}>Validating...</div>
+            )}
+            {anthropicKeyStatus === 'success' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+                <div
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: '#4ade80',
+                    flexShrink: 0,
+                  }}
+                />
+                <span style={{ color: '#4ade80' }}>Connected</span>
+              </div>
+            )}
+            {anthropicKeyStatus === 'error' && (
+              <div style={{ color: '#f87171', fontSize: 12 }}>{anthropicKeyError}</div>
+            )}
+            <a
+              href="https://console.anthropic.com/settings/keys"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#a78bfa', fontSize: 12, textDecoration: 'none' }}
+              onMouseEnter={e => {
+                e.currentTarget.style.textDecoration = 'underline';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.textDecoration = 'none';
+              }}>
+              Get your key from console.anthropic.com
+            </a>
+          </div>
+        );
+
+      case 6:
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%' }}>
+            <div>
+              <div style={{ color: '#f1f5f9', fontSize: 16, fontWeight: 600, marginBottom: 6 }}>
+                Add API key to your repos
+              </div>
+              <div style={{ color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
+                Each repo needs a secret named{' '}
+                <code
+                  style={{
+                    background: 'rgba(148,163,184,0.12)',
+                    padding: '1px 5px',
+                    borderRadius: 4,
+                    fontSize: 12,
+                    color: '#c4b5fd',
+                  }}>
+                  ANTHROPIC_API_KEY
+                </code>{' '}
+                for the GitHub Action to work.
+              </div>
+            </div>
+            <button
+              onClick={handleCopyApiKey}
+              style={{
+                height: 36,
+                borderRadius: 8,
+                border: copiedApiKey ? '1px solid rgba(74,222,128,0.3)' : '1px solid rgba(148,163,184,0.15)',
+                background: copiedApiKey ? 'rgba(74,222,128,0.08)' : 'rgba(148,163,184,0.08)',
+                color: copiedApiKey ? '#4ade80' : '#f1f5f9',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                transition: 'all 0.15s cubic-bezier(0.25, 1, 0.5, 1)',
+              }}>
+              {copiedApiKey ? (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                    <path
+                      d="M3 8.5L6.5 12L13 4"
+                      stroke="#4ade80"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  Copied!
+                </>
+              ) : (
+                'Copy API key'
+              )}
+            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {storedRepos.map(repo => {
+                const status = repoSecretStatus[repo] ?? 'checking';
+                return (
+                  <div
+                    key={repo}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '8px 10px',
+                      background: 'rgba(148,163,184,0.06)',
+                      borderRadius: 8,
+                      border: '1px solid rgba(148,163,184,0.1)',
+                    }}>
+                    <span style={{ color: '#f1f5f9', fontSize: 13 }}>{repo}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, flexShrink: 0 }}>
+                      <div
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          background:
+                            status === 'exists'
+                              ? '#4ade80'
+                              : status === 'missing'
+                                ? '#f87171'
+                                : 'rgba(148,163,184,0.4)',
+                          flexShrink: 0,
+                        }}
+                      />
+                      {status === 'exists' && <span style={{ color: '#4ade80' }}>Ready</span>}
+                      {status === 'missing' && (
+                        <a
+                          href={`https://github.com/${repo}/settings/secrets/actions/new?secret_name=ANTHROPIC_API_KEY`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: '#f87171', textDecoration: 'none' }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.textDecoration = 'underline';
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.textDecoration = 'none';
+                          }}>
+                          Add secret &rarr;
+                        </a>
+                      )}
+                      {status === 'checking' && <span style={{ color: 'rgba(148,163,184,0.4)' }}>Checking...</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <button
+              onClick={checkAllSecrets}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'rgba(241,245,249,0.45)',
+                fontSize: 12,
+                cursor: 'pointer',
+                textDecoration: 'underline',
+                padding: 0,
+                alignSelf: 'flex-start',
+              }}>
+              Re-check
+            </button>
+          </div>
+        );
+
+      case 7:
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%' }}>
+            <div>
+              <div style={{ color: '#f1f5f9', fontSize: 16, fontWeight: 600, marginBottom: 6 }}>
+                Add the workflow file
+              </div>
+              <div style={{ color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
+                Each repo needs a GitHub Action workflow file.
+              </div>
+            </div>
+            <div
+              style={{
+                position: 'relative',
+                background: 'rgba(148,163,184,0.08)',
+                borderRadius: 8,
+                border: '1px solid rgba(148,163,184,0.15)',
+                overflow: 'hidden',
+              }}>
+              <pre
+                style={{
+                  margin: 0,
+                  padding: '12px',
+                  fontSize: 11,
+                  lineHeight: 1.5,
+                  color: '#c4b5fd',
+                  fontFamily: 'monospace',
+                  overflowX: 'auto',
+                  maxHeight: 160,
+                  overflowY: 'auto',
+                  whiteSpace: 'pre',
+                }}>
+                <code>{WORKFLOW_YAML}</code>
+              </pre>
+            </div>
+            <button
+              onClick={handleCopyYaml}
+              style={{
+                height: 36,
+                borderRadius: 8,
+                border: copiedYaml ? '1px solid rgba(74,222,128,0.3)' : '1px solid rgba(148,163,184,0.15)',
+                background: copiedYaml ? 'rgba(74,222,128,0.08)' : 'rgba(148,163,184,0.08)',
+                color: copiedYaml ? '#4ade80' : '#f1f5f9',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                transition: 'all 0.15s cubic-bezier(0.25, 1, 0.5, 1)',
+              }}>
+              {copiedYaml ? (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                    <path
+                      d="M3 8.5L6.5 12L13 4"
+                      stroke="#4ade80"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  Copied!
+                </>
+              ) : (
+                'Copy YAML'
+              )}
+            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {storedRepos.map(repo => {
+                const status = repoWorkflowStatus[repo] ?? 'checking';
+                return (
+                  <div
+                    key={repo}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '8px 10px',
+                      background: 'rgba(148,163,184,0.06)',
+                      borderRadius: 8,
+                      border: '1px solid rgba(148,163,184,0.1)',
+                    }}>
+                    <span style={{ color: '#f1f5f9', fontSize: 13 }}>{repo}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, flexShrink: 0 }}>
+                      <div
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          background:
+                            status === 'exists'
+                              ? '#4ade80'
+                              : status === 'missing'
+                                ? '#f87171'
+                                : 'rgba(148,163,184,0.4)',
+                          flexShrink: 0,
+                        }}
+                      />
+                      {status === 'exists' && <span style={{ color: '#4ade80' }}>Ready</span>}
+                      {status === 'missing' && (
+                        <a
+                          href={`https://github.com/${repo}/new/main?filename=.github/workflows/visual-issue-claude-fix.yml`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: '#f87171', textDecoration: 'none' }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.textDecoration = 'underline';
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.textDecoration = 'none';
+                          }}>
+                          Add workflow &rarr;
+                        </a>
+                      )}
+                      {status === 'checking' && <span style={{ color: 'rgba(148,163,184,0.4)' }}>Checking...</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <button
+              onClick={checkAllWorkflows}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'rgba(241,245,249,0.45)',
+                fontSize: 12,
+                cursor: 'pointer',
+                textDecoration: 'underline',
+                padding: 0,
+                alignSelf: 'flex-start',
+              }}>
+              Re-check
+            </button>
+          </div>
+        );
+
+      case 8:
+        return (
+          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 12,
+                background: 'rgba(74,222,128,0.12)',
+                border: '1px solid rgba(74,222,128,0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M5 13L9.5 17.5L19 7"
+                  stroke="#4ade80"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <div>
+              <div style={{ color: '#f1f5f9', fontSize: 16, fontWeight: 600, marginBottom: 8 }}>
+                You&apos;re all set!
+              </div>
+              <div style={{ color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
+                Claude Code will automatically analyze issues and open PRs with fixes.
+              </div>
+            </div>
+            <button
+              onClick={handleFinishChapter2}
+              style={{
+                width: '100%',
+                height: 40,
+                borderRadius: 10,
+                border: 'none',
+                background: 'linear-gradient(135deg, #7c3aed, #9333ea)',
+                color: '#ffffff',
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: 'pointer',
+                marginTop: 4,
+                transition:
+                  'opacity 0.15s cubic-bezier(0.25, 1, 0.5, 1), transform 0.15s cubic-bezier(0.25, 1, 0.5, 1)',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.opacity = '0.9';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.opacity = '1';
+                e.currentTarget.style.transform = 'none';
+              }}>
+              Start Reporting
+            </button>
+          </div>
+        );
+
       default:
-        return <div style={{ color: '#f1f5f9', fontSize: 14, textAlign: 'center' }}>Step {currentStep}</div>;
+        return null;
     }
   };
 
@@ -732,7 +1346,7 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
             transition: 'opacity 0.15s cubic-bezier(0.25, 1, 0.5, 1)',
             minHeight: 120,
             display: 'flex',
-            alignItems: currentStep === 2 || currentStep === 3 ? 'flex-start' : 'center',
+            alignItems: [2, 3, 5, 6, 7].includes(currentStep) ? 'flex-start' : 'center',
             justifyContent: 'center',
           }}>
           {renderStepContent()}
@@ -819,7 +1433,7 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                 e.currentTarget.style.opacity = '1';
                 e.currentTarget.style.transform = 'none';
               }}>
-              Next
+              {nextButtonText}
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                 <path
                   d="M6 3L11 8L6 13"
