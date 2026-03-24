@@ -2,17 +2,56 @@ interface RepoSelectorProps {
   selectedRepo: string;
   repos: string[];
   onChange: (repo: string) => void;
+  onOpenSettings?: (section?: string) => void;
 }
 
-export default function RepoSelector({ selectedRepo, repos, onChange }: RepoSelectorProps) {
+export default function RepoSelector({ selectedRepo, repos, onChange, onOpenSettings }: RepoSelectorProps) {
+  if (repos.length === 0) {
+    return (
+      <div>
+        <h2 style={{ fontSize: 18, margin: '0 0 8px', color: '#a78bfa' }}>Repository</h2>
+        <button
+          onClick={() => onOpenSettings?.('repos')}
+          style={{
+            width: '100%',
+            background: 'rgba(148,163,184,0.05)',
+            border: '1px dashed rgba(148,163,184,0.2)',
+            borderRadius: 8,
+            padding: '12px 14px',
+            color: 'rgba(241,245,249,0.4)',
+            fontSize: 13,
+            cursor: 'pointer',
+            textAlign: 'left',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            transition: 'all 0.15s',
+            boxSizing: 'border-box',
+          }}>
+          <span>Add a repository in Settings</span>
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            style={{ opacity: 0.4 }}>
+            <path
+              d="M9.5 5.75L15.75 12L9.5 18.25"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <h2
-        style={{
-          fontSize: 18,
-          margin: '0 0 8px',
-          color: '#a78bfa',
-        }}>
+      <h2 style={{ fontSize: 18, margin: '0 0 8px', color: '#a78bfa' }}>
         <label htmlFor="repo-selector">Repository</label>
       </h2>
       <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
@@ -40,11 +79,6 @@ export default function RepoSelector({ selectedRepo, repos, onChange }: RepoSele
             boxSizing: 'border-box',
             transition: 'all 0.15s',
           }}>
-          {repos.length === 0 && (
-            <option value="" disabled>
-              No repositories configured
-            </option>
-          )}
           {repos.map(repo => (
             <option key={repo} value={repo} style={{ background: '#1e293b' }}>
               {repo}

@@ -1,7 +1,6 @@
 import 'webextension-polyfill';
 import { Octokit } from '@octokit/rest';
 import type {
-  AutoFixSettings,
   CheckTokenStatusResponse,
   CreateIssueMessage,
   ExtensionMessage,
@@ -81,6 +80,14 @@ chrome.runtime.onMessage.addListener(
       });
       return false;
     }
+    if (message.type === 'CHECK_REPO_WORKFLOW') {
+      handleCheckRepoWorkflow(message as { type: string; payload: { repo: string } }, sendResponse);
+      return true;
+    }
+    if (message.type === 'CHECK_REPO_SECRET') {
+      handleCheckRepoSecret(message as { type: string; payload: { repo: string; secretName: string } }, sendResponse);
+      return true;
+    }
     if (message.type === 'SHOW_ISSUES_PANEL') {
       handleShowIssuesPanel(message);
       return true;
@@ -88,6 +95,64 @@ chrome.runtime.onMessage.addListener(
     return false;
   },
 );
+
+const handleCheckRepoWorkflow = async (
+  message: { type: string; payload: { repo: string } },
+  sendResponse: (response: MessageResponse & { exists?: boolean }) => void,
+) => {
+  try {
+    const parsed = parseRepoName(message.payload.repo);
+    if (!parsed) {
+      sendResponse({ success: false, error: 'Invalid repo' });
+      return;
+    }
+    const octokit = await getOctokit();
+    try {
+      await octokit.repos.getContent({
+        owner: parsed.owner,
+        repo: parsed.repo,
+        path: '.github/workflows/visual-issue-claude-fix.yml',
+      });
+      sendResponse({ success: true, exists: true });
+    } catch {
+      sendResponse({ success: true, exists: false });
+    }
+  } catch (err) {
+    sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
+  }
+};
+
+const handleCheckRepoSecret = async (
+  message: { type: string; payload: { repo: string; secretName: string } },
+  sendResponse: (response: MessageResponse & { exists?: boolean }) => void,
+) => {
+  try {
+    const parsed = parseRepoName(message.payload.repo);
+    if (!parsed) {
+      sendResponse({ success: false, error: 'Invalid repo' });
+      return;
+    }
+    const octokit = await getOctokit();
+    try {
+      await octokit.request('GET /repos/{owner}/{repo}/actions/secrets/{secret_name}', {
+        owner: parsed.owner,
+        repo: parsed.repo,
+        secret_name: message.payload.secretName,
+      });
+      sendResponse({ success: true, exists: true });
+    } catch (err) {
+      const status = (err as { status?: number })?.status;
+      if (status === 404) {
+        sendResponse({ success: true, exists: false });
+      } else {
+        await check401(err);
+        sendResponse({ success: false, error: 'Could not check secret' });
+      }
+    }
+  } catch (err) {
+    sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
+  }
+};
 
 const handleStartReport = async (tool: 'select' | 'pencil', sendResponse: (response: MessageResponse) => void) => {
   try {
@@ -115,6 +180,7 @@ const handleStartReport = async (tool: 'select' | 'pencil', sendResponse: (respo
     chrome.runtime.sendMessage({ type: 'OVERLAY_OPENED' }).catch(() => {});
     sendResponse({ success: true });
   } catch (err) {
+    await check401(err);
     sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
   }
 };
@@ -125,6 +191,15 @@ const getOctokit = async (): Promise<Octokit> => {
     throw new Error('GitHub token not configured. Go to extension options to set it up.');
   }
   return new Octokit({ auth: githubPat });
+};
+
+/** Check if an API error is a 401 and auto-disconnect the token */
+const check401 = async (err: unknown): Promise<void> => {
+  const status = (err as { status?: number })?.status;
+  if (status === 401) {
+    await chrome.storage.local.remove(['githubPat', 'githubPatUser']);
+    chrome.runtime.sendMessage({ type: 'TOKEN_REVOKED' }).catch(() => {});
+  }
 };
 
 const getRepoConfig = async (): Promise<{ owner: string; repo: string }> => {
@@ -154,13 +229,26 @@ const handleValidateToken = async (
     const response = await fetch('https://api.github.com/user', {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (response.ok) {
-      const user = (await response.json()) as { login: string };
-      await chrome.storage.local.set({ githubPat: token, githubPatUser: user.login });
-      sendResponse({ success: true, login: user.login });
-    } else {
-      sendResponse({ success: false, error: 'Invalid token — check scopes and try again.' });
+    if (!response.ok) {
+      sendResponse({ success: false, error: 'Invalid token — could not authenticate.' });
+      return;
     }
+    // Check scopes — classic tokens expose them via x-oauth-scopes header
+    const scopes = response.headers.get('x-oauth-scopes') ?? '';
+    const hasRepoScope = scopes.split(',').some(s => s.trim() === 'repo');
+    // Fine-grained tokens don't return x-oauth-scopes, so we allow those through
+    // (they'll fail at the API call level if permissions are missing)
+    const isFineGrained = !scopes && token.startsWith('github_pat_');
+    if (!hasRepoScope && !isFineGrained) {
+      sendResponse({
+        success: false,
+        error: 'Token is missing the "repo" scope. Create a classic token with the repo scope.',
+      });
+      return;
+    }
+    const user = (await response.json()) as { login: string };
+    await chrome.storage.local.set({ githubPat: token, githubPatUser: user.login });
+    sendResponse({ success: true, login: user.login });
   } catch {
     sendResponse({ success: false, error: 'Token validation failed.' });
   }
@@ -174,10 +262,35 @@ const handleRemoveToken = async (sendResponse: (response: MessageResponse) => vo
 
 const handleCheckTokenStatus = async (sendResponse: (response: CheckTokenStatusResponse) => void) => {
   const { githubPat, githubPatUser } = await chrome.storage.local.get(['githubPat', 'githubPatUser']);
-  sendResponse({
-    connected: !!githubPat,
-    login: (githubPatUser as string) || undefined,
-  });
+  if (!githubPat) {
+    sendResponse({ connected: false });
+    return;
+  }
+  // Verify the token still works and has the right scope
+  try {
+    const response = await fetch('https://api.github.com/user', {
+      headers: { Authorization: `Bearer ${githubPat}` },
+    });
+    if (!response.ok) {
+      // Token revoked or expired — clean up
+      await chrome.storage.local.remove(['githubPat', 'githubPatUser']);
+      sendResponse({ connected: false });
+      return;
+    }
+    const scopes = response.headers.get('x-oauth-scopes') ?? '';
+    const hasRepoScope = scopes.split(',').some(s => s.trim() === 'repo');
+    const isFineGrained = !scopes && String(githubPat).startsWith('github_pat_');
+    if (!hasRepoScope && !isFineGrained) {
+      // Token is valid but missing required scope — clean up
+      await chrome.storage.local.remove(['githubPat', 'githubPatUser']);
+      sendResponse({ connected: false });
+      return;
+    }
+    sendResponse({ connected: true, login: (githubPatUser as string) || undefined });
+  } catch {
+    // Network error — assume still valid to avoid disconnecting on transient failures
+    sendResponse({ connected: !!githubPat, login: (githubPatUser as string) || undefined });
+  }
 };
 
 const RELEASE_TAG = 'visual-issues';
@@ -374,12 +487,15 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
     });
 
     // Handle auto-fix with Claude
+    let autoFixResult: AutoFixResult | undefined;
+    let autoFixError: string | undefined;
     if (autoFix) {
       try {
-        await setupAutoFix(octokit, owner, repo, issue.data.number);
+        autoFixResult = await setupAutoFix(octokit, owner, repo, issue.data.number);
       } catch (autoFixErr) {
-        // Log but don't fail the issue creation
         console.error('Auto-fix setup failed:', autoFixErr);
+        autoFixResult = 'failed';
+        autoFixError = autoFixErr instanceof Error ? autoFixErr.message : String(autoFixErr);
       }
     }
 
@@ -387,111 +503,54 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
       success: true,
       issueUrl: issue.data.html_url,
       issueNumber: issue.data.number,
+      autoFixResult,
+      autoFixError,
     });
   } catch (err) {
+    await check401(err);
     sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
   }
 };
 
-// Auto-fix with Claude workflow template
-const AUTO_FIX_WORKFLOW = `name: Claude Auto-Fix
+type AutoFixResult = 'triggered' | 'no-workflow' | 'failed';
 
-on:
-  issues:
-    types: [labeled]
-
-permissions:
-  contents: write
-  pull-requests: write
-  issues: write
-
-jobs:
-  auto-fix:
-    if: github.event.label.name == 'auto-fix'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Run Claude
-        uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: \${{ secrets.ANTHROPIC_API_KEY }}
-          prompt: |
-            You are an AI assistant that fixes visual issues reported via the Visual Issue Reporter extension.
-
-            When you receive an issue:
-            1. Read the issue description and examine any attached screenshot
-            2. The purple highlighted area shows the problem location
-            3. Identify the relevant code files
-            4. Create a minimal fix that addresses only the reported issue
-            5. Open a PR with your changes
-
-            Keep changes minimal. Don't refactor. Don't add features. Just fix the reported issue.
-`;
-
-const setupAutoFix = async (octokit: Octokit, owner: string, repo: string, issueNumber: number): Promise<void> => {
+const setupAutoFix = async (
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  issueNumber: number,
+): Promise<AutoFixResult> => {
   // 1. Ensure the auto-fix label exists
   try {
     await octokit.issues.getLabel({ owner, repo, name: 'auto-fix' });
   } catch {
-    // Label doesn't exist, create it
     await octokit.issues.createLabel({
       owner,
       repo,
       name: 'auto-fix',
       color: 'a78bfa',
-      description: 'Auto-fix with Claude AI',
+      description: 'Auto-fix with Claude Code',
     });
   }
 
-  // 2. Ensure the GitHub Action workflow exists
-  const workflowPath = '.github/workflows/claude-auto-fix.yml';
+  // 2. Check if the workflow file exists
+  let workflowExists = false;
   try {
-    await octokit.repos.getContent({ owner, repo, path: workflowPath });
-    // Workflow exists, no need to create
+    await octokit.repos.getContent({ owner, repo, path: '.github/workflows/visual-issue-claude-fix.yml' });
+    workflowExists = true;
   } catch {
-    // Workflow doesn't exist, try to create it
-    try {
-      // Get the default branch
-      const { data: repoData } = await octokit.repos.get({ owner, repo });
-      const defaultBranch = repoData.default_branch;
-
-      // Get the custom system prompt if set
-      const { autoFixSettings } = await chrome.storage.local.get('autoFixSettings');
-      let workflowContent = AUTO_FIX_WORKFLOW;
-      if (autoFixSettings?.systemPrompt) {
-        // Replace the default prompt with custom one
-        workflowContent = workflowContent.replace(
-          /prompt: \|[\s\S]*$/,
-          `prompt: |\n            ${(autoFixSettings as AutoFixSettings).systemPrompt?.split('\n').join('\n            ')}\n`,
-        );
-      }
-
-      await octokit.repos.createOrUpdateFileContents({
-        owner,
-        repo,
-        path: workflowPath,
-        message: 'Add Claude auto-fix workflow',
-        content: btoa(workflowContent),
-        branch: defaultBranch,
-      });
-    } catch (createErr) {
-      console.error('Failed to create workflow file:', createErr);
-      // Continue anyway - user may need to add manually
-    }
+    // Not found
   }
 
-  // 3. Add the auto-fix label to trigger the action
+  // 3. Add the auto-fix label to the issue
   await octokit.issues.addLabels({
     owner,
     repo,
     issue_number: issueNumber,
     labels: ['auto-fix'],
   });
+
+  return workflowExists ? 'triggered' : 'no-workflow';
 };
 
 const handleFetchLabels = async (
@@ -510,11 +569,13 @@ const handleFetchLabels = async (
       repo: parsed.repo,
       per_page: 100,
     });
+    const hiddenLabels = ['visual-issue', 'auto-fix', 'from-extension'];
     sendResponse({
       success: true,
-      labels: data.map(l => ({ name: l.name, color: l.color })),
+      labels: data.filter(l => !hiddenLabels.includes(l.name)).map(l => ({ name: l.name, color: l.color })),
     });
   } catch (err) {
+    await check401(err);
     sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
   }
 };
@@ -536,6 +597,7 @@ const handleFetchRepos = async (sendResponse: (response: FetchReposResponse) => 
     }
     sendResponse({ success: true, repos });
   } catch (err) {
+    await check401(err);
     sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
   }
 };
@@ -561,6 +623,7 @@ const handleFetchAssignees = async (
       assignees: data.map(a => ({ login: a.login, avatar_url: a.avatar_url ?? '' })),
     });
   } catch (err) {
+    await check401(err);
     sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
   }
 };
@@ -700,6 +763,7 @@ const handleFetchPageIssues = async (
 
     sendResponse({ success: true, issues: matched });
   } catch (err) {
+    await check401(err);
     sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
   }
 };

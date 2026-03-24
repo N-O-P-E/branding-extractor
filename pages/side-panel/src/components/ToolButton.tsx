@@ -106,8 +106,9 @@ export default function ToolButton({ icon, label, active, disabled, onClick }: T
         boxShadow: active
           ? '0 0 16px rgba(139,92,246,0.25), inset 0 0 12px rgba(139,92,246,0.1)'
           : hovered
-            ? '0 0 8px rgba(139,92,246,0.1)'
+            ? '0 4px 12px rgba(139,92,246,0.15)'
             : 'none',
+        transform: hovered && !active && !disabled ? 'translateY(-1px)' : 'none',
         transition: 'all 0.15s ease',
       }}>
       <Icon />

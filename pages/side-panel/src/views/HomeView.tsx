@@ -5,7 +5,8 @@ import { useState, useEffect, useCallback } from 'react';
 import type { PageIssue } from '@extension/shared';
 
 interface HomeViewProps {
-  onOpenSettings: () => void;
+  onOpenSettings: (section?: string) => void;
+  onMount?: () => void;
 }
 
 const colors = {
@@ -19,24 +20,49 @@ const colors = {
   green: '#4ade80',
 } as const;
 
-export default function HomeView({ onOpenSettings }: HomeViewProps) {
+export default function HomeView({ onOpenSettings, onMount }: HomeViewProps) {
   const [repos, setRepos] = useState<string[]>([]);
   const [selectedRepo, setSelectedRepo] = useState('');
   const [activeTool, setActiveTool] = useState<'select' | 'pencil' | 'inspect' | null>(null);
   const [issues, setIssues] = useState<PageIssue[]>([]);
   const [loading, setLoading] = useState(false);
   const [patConnected, setPatConnected] = useState(false);
+  const [autoFixConfigured, setAutoFixConfigured] = useState(false);
+  const [autoFixStatus, setAutoFixStatus] = useState<'not-configured' | 'missing-secret' | 'ready'>('not-configured');
+
+  useEffect(() => {
+    onMount?.();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load settings from storage
   useEffect(() => {
-    chrome.storage.local.get(['repoList', 'selectedRepo']).then(result => {
-      if (result.repoList) setRepos(result.repoList as string[]);
+    chrome.storage.local.get(['repoList', 'selectedRepo', 'autoFixSettings']).then(result => {
+      const repoList = (result.repoList as string[]) ?? [];
+      if (repoList.length) setRepos(repoList);
       if (result.selectedRepo) setSelectedRepo(result.selectedRepo as string);
+      if (result.autoFixSettings) {
+        const s = result.autoFixSettings as { anthropicApiKey?: string };
+        setAutoFixConfigured(!!s.anthropicApiKey);
+      }
     });
     chrome.runtime.sendMessage({ type: 'CHECK_TOKEN_STATUS' }, (response: { connected: boolean }) => {
       setPatConnected(!!response?.connected);
     });
   }, []);
+
+  // Check auto-fix status based on selected repo
+  useEffect(() => {
+    if (!autoFixConfigured || !selectedRepo) {
+      if (!autoFixConfigured) setAutoFixStatus('not-configured');
+      return;
+    }
+    chrome.runtime.sendMessage(
+      { type: 'CHECK_REPO_SECRET', payload: { repo: selectedRepo, secretName: 'ANTHROPIC_API_KEY' } },
+      (response: { success: boolean; exists?: boolean }) => {
+        setAutoFixStatus(response?.exists ? 'ready' : 'missing-secret');
+      },
+    );
+  }, [autoFixConfigured, selectedRepo]);
 
   // Listen for tool switch messages from content-UI
   useEffect(() => {
@@ -211,7 +237,12 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
 
       {/* Repository section */}
       <div style={{ padding: '20px 20px 0' }}>
-        <RepoSelector selectedRepo={selectedRepo} repos={repos} onChange={handleRepoChange} />
+        <RepoSelector
+          selectedRepo={selectedRepo}
+          repos={repos}
+          onChange={handleRepoChange}
+          onOpenSettings={onOpenSettings}
+        />
       </div>
 
       {/* Divider */}
@@ -280,11 +311,11 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
       {/* Settings section */}
       <div style={{ padding: '16px 20px 24px' }}>
         {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}
-        <h2 style={{ ...sectionHeadingStyle, cursor: 'pointer' }} onClick={onOpenSettings}>
+        <h2 style={{ ...sectionHeadingStyle, cursor: 'pointer' }} onClick={() => onOpenSettings()}>
           Settings
         </h2>
         <div style={{ marginTop: 8 }}>
-          <button onClick={onOpenSettings} style={settingsRowStyle}>
+          <button onClick={() => onOpenSettings('token')} style={settingsRowStyle}>
             <span>GitHub Token</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: 12, color: patConnected ? colors.green : colors.textSecondary }}>
@@ -307,7 +338,7 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
               </svg>
             </span>
           </button>
-          <button onClick={onOpenSettings} style={settingsRowStyle}>
+          <button onClick={() => onOpenSettings('repos')} style={settingsRowStyle}>
             <span>Repositories</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: 12, color: colors.textSecondary }}>
@@ -330,10 +361,25 @@ export default function HomeView({ onOpenSettings }: HomeViewProps) {
               </svg>
             </span>
           </button>
-          <button onClick={onOpenSettings} style={{ ...settingsRowStyle, borderBottom: 'none' }}>
-            <span>Default Labels</span>
+          <button onClick={() => onOpenSettings('autofix')} style={{ ...settingsRowStyle, borderBottom: 'none' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>Auto-fix with Claude Code</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 12, color: colors.textSecondary }}>visual-issue</span>
+              <span
+                style={{
+                  fontSize: 12,
+                  color:
+                    autoFixStatus === 'ready'
+                      ? colors.green
+                      : autoFixStatus === 'missing-secret'
+                        ? '#F59E0B'
+                        : colors.textSecondary,
+                }}>
+                {autoFixStatus === 'ready'
+                  ? 'Enabled'
+                  : autoFixStatus === 'missing-secret'
+                    ? 'Setup incomplete'
+                    : 'Not configured'}
+              </span>
               <svg
                 width="12"
                 height="12"

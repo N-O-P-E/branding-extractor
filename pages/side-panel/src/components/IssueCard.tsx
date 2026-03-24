@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { PageIssue } from '@extension/shared';
 
 interface IssueCardProps {
@@ -22,6 +23,7 @@ const timeAgo = (dateString: string): string => {
 
 export default function IssueCard({ issue }: IssueCardProps) {
   const isOpen = issue.state === 'open';
+  const [hovered, setHovered] = useState(false);
 
   const handleClick = () => {
     chrome.tabs.create({ url: issue.html_url });
@@ -30,20 +32,24 @@ export default function IssueCard({ issue }: IssueCardProps) {
   return (
     <button
       onClick={handleClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: 12,
         width: '100%',
         padding: '10px 12px',
-        background: 'rgba(148,163,184,0.08)',
-        border: '1px solid rgba(148,163,184,0.15)',
+        background: hovered ? 'rgba(139,92,246,0.12)' : 'rgba(148,163,184,0.08)',
+        border: `1px solid ${hovered ? 'rgba(139,92,246,0.3)' : 'rgba(148,163,184,0.15)'}`,
         borderRadius: 8,
         cursor: 'pointer',
         textAlign: 'left',
         color: '#f1f5f9',
         boxSizing: 'border-box',
         transition: 'all 0.15s',
+        transform: hovered ? 'translateY(-1px)' : 'none',
+        boxShadow: hovered ? '0 4px 12px rgba(139,92,246,0.15)' : 'none',
       }}>
       {/* Thumbnail placeholder */}
       <div
