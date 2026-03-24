@@ -4,6 +4,7 @@ import type { AutoFixSettings } from '@extension/shared';
 interface SetupViewProps {
   onDone: () => void;
   openSection?: string;
+  onOpenWizard?: (chapter: 1 | 2) => void;
 }
 
 const colors = {
@@ -100,7 +101,7 @@ const SectionHeader = ({
   </button>
 );
 
-export default function SetupView({ onDone, openSection }: SetupViewProps) {
+export default function SetupView({ onDone, openSection, onOpenWizard }: SetupViewProps) {
   const [pat, setPat] = useState('');
   const [patStatus, setPatStatus] = useState<'idle' | 'validating' | 'valid' | 'invalid'>('idle');
   const [patUser, setPatUser] = useState('');
@@ -1050,6 +1051,19 @@ export default function SetupView({ onDone, openSection }: SetupViewProps) {
               label. The workflow triggers Claude Code to analyze the issue and open a PR. Each repo needs the workflow
               file and the API key secret.
             </p>
+            <button
+              onClick={() => onOpenWizard?.(2)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#c4b5fd',
+                fontSize: 12,
+                cursor: 'pointer',
+                padding: '8px 0 0',
+                textDecoration: 'underline',
+              }}>
+              Open setup guide
+            </button>
           </div>
         </div>
       </section>

@@ -6,6 +6,7 @@ import type { PageIssue } from '@extension/shared';
 
 interface HomeViewProps {
   onOpenSettings: (section?: string) => void;
+  onOpenWizard?: (chapter: 1 | 2) => void;
   onMount?: () => void;
 }
 
@@ -20,7 +21,7 @@ const colors = {
   green: '#4ade80',
 } as const;
 
-export default function HomeView({ onOpenSettings, onMount }: HomeViewProps) {
+export default function HomeView({ onOpenSettings, onOpenWizard, onMount }: HomeViewProps) {
   const [repos, setRepos] = useState<string[]>([]);
   const [selectedRepo, setSelectedRepo] = useState('');
   const [activeTool, setActiveTool] = useState<'select' | 'pencil' | 'inspect' | null>(null);
@@ -361,7 +362,9 @@ export default function HomeView({ onOpenSettings, onMount }: HomeViewProps) {
               </svg>
             </span>
           </button>
-          <button onClick={() => onOpenSettings('autofix')} style={{ ...settingsRowStyle, borderBottom: 'none' }}>
+          <button
+            onClick={() => (autoFixStatus !== 'ready' ? onOpenWizard?.(2) : onOpenSettings('autofix'))}
+            style={{ ...settingsRowStyle, borderBottom: 'none' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>Auto-fix with Claude Code</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span

@@ -19,6 +19,7 @@ interface CreateIssueViewProps {
   browserMetadata: BrowserMetadata | null;
   onBack: () => void;
   onSuccess: () => void;
+  onOpenWizard?: (chapter: 1 | 2) => void;
 }
 
 const colors = {
@@ -32,7 +33,13 @@ const colors = {
   error: '#f87171',
 } as const;
 
-export default function CreateIssueView({ captureData, browserMetadata, onBack, onSuccess }: CreateIssueViewProps) {
+export default function CreateIssueView({
+  captureData,
+  browserMetadata,
+  onBack,
+  onSuccess,
+  onOpenWizard,
+}: CreateIssueViewProps) {
   const [description, setDescription] = useState('');
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [selectedAssignee, setSelectedAssignee] = useState('');
@@ -318,6 +325,21 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
           }}>
           Report another issue
         </button>
+        {autoFixResult === 'no-workflow' && (
+          <button
+            onClick={() => onOpenWizard?.(2)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#c4b5fd',
+              fontSize: 12,
+              cursor: 'pointer',
+              marginTop: 8,
+              textDecoration: 'underline',
+            }}>
+            Complete Claude Code setup
+          </button>
+        )}
       </div>
     );
   }

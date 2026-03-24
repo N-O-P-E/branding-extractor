@@ -1,3 +1,4 @@
+import OnboardingWizard from './components/OnboardingWizard';
 import CreateIssueView from './views/CreateIssueView';
 import HomeView from './views/HomeView';
 import SetupView from './views/SetupView';
@@ -11,10 +12,17 @@ export default function SidePanel() {
   const [captureData, setCaptureData] = useState<CaptureCompleteMessage['payload'] | null>(null);
   const [browserMetadata, setBrowserMetadata] = useState<BrowserMetadata | null>(null);
   const [settingsSection, setSettingsSection] = useState<string | undefined>();
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardChapter, setWizardChapter] = useState<1 | 2>(1);
+
+  const openWizard = (chapter: 1 | 2) => {
+    setWizardChapter(chapter);
+    setWizardOpen(true);
+  };
 
   useEffect(() => {
     chrome.runtime.sendMessage({ type: 'CHECK_TOKEN_STATUS' }, (response: { connected: boolean }) => {
-      if (!response?.connected) setView('setup');
+      if (!response?.connected) openWizard(1);
     });
   }, []);
 
@@ -75,13 +83,16 @@ export default function SidePanel() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 1 }}>
-        {view === 'setup' && <SetupView onDone={() => setView('home')} openSection={settingsSection} />}
+        {view === 'setup' && (
+          <SetupView onDone={() => setView('home')} openSection={settingsSection} onOpenWizard={openWizard} />
+        )}
         {view === 'home' && (
           <HomeView
             onOpenSettings={(section?: string) => {
               setSettingsSection(section);
               setView('setup');
             }}
+            onOpenWizard={openWizard}
             onMount={() => {
               // Dismiss any stale overlay when returning to home
               chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
@@ -94,6 +105,7 @@ export default function SidePanel() {
           <CreateIssueView
             captureData={captureData}
             browserMetadata={browserMetadata}
+            onOpenWizard={openWizard}
             onBack={() => {
               setView('home');
               // Dismiss the overlay on the page
@@ -131,6 +143,7 @@ export default function SidePanel() {
         }}>
         Built by <strong>Studio N.O.P.E.</strong>
       </a>
+      <OnboardingWizard open={wizardOpen} chapter={wizardChapter} onClose={() => setWizardOpen(false)} />
     </div>
   );
 }
