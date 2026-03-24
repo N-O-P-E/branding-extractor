@@ -544,7 +544,16 @@ const App = () => {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        dismiss();
+        // Cmd+Escape closes the overlay entirely
+        if (e.metaKey) {
+          dismiss();
+          return;
+        }
+        // Plain Escape cancels current action (e.g. editing comment)
+        if (editingCommentRef.current) {
+          setEditingComment(null);
+          return;
+        }
         return;
       }
       // Undo (all modes)
@@ -914,6 +923,7 @@ const App = () => {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        // Plain Escape exits inspect mode; Cmd+Escape handled by backdrop handler
         setInspectActive(false);
         setInspectHighlight(null);
         inspectHoveredEl.current = null;
@@ -1093,11 +1103,11 @@ const App = () => {
                 {inspectElInfo}
               </span>
               <span style={{ opacity: 0.4, margin: '0 6px' }}>·</span>
-              <span style={{ opacity: 0.5 }}>Click to select · Esc to cancel</span>
+              <span style={{ opacity: 0.5 }}>Click to select · ⌘Esc to close</span>
             </>
           ) : (
             <>
-              Click an element to report · <span style={{ opacity: 0.5 }}>Esc to cancel</span>
+              Click an element to report · <span style={{ opacity: 0.5 }}>⌘Esc to close</span>
             </>
           )}
         </div>
@@ -1110,7 +1120,7 @@ const App = () => {
           style={{ ...styles.backdrop, outline: 'none' }}
           onClick={handleBackdropClick}
           onKeyDown={e => {
-            if (e.key === 'Escape') {
+            if (e.key === 'Escape' && e.metaKey) {
               dismiss();
             }
             e.stopPropagation();
