@@ -81,6 +81,19 @@ export default function SidePanel() {
     };
   }, [view]);
 
+  if (wizardOpen) {
+    return (
+      <OnboardingWizard
+        open={wizardOpen}
+        chapter={wizardChapter}
+        onClose={() => {
+          setWizardOpen(false);
+          setRefreshKey(k => k + 1);
+        }}
+      />
+    );
+  }
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 1 }}>
@@ -150,14 +163,6 @@ export default function SidePanel() {
         }}>
         Built by <strong>Studio N.O.P.E.</strong>
       </a>
-      <OnboardingWizard
-        open={wizardOpen}
-        chapter={wizardChapter}
-        onClose={() => {
-          setWizardOpen(false);
-          setRefreshKey(k => k + 1);
-        }}
-      />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import onboardingHero from '../assets/onboarding-hero.jpg';
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface OnboardingWizardProps {
@@ -345,6 +346,16 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
     });
   }, []);
 
+  // Determine canProceed for each step
+  const canProceed =
+    currentStep === 2
+      ? patStatus === 'success'
+      : currentStep === 3
+        ? repos.length > 0
+        : currentStep === 5
+          ? anthropicKeyStatus === 'success'
+          : true;
+
   // Keyboard support
   useEffect(() => {
     if (!open) return;
@@ -365,28 +376,6 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
   const isFirstStepOfChapter = chapter === 1 && currentStep === 1;
   const hideNav = currentStep === 1 || currentStep === 4 || currentStep === 8;
 
-  // Determine canProceed for each step
-  const canProceed =
-    currentStep === 2
-      ? patStatus === 'success'
-      : currentStep === 3
-        ? repos.length > 0
-        : currentStep === 5
-          ? anthropicKeyStatus === 'success'
-          : true;
-
-  // Steps 6/7: check if all repos are green
-  const allSecretsReady = storedRepos.length > 0 && storedRepos.every(r => repoSecretStatus[r] === 'exists');
-  const allWorkflowsReady = storedRepos.length > 0 && storedRepos.every(r => repoWorkflowStatus[r] === 'exists');
-
-  // Dynamic next button text
-  const nextButtonText =
-    currentStep === 6 && !allSecretsReady
-      ? 'Continue anyway'
-      : currentStep === 7 && !allWorkflowsReady
-        ? 'Continue anyway'
-        : 'Next';
-
   // Filtered repos for dropdown
   const filteredRepos = allRepos.filter(
     r =>
@@ -399,51 +388,28 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
     switch (currentStep) {
       case 1:
         return (
-          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-            <div
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 12,
-                background: 'linear-gradient(135deg, #7c3aed, #9333ea)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 22,
-              }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"
-                  fill="#ffffff"
-                  stroke="#ffffff"
-                  strokeWidth="1.5"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </div>
+          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
             <div>
-              <div style={{ color: '#f1f5f9', fontSize: 16, fontWeight: 600, marginBottom: 8 }}>
-                Welcome to Visual Issue Reporter
-              </div>
-              <div style={{ color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
-                Report visual issues directly from any website. Let&apos;s get you connected in 2 minutes.
-              </div>
+              <h2 style={{ fontSize: 22, margin: '0 0 10px', color: '#f1f5f9', lineHeight: 1.2 }}>Welcome</h2>
+              <p style={{ margin: 0, color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.6 }}>
+                Report visual issues directly from any website.
+                <br />
+                Let&apos;s get you connected in 2 minutes.
+              </p>
             </div>
             <button
               onClick={handleNext}
               style={{
                 width: '100%',
-                height: 40,
                 borderRadius: 10,
                 border: 'none',
                 background: 'linear-gradient(135deg, #7c3aed, #9333ea)',
                 color: '#ffffff',
                 fontSize: 14,
-                fontWeight: 600,
+                fontWeight: 500,
+                padding: '12px 18px',
                 cursor: 'pointer',
-                marginTop: 4,
-                transition:
-                  'opacity 0.15s cubic-bezier(0.25, 1, 0.5, 1), transform 0.15s cubic-bezier(0.25, 1, 0.5, 1)',
+                transition: 'all 0.15s',
               }}
               onMouseEnter={e => {
                 e.currentTarget.style.opacity = '0.9';
@@ -455,6 +421,25 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
               }}>
               Get Started
             </button>
+            <button
+              onClick={onClose}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'rgba(241,245,249,0.25)',
+                fontSize: 12,
+                cursor: 'pointer',
+                padding: '4px 8px',
+                transition: 'color 0.15s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.color = 'rgba(241,245,249,0.5)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = 'rgba(241,245,249,0.25)';
+              }}>
+              Skip setup
+            </button>
           </div>
         );
 
@@ -462,38 +447,22 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%' }}>
             <div>
-              <div style={{ color: '#f1f5f9', fontSize: 16, fontWeight: 600, marginBottom: 6 }}>
-                Connect your GitHub account
-              </div>
-              <div style={{ color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
-                Create a classic token with the{' '}
-                <code
-                  style={{
-                    background: 'rgba(148,163,184,0.12)',
-                    padding: '1px 5px',
-                    borderRadius: 4,
-                    fontSize: 12,
-                    color: '#a78bfa',
-                  }}>
-                  repo
-                </code>{' '}
-                scope.{' '}
+              <h2 style={{ fontSize: 18, margin: '0 0 8px', color: '#a78bfa' }}>GitHub Token</h2>
+              <p style={{ margin: 0, color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
+                Create a{' '}
                 <a
                   href="https://github.com/settings/tokens/new?scopes=repo&description=Visual+Issue+Reporter"
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ color: '#a78bfa', textDecoration: 'none' }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.textDecoration = 'underline';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.textDecoration = 'none';
-                  }}>
-                  Create token
-                </a>
-              </div>
+                  style={{ color: '#c4b5fd' }}>
+                  classic token
+                </a>{' '}
+                with the{' '}
+                <code style={{ background: 'rgba(148,163,184,0.08)', padding: '1px 5px', borderRadius: 4 }}>repo</code>{' '}
+                scope. Works across all your organizations.
+              </p>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
               <input
                 type="password"
                 value={pat}
@@ -504,18 +473,18 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                     setPatError('');
                   }
                 }}
-                placeholder="ghp_xxxxxxxxxxxx"
+                placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
                 style={{
                   flex: 1,
-                  height: 36,
-                  borderRadius: 8,
-                  border: '1px solid rgba(148,163,184,0.15)',
                   background: 'rgba(148,163,184,0.08)',
+                  border: '1px solid rgba(148,163,184,0.15)',
+                  borderRadius: 8,
+                  padding: '10px 14px',
                   color: '#f1f5f9',
-                  fontSize: 13,
-                  padding: '0 12px',
+                  fontSize: 14,
                   outline: 'none',
-                  fontFamily: 'monospace',
+                  minWidth: 0,
+                  transition: 'all 0.15s',
                 }}
                 onFocus={e => {
                   e.currentTarget.style.borderColor = '#a78bfa';
@@ -531,42 +500,47 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                 onClick={handleValidateToken}
                 disabled={!pat.trim() || patStatus === 'validating'}
                 style={{
-                  height: 36,
-                  borderRadius: 8,
+                  background: 'linear-gradient(135deg, #7c3aed, #9333ea)',
                   border: 'none',
-                  background:
-                    !pat.trim() || patStatus === 'validating'
-                      ? 'rgba(148,163,184,0.15)'
-                      : 'linear-gradient(135deg, #7c3aed, #9333ea)',
-                  color: !pat.trim() || patStatus === 'validating' ? 'rgba(241,245,249,0.3)' : '#ffffff',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  padding: '0 14px',
+                  borderRadius: 10,
+                  padding: '10px 18px',
+                  color: '#fff',
+                  fontSize: 14,
+                  fontWeight: 500,
                   cursor: !pat.trim() || patStatus === 'validating' ? 'not-allowed' : 'pointer',
                   whiteSpace: 'nowrap',
-                  transition: 'opacity 0.15s cubic-bezier(0.25, 1, 0.5, 1)',
+                  flexShrink: 0,
+                  transition: 'all 0.15s',
+                  opacity: !pat.trim() || patStatus === 'validating' ? 0.45 : 1,
                 }}>
-                Validate
+                {patStatus === 'validating' ? '…' : 'Validate'}
               </button>
             </div>
-            {patStatus === 'validating' && (
-              <div style={{ color: 'rgba(241,245,249,0.45)', fontSize: 12 }}>Validating...</div>
-            )}
             {patStatus === 'success' && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-                <div
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: '#4ade80',
-                    flexShrink: 0,
-                  }}
-                />
-                <span style={{ color: '#4ade80' }}>Connected as {patLogin}</span>
+              <div
+                style={{
+                  marginTop: 4,
+                  fontSize: 13,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}>
+                <span style={{ color: '#4ade80', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: '#4ade80',
+                      display: 'inline-block',
+                      flexShrink: 0,
+                    }}
+                  />
+                  Connected{patLogin ? ` as ${patLogin}` : ''}
+                </span>
               </div>
             )}
-            {patStatus === 'error' && <div style={{ color: '#f87171', fontSize: 12 }}>{patError}</div>}
+            {patStatus === 'error' && <div style={{ color: '#f87171', fontSize: 13 }}>{patError}</div>}
           </div>
         );
 
@@ -574,12 +548,10 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%' }}>
             <div>
-              <div style={{ color: '#f1f5f9', fontSize: 16, fontWeight: 600, marginBottom: 6 }}>
-                Select repositories
-              </div>
-              <div style={{ color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
+              <h2 style={{ fontSize: 18, margin: '0 0 8px', color: '#a78bfa' }}>Repositories</h2>
+              <p style={{ margin: 0, color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
                 Choose which repos you want to report issues on.
-              </div>
+              </p>
             </div>
             <div style={{ position: 'relative' }}>
               <input
@@ -597,15 +569,16 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                 placeholder="Search repositories..."
                 style={{
                   width: '100%',
-                  height: 36,
-                  borderRadius: 8,
-                  border: '1px solid rgba(148,163,184,0.15)',
                   background: 'rgba(148,163,184,0.08)',
+                  border: '1px solid rgba(148,163,184,0.15)',
+                  borderRadius: 8,
+                  padding: '10px 14px',
                   color: '#f1f5f9',
-                  fontSize: 13,
-                  padding: '0 12px',
+                  fontSize: 14,
                   outline: 'none',
                   boxSizing: 'border-box',
+                  minWidth: 0,
+                  transition: 'all 0.15s',
                 }}
                 onFocusCaptureCapture={e => {
                   e.currentTarget.style.borderColor = '#a78bfa';
@@ -706,7 +679,7 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                       borderRadius: 8,
                       border: '1px solid rgba(148,163,184,0.1)',
                     }}>
-                    <span style={{ color: '#f1f5f9', fontSize: 13 }}>{repo.full_name}</span>
+                    <span style={{ color: '#f1f5f9', fontSize: 14 }}>{repo.full_name}</span>
                     <button
                       onClick={() => handleRemoveRepo(repo.full_name)}
                       style={{
@@ -747,12 +720,10 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
         return (
           <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
             <div>
-              <div style={{ color: '#f1f5f9', fontSize: 16, fontWeight: 600, marginBottom: 8 }}>
-                Enable auto-fix with Claude Code?
-              </div>
-              <div style={{ color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
-                Let Claude Code automatically analyze visual issues and open PRs with fixes.
-              </div>
+              <h2 style={{ fontSize: 18, margin: '0 0 8px', color: '#a78bfa' }}>Auto-fix with Claude Code</h2>
+              <p style={{ margin: 0, color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
+                Let Claude Code automatically analyze reported issues and open a PR with the fix.
+              </p>
             </div>
             <div style={{ display: 'flex', gap: 10, width: '100%' }}>
               <button
@@ -762,16 +733,15 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                 }}
                 style={{
                   flex: 1,
-                  height: 40,
                   borderRadius: 10,
                   border: '1px solid rgba(148,163,184,0.2)',
                   background: 'transparent',
                   color: 'rgba(241,245,249,0.5)',
-                  fontSize: 13,
-                  fontWeight: 600,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  padding: '10px 18px',
                   cursor: 'pointer',
-                  transition:
-                    'border-color 0.15s cubic-bezier(0.25, 1, 0.5, 1), color 0.15s cubic-bezier(0.25, 1, 0.5, 1)',
+                  transition: 'all 0.15s',
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.borderColor = 'rgba(148,163,184,0.35)';
@@ -790,16 +760,15 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                 }}
                 style={{
                   flex: 1,
-                  height: 40,
                   borderRadius: 10,
                   border: 'none',
                   background: 'linear-gradient(135deg, #7c3aed, #9333ea)',
                   color: '#ffffff',
-                  fontSize: 13,
-                  fontWeight: 600,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  padding: '10px 18px',
                   cursor: 'pointer',
-                  transition:
-                    'opacity 0.15s cubic-bezier(0.25, 1, 0.5, 1), transform 0.15s cubic-bezier(0.25, 1, 0.5, 1)',
+                  transition: 'all 0.15s',
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.opacity = '0.9';
@@ -819,12 +788,12 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%' }}>
             <div>
-              <div style={{ color: '#f1f5f9', fontSize: 16, fontWeight: 600, marginBottom: 6 }}>Connect Anthropic</div>
-              <div style={{ color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
-                Enter your API key to enable Claude Code.
-              </div>
+              <h2 style={{ fontSize: 18, margin: '0 0 8px', color: '#a78bfa' }}>Anthropic API Key</h2>
+              <p style={{ margin: 0, color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
+                Enter your API key to enable Claude Code auto-fix.
+              </p>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
               <input
                 type="password"
                 value={anthropicApiKey}
@@ -838,15 +807,15 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                 placeholder="sk-ant-xxxxxxxxxxxx"
                 style={{
                   flex: 1,
-                  height: 36,
-                  borderRadius: 8,
-                  border: '1px solid rgba(148,163,184,0.15)',
                   background: 'rgba(148,163,184,0.08)',
+                  border: '1px solid rgba(148,163,184,0.15)',
+                  borderRadius: 8,
+                  padding: '10px 14px',
                   color: '#f1f5f9',
-                  fontSize: 13,
-                  padding: '0 12px',
+                  fontSize: 14,
                   outline: 'none',
-                  fontFamily: 'monospace',
+                  minWidth: 0,
+                  transition: 'all 0.15s',
                 }}
                 onFocus={e => {
                   e.currentTarget.style.borderColor = '#a78bfa';
@@ -862,46 +831,47 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                 onClick={handleValidateAnthropicKey}
                 disabled={!anthropicApiKey.trim() || anthropicKeyStatus === 'validating'}
                 style={{
-                  height: 36,
-                  borderRadius: 8,
+                  background: 'linear-gradient(135deg, #7c3aed, #9333ea)',
                   border: 'none',
-                  background:
-                    !anthropicApiKey.trim() || anthropicKeyStatus === 'validating'
-                      ? 'rgba(148,163,184,0.15)'
-                      : 'linear-gradient(135deg, #7c3aed, #9333ea)',
-                  color:
-                    !anthropicApiKey.trim() || anthropicKeyStatus === 'validating'
-                      ? 'rgba(241,245,249,0.3)'
-                      : '#ffffff',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  padding: '0 14px',
+                  borderRadius: 10,
+                  padding: '10px 18px',
+                  color: '#fff',
+                  fontSize: 14,
+                  fontWeight: 500,
                   cursor: !anthropicApiKey.trim() || anthropicKeyStatus === 'validating' ? 'not-allowed' : 'pointer',
                   whiteSpace: 'nowrap',
-                  transition: 'opacity 0.15s cubic-bezier(0.25, 1, 0.5, 1)',
+                  flexShrink: 0,
+                  transition: 'all 0.15s',
+                  opacity: !anthropicApiKey.trim() || anthropicKeyStatus === 'validating' ? 0.45 : 1,
                 }}>
-                Validate
+                {anthropicKeyStatus === 'validating' ? '…' : 'Validate'}
               </button>
             </div>
-            {anthropicKeyStatus === 'validating' && (
-              <div style={{ color: 'rgba(241,245,249,0.45)', fontSize: 12 }}>Validating...</div>
-            )}
             {anthropicKeyStatus === 'success' && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-                <div
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: '#4ade80',
-                    flexShrink: 0,
-                  }}
-                />
-                <span style={{ color: '#4ade80' }}>Connected</span>
+              <div
+                style={{
+                  marginTop: 4,
+                  fontSize: 13,
+                  display: 'flex',
+                  alignItems: 'center',
+                }}>
+                <span style={{ color: '#4ade80', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: '#4ade80',
+                      display: 'inline-block',
+                      flexShrink: 0,
+                    }}
+                  />
+                  Connected
+                </span>
               </div>
             )}
             {anthropicKeyStatus === 'error' && (
-              <div style={{ color: '#f87171', fontSize: 12 }}>{anthropicKeyError}</div>
+              <div style={{ color: '#f87171', fontSize: 13 }}>{anthropicKeyError}</div>
             )}
             <a
               href="https://console.anthropic.com/settings/keys"
@@ -923,34 +893,25 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%' }}>
             <div>
-              <div style={{ color: '#f1f5f9', fontSize: 16, fontWeight: 600, marginBottom: 6 }}>
-                Add API key to your repos
-              </div>
-              <div style={{ color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
+              <h2 style={{ fontSize: 18, margin: '0 0 8px', color: '#a78bfa' }}>Repository Secrets</h2>
+              <p style={{ margin: 0, color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
                 Each repo needs a secret named{' '}
-                <code
-                  style={{
-                    background: 'rgba(148,163,184,0.12)',
-                    padding: '1px 5px',
-                    borderRadius: 4,
-                    fontSize: 12,
-                    color: '#c4b5fd',
-                  }}>
+                <code style={{ background: 'rgba(148,163,184,0.08)', padding: '1px 5px', borderRadius: 4 }}>
                   ANTHROPIC_API_KEY
                 </code>{' '}
                 for the GitHub Action to work.
-              </div>
+              </p>
             </div>
             <button
               onClick={handleCopyApiKey}
               style={{
-                height: 36,
-                borderRadius: 8,
+                borderRadius: 10,
                 border: copiedApiKey ? '1px solid rgba(74,222,128,0.3)' : '1px solid rgba(148,163,184,0.15)',
                 background: copiedApiKey ? 'rgba(74,222,128,0.08)' : 'rgba(148,163,184,0.08)',
                 color: copiedApiKey ? '#4ade80' : '#f1f5f9',
-                fontSize: 13,
-                fontWeight: 600,
+                fontSize: 14,
+                fontWeight: 500,
+                padding: '10px 18px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -1049,12 +1010,10 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%' }}>
             <div>
-              <div style={{ color: '#f1f5f9', fontSize: 16, fontWeight: 600, marginBottom: 6 }}>
-                Add the workflow file
-              </div>
-              <div style={{ color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
+              <h2 style={{ fontSize: 18, margin: '0 0 8px', color: '#a78bfa' }}>Workflow File</h2>
+              <p style={{ margin: 0, color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
                 Each repo needs a GitHub Action workflow file.
-              </div>
+              </p>
             </div>
             <div
               style={{
@@ -1083,13 +1042,13 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
             <button
               onClick={handleCopyYaml}
               style={{
-                height: 36,
-                borderRadius: 8,
+                borderRadius: 10,
                 border: copiedYaml ? '1px solid rgba(74,222,128,0.3)' : '1px solid rgba(148,163,184,0.15)',
                 background: copiedYaml ? 'rgba(74,222,128,0.08)' : 'rgba(148,163,184,0.08)',
                 color: copiedYaml ? '#4ade80' : '#f1f5f9',
-                fontSize: 13,
-                fontWeight: 600,
+                fontSize: 14,
+                fontWeight: 500,
+                padding: '10px 18px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -1209,28 +1168,25 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
               </svg>
             </div>
             <div>
-              <div style={{ color: '#f1f5f9', fontSize: 16, fontWeight: 600, marginBottom: 8 }}>
-                You&apos;re all set!
-              </div>
-              <div style={{ color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
+              <h2 style={{ fontSize: 18, margin: '0 0 8px', color: '#a78bfa' }}>You&apos;re all set!</h2>
+              <p style={{ margin: 0, color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
                 Claude Code will automatically analyze issues and open PRs with fixes.
-              </div>
+              </p>
             </div>
             <button
               onClick={handleFinishChapter2}
               style={{
                 width: '100%',
-                height: 40,
                 borderRadius: 10,
                 border: 'none',
                 background: 'linear-gradient(135deg, #7c3aed, #9333ea)',
                 color: '#ffffff',
                 fontSize: 14,
-                fontWeight: 600,
+                fontWeight: 500,
+                padding: '10px 18px',
                 cursor: 'pointer',
                 marginTop: 4,
-                transition:
-                  'opacity 0.15s cubic-bezier(0.25, 1, 0.5, 1), transform 0.15s cubic-bezier(0.25, 1, 0.5, 1)',
+                transition: 'all 0.15s',
               }}
               onMouseEnter={e => {
                 e.currentTarget.style.opacity = '0.9';
@@ -1250,119 +1206,131 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
     }
   };
 
+  // Compute step counter for the bottom nav bar
+  const getStepIndicator = (): { current: number; total: number } | null => {
+    if (hideNav) return null;
+    if (currentStep <= 4) {
+      // Chapter 1 navigable steps: 2, 3
+      const ch1Steps = [2, 3];
+      const idx = ch1Steps.indexOf(currentStep);
+      return idx >= 0 ? { current: idx + 1, total: ch1Steps.length } : null;
+    }
+    // Chapter 2 navigable steps: 5, 6, 7
+    const ch2Steps = [5, 6, 7];
+    const idx = ch2Steps.indexOf(currentStep);
+    return idx >= 0 ? { current: idx + 1, total: ch2Steps.length } : null;
+  };
+  const stepIndicator = getStepIndicator();
+
   return (
     <div
       style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.6)',
-        backdropFilter: 'blur(4px)',
-        WebkitBackdropFilter: 'blur(4px)',
-        zIndex: 2147483647,
+        flex: 1,
+        background: '#0f172a',
+        color: '#f1f5f9',
+        fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif",
+        boxSizing: 'border-box',
+        minHeight: '100vh',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        flexDirection: 'column',
       }}>
-      {/* Modal body */}
-      <div
-        style={{
-          background: '#1e293b',
-          borderRadius: 16,
-          maxWidth: 360,
-          width: 'calc(100% - 32px)',
-          maxHeight: 'calc(100vh - 80px)',
-          overflowY: 'auto',
-          position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
-          padding: '24px 20px 20px',
-        }}>
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: 12,
-            right: 12,
-            width: 28,
-            height: 28,
-            borderRadius: 8,
-            border: 'none',
-            background: 'rgba(148,163,184,0.08)',
-            color: 'rgba(241,245,249,0.45)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 16,
-            lineHeight: 1,
-            padding: 0,
-            transition: 'background 0.15s cubic-bezier(0.25, 1, 0.5, 1), color 0.15s cubic-bezier(0.25, 1, 0.5, 1)',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.background = 'rgba(148,163,184,0.15)';
-            e.currentTarget.style.color = '#f1f5f9';
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.background = 'rgba(148,163,184,0.08)';
-            e.currentTarget.style.color = 'rgba(241,245,249,0.45)';
-          }}
-          aria-label="Close">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-        </button>
-
-        {/* Progress dots */}
+      {/* Hero image — shown on welcome (step 1) and chapter 2 intro (step 5 intro already has own heading) */}
+      {currentStep === 1 && (
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-            marginBottom: 20,
-            paddingTop: 4,
+            position: 'relative',
+            width: '100%',
+            height: 160,
+            overflow: 'hidden',
+            flexShrink: 0,
           }}>
-          {(() => {
-            const dotsStart = chapter === 2 ? CHAPTER_2_START : 1;
-            const dotsEnd = chapter === 1 ? TOTAL_STEPS : TOTAL_STEPS;
-            const dots = [];
-            for (let stepNum = dotsStart; stepNum <= dotsEnd; stepNum++) {
-              const isFilled = stepNum <= currentStep;
-              const isCurrent = stepNum === currentStep;
-              const isChapterGap = chapter === 1 && stepNum === CHAPTER_2_START;
-              const isGreyed = chapter === 1 && stepNum > 4 && currentStep <= 4;
-
-              dots.push(
-                <div key={stepNum} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {isChapterGap && (
-                    <div
-                      style={{
-                        width: 8,
-                        height: 1,
-                        background: 'rgba(148,163,184,0.15)',
-                        marginRight: 0,
-                      }}
-                    />
-                  )}
-                  <div
-                    style={{
-                      width: isCurrent ? 10 : 8,
-                      height: isCurrent ? 10 : 8,
-                      borderRadius: '50%',
-                      background: isGreyed ? 'transparent' : isFilled ? '#a78bfa' : 'transparent',
-                      border: `2px solid ${isGreyed ? 'rgba(148,163,184,0.12)' : isFilled ? '#a78bfa' : 'rgba(148,163,184,0.3)'}`,
-                      transition: 'all 0.2s cubic-bezier(0.25, 1, 0.5, 1)',
-                      flexShrink: 0,
-                    }}
-                  />
-                </div>,
-              );
-            }
-            return dots;
-          })()}
+          <img
+            src={onboardingHero}
+            alt="Visual Issue Reporter"
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              objectPosition: 'center 40%',
+              display: 'block',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'linear-gradient(to bottom, transparent 40%, #0f172a)',
+            }}
+          />
         </div>
+      )}
 
+      {/* Compact hero strip for non-welcome steps */}
+      {currentStep !== 1 && (
+        <div
+          style={{
+            position: 'relative',
+            width: '100%',
+            height: 56,
+            overflow: 'hidden',
+            flexShrink: 0,
+          }}>
+          <img
+            src={onboardingHero}
+            alt=""
+            style={{
+              width: '100%',
+              height: 120,
+              objectFit: 'cover',
+              objectPosition: 'center 40%',
+              display: 'block',
+              opacity: 0.4,
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'linear-gradient(to bottom, rgba(15,23,42,0.3) 0%, #0f172a 100%)',
+            }}
+          />
+          {/* Skip / Close in the strip */}
+          <button
+            onClick={onClose}
+            style={{
+              position: 'absolute',
+              top: 12,
+              right: 16,
+              background: 'none',
+              border: 'none',
+              color: 'rgba(241,245,249,0.45)',
+              fontSize: 12,
+              fontWeight: 500,
+              cursor: 'pointer',
+              padding: '4px 8px',
+              letterSpacing: '0.02em',
+              transition: 'color 0.15s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = 'rgba(241,245,249,0.7)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = 'rgba(241,245,249,0.45)';
+            }}>
+            {currentStep <= 4 ? 'Skip' : 'Close'}
+          </button>
+        </div>
+      )}
+
+      {/* Main content area */}
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          padding: '0 20px',
+          position: 'relative',
+        }}>
         {/* Step content */}
         <div
           style={{
@@ -1373,49 +1341,56 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
             display: 'flex',
             alignItems: [2, 3, 5, 6, 7].includes(currentStep) ? 'flex-start' : 'center',
             justifyContent: 'center',
+            paddingTop: currentStep === 1 ? 0 : 8,
           }}>
           {renderStepContent()}
         </div>
 
-        {/* Navigation - hidden on steps 1, 4, and 8 */}
+        {/* Bottom navigation bar — ← 1/3 → */}
         {!hideNav && (
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              marginTop: 20,
-              gap: 12,
+              justifyContent: 'center',
+              padding: '16px 0 28px',
+              gap: 16,
             }}>
-            {/* Back button */}
+            {/* Back */}
             <button
               onClick={handleBack}
+              disabled={isFirstStepOfChapter}
               style={{
-                visibility: isFirstStepOfChapter ? 'hidden' : 'visible',
-                width: 36,
-                height: 36,
+                width: 40,
+                height: 40,
                 borderRadius: 10,
-                border: '1px solid rgba(148,163,184,0.15)',
-                background: 'rgba(148,163,184,0.08)',
-                color: '#f1f5f9',
-                cursor: 'pointer',
+                border: '1px solid rgba(148,163,184,0.12)',
+                background: 'rgba(148,163,184,0.06)',
+                color: isFirstStepOfChapter ? 'rgba(148,163,184,0.15)' : 'rgba(241,245,249,0.6)',
+                cursor: isFirstStepOfChapter ? 'default' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 padding: 0,
                 flexShrink: 0,
-                transition:
-                  'background 0.15s cubic-bezier(0.25, 1, 0.5, 1), border-color 0.15s cubic-bezier(0.25, 1, 0.5, 1)',
+                transition: 'all 0.15s',
+                opacity: isFirstStepOfChapter ? 0.4 : 1,
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.background = 'rgba(148,163,184,0.15)';
-                e.currentTarget.style.borderColor = 'rgba(148,163,184,0.25)';
+                if (!isFirstStepOfChapter) {
+                  e.currentTarget.style.background = 'rgba(148,163,184,0.12)';
+                  e.currentTarget.style.borderColor = 'rgba(148,163,184,0.2)';
+                  e.currentTarget.style.color = '#f1f5f9';
+                }
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.background = 'rgba(148,163,184,0.08)';
-                e.currentTarget.style.borderColor = 'rgba(148,163,184,0.15)';
+                if (!isFirstStepOfChapter) {
+                  e.currentTarget.style.background = 'rgba(148,163,184,0.06)';
+                  e.currentTarget.style.borderColor = 'rgba(148,163,184,0.12)';
+                  e.currentTarget.style.color = 'rgba(241,245,249,0.6)';
+                }
               }}
-              aria-label="Back">
+              aria-label="Previous step">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path
                   d="M10 3L5 8L10 13"
@@ -1427,39 +1402,64 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
               </svg>
             </button>
 
-            {/* Next button */}
+            {/* Step counter */}
+            {stepIndicator && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  color: 'rgba(241,245,249,0.35)',
+                  fontSize: 12,
+                  fontWeight: 500,
+                  letterSpacing: '0.05em',
+                  userSelect: 'none',
+                  minWidth: 32,
+                  justifyContent: 'center',
+                }}>
+                <span style={{ color: '#a78bfa', fontWeight: 600 }}>{stepIndicator.current}</span>
+                <span style={{ fontSize: 10 }}>/</span>
+                <span>{stepIndicator.total}</span>
+              </div>
+            )}
+
+            {/* Next */}
             <button
               onClick={handleNext}
               disabled={!canProceed}
               style={{
-                flex: 1,
-                height: 36,
+                width: 40,
+                height: 40,
                 borderRadius: 10,
                 border: 'none',
-                background: canProceed ? 'linear-gradient(135deg, #7c3aed, #9333ea)' : 'rgba(148,163,184,0.15)',
-                color: canProceed ? '#ffffff' : 'rgba(241,245,249,0.3)',
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: canProceed ? 'pointer' : 'not-allowed',
+                background: canProceed ? 'linear-gradient(135deg, #7c3aed, #9333ea)' : 'rgba(148,163,184,0.06)',
+                borderStyle: canProceed ? 'none' : 'solid',
+                borderWidth: canProceed ? 0 : 1,
+                borderColor: canProceed ? 'transparent' : 'rgba(148,163,184,0.12)',
+                color: canProceed ? '#ffffff' : 'rgba(148,163,184,0.15)',
+                cursor: canProceed ? 'pointer' : 'default',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: 6,
-                transition:
-                  'opacity 0.15s cubic-bezier(0.25, 1, 0.5, 1), transform 0.15s cubic-bezier(0.25, 1, 0.5, 1)',
+                padding: 0,
+                flexShrink: 0,
+                transition: 'all 0.15s',
+                opacity: canProceed ? 1 : 0.4,
               }}
               onMouseEnter={e => {
                 if (canProceed) {
-                  e.currentTarget.style.opacity = '0.9';
+                  e.currentTarget.style.opacity = '0.85';
                   e.currentTarget.style.transform = 'translateY(-1px)';
                 }
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.opacity = '1';
-                e.currentTarget.style.transform = 'none';
-              }}>
-              {nextButtonText}
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                if (canProceed) {
+                  e.currentTarget.style.opacity = '1';
+                  e.currentTarget.style.transform = 'none';
+                }
+              }}
+              aria-label="Next step">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path
                   d="M6 3L11 8L6 13"
                   stroke="currentColor"
