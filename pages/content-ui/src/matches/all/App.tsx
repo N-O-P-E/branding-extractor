@@ -38,28 +38,35 @@ type CanvasSubTool = 'draw' | 'text' | 'image';
 
 const isLightColor = (color: string) => color === '#FFFFFF' || color === '#F59E0B';
 
-// Custom SVG cursors matching toolbar icons (Figma-style)
-const makeCursor = (svg: string, x = 12, y = 12) =>
-  `url("data:image/svg+xml,${encodeURIComponent(svg)}") ${x} ${y}, crosshair`;
+// Custom SVG cursors — white icons with dark drop shadow for visibility on any background
+const makeCursor = (svg: string, x = 12, y = 12) => {
+  const enhanced = svg
+    .replace(
+      'fill="none">',
+      'fill="none"><defs><filter id="s" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#000" flood-opacity="0.6"/></filter></defs><g filter="url(#s)">',
+    )
+    .replace('</svg>', '</g></svg>');
+  return `url("data:image/svg+xml,${encodeURIComponent(enhanced)}") ${x} ${y}, crosshair`;
+};
 
 const CURSOR_SELECT = makeCursor(
-  `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5.7 3.75C4.623 3.75 3.75 4.623 3.75 5.7V5.75M18.25 3.75C19.355 3.75 20.25 4.645 20.25 5.75M3.75 18.25V18.3C3.75 19.377 4.623 20.25 5.7 20.25M18.25 20.25C19.355 20.25 20.25 19.355 20.25 18.25M10.25 3.75H13.75M20.25 10.25V13.75M13.75 20.25H10.25M3.75 13.75V10.25" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.7 3.75C4.623 3.75 3.75 4.623 3.75 5.7V5.75M18.25 3.75C19.355 3.75 20.25 4.645 20.25 5.75M3.75 18.25V18.3C3.75 19.377 4.623 20.25 5.7 20.25M18.25 20.25C19.355 20.25 20.25 19.355 20.25 18.25M10.25 3.75H13.75M20.25 10.25V13.75M13.75 20.25H10.25M3.75 13.75V10.25" stroke="%238B5CF6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5.7 3.75C4.623 3.75 3.75 4.623 3.75 5.7V5.75M18.25 3.75C19.355 3.75 20.25 4.645 20.25 5.75M3.75 18.25V18.3C3.75 19.377 4.623 20.25 5.7 20.25M18.25 20.25C19.355 20.25 20.25 19.355 20.25 18.25M10.25 3.75H13.75M20.25 10.25V13.75M13.75 20.25H10.25M3.75 13.75V10.25" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
 );
 
 const CURSOR_DRAW = makeCursor(
-  `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M2.746 13.5C10.918 5.422 14.288 2.281 16.267 4.386C19.081 7.379 4.628 16.462 8.627 18.768C11.958 20.688 17.335 10.212 19.543 12.899C20.845 14.482 16.267 17.991 17.486 19.737C18.322 20.935 20.113 19.794 21.247 18.771" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.746 13.5C10.918 5.422 14.288 2.281 16.267 4.386C19.081 7.379 4.628 16.462 8.627 18.768C11.958 20.688 17.335 10.212 19.543 12.899C20.845 14.482 16.267 17.991 17.486 19.737C18.322 20.935 20.113 19.794 21.247 18.771" stroke="%238B5CF6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M2.746 13.5C10.918 5.422 14.288 2.281 16.267 4.386C19.081 7.379 4.628 16.462 8.627 18.768C11.958 20.688 17.335 10.212 19.543 12.899C20.845 14.482 16.267 17.991 17.486 19.737C18.322 20.935 20.113 19.794 21.247 18.771" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   2,
   14,
 );
 
 const CURSOR_COMMENT = makeCursor(
-  `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15.25 9H8.75M15.25 13H8.75M9.294 18.484L11.359 20.215C11.729 20.525 12.268 20.526 12.64 20.218L14.738 18.48C14.917 18.331 15.143 18.25 15.376 18.25H18.25C19.355 18.25 20.25 17.355 20.25 16.25V5.75C20.25 4.645 19.355 3.75 18.25 3.75H5.75C4.645 3.75 3.75 4.645 3.75 5.75V16.25C3.75 17.355 4.645 18.25 5.75 18.25H8.652C8.887 18.25 9.114 18.333 9.294 18.484Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15.25 9H8.75M15.25 13H8.75M9.294 18.484L11.359 20.215C11.729 20.525 12.268 20.526 12.64 20.218L14.738 18.48C14.917 18.331 15.143 18.25 15.376 18.25H18.25C19.355 18.25 20.25 17.355 20.25 16.25V5.75C20.25 4.645 19.355 3.75 18.25 3.75H5.75C4.645 3.75 3.75 4.645 3.75 5.75V16.25C3.75 17.355 4.645 18.25 5.75 18.25H8.652C8.887 18.25 9.114 18.333 9.294 18.484Z" stroke="%238B5CF6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15.25 9H8.75M15.25 13H8.75M9.294 18.484L11.359 20.215C11.729 20.525 12.268 20.526 12.64 20.218L14.738 18.48C14.917 18.331 15.143 18.25 15.376 18.25H18.25C19.355 18.25 20.25 17.355 20.25 16.25V5.75C20.25 4.645 19.355 3.75 18.25 3.75H5.75C4.645 3.75 3.75 4.645 3.75 5.75V16.25C3.75 17.355 4.645 18.25 5.75 18.25H8.652C8.887 18.25 9.114 18.333 9.294 18.484Z" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   4,
   20,
 );
 
 const CURSOR_IMAGE = makeCursor(
-  `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M11.25 20.25H5.75C4.645 20.25 3.75 19.355 3.75 18.25V5.75C3.75 4.645 4.645 3.75 5.75 3.75H18.25C19.355 3.75 20.25 4.645 20.25 5.75V11.25" stroke="white" stroke-width="2" stroke-linecap="round"/><path d="M3.75 16.25L6.586 13.414C7.367 12.633 8.633 12.633 9.414 13.414L12 16" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="14.5" cy="9.5" r="2" stroke="white" stroke-width="2"/><path d="M15.75 18.5H21.25M18.5 15.75V21.25" stroke="white" stroke-width="2" stroke-linecap="round"/><path d="M11.25 20.25H5.75C4.645 20.25 3.75 19.355 3.75 18.25V5.75C3.75 4.645 4.645 3.75 5.75 3.75H18.25C19.355 3.75 20.25 4.645 20.25 5.75V11.25" stroke="%238B5CF6" stroke-width="1.5" stroke-linecap="round"/><path d="M3.75 16.25L6.586 13.414C7.367 12.633 8.633 12.633 9.414 13.414L12 16" stroke="%238B5CF6" stroke-width="1.5" stroke-linecap="round"/><circle cx="14.5" cy="9.5" r="2" stroke="%238B5CF6" stroke-width="1.5"/><path d="M15.75 18.5H21.25M18.5 15.75V21.25" stroke="%238B5CF6" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+  `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M11.25 20.25H5.75C4.645 20.25 3.75 19.355 3.75 18.25V5.75C3.75 4.645 4.645 3.75 5.75 3.75H18.25C19.355 3.75 20.25 4.645 20.25 5.75V11.25" stroke="white" stroke-width="1.5" stroke-linecap="round"/><path d="M3.75 16.25L6.586 13.414C7.367 12.633 8.633 12.633 9.414 13.414L12 16" stroke="white" stroke-width="1.5" stroke-linecap="round"/><circle cx="14.5" cy="9.5" r="2" stroke="white" stroke-width="1.5"/><path d="M15.75 18.5H21.25M18.5 15.75V21.25" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>`,
 );
 
 const STROKE_COLORS = [
@@ -466,8 +473,6 @@ const App = () => {
         },
       ]);
       actionHistory.current.push('image');
-      // Pre-select comment tool after placing image
-      setCanvasSubTool('text');
     };
     img.src = dataUrl;
   }, []);
@@ -642,8 +647,6 @@ const App = () => {
         if (prev && prev.points.length >= 2) {
           setStrokes(s => [...s, prev]);
           actionHistory.current.push('stroke');
-          // Pre-select comment tool after drawing
-          setCanvasSubTool('text');
         }
         return null;
       });
@@ -720,13 +723,8 @@ const App = () => {
         // Snippet extraction is optional
       }
 
-      // Switch to canvas mode with comment tool pre-selected
-      setActiveTool('pencil');
-      setCanvasSubTool('text');
+      // Stay on select tool so user can make additional selections
       forceRender(n => n + 1);
-
-      // Notify side panel to switch its button state to canvas
-      chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: 'pencil' } });
     },
     [screenshotUrl],
   );
@@ -909,15 +907,13 @@ const App = () => {
       const size = `${Math.round(rect.width)}×${Math.round(rect.height)}`;
       setCapturedElements(prev => [...prev, `${tag}${elId}${classes} · ${size}`]);
 
-      // Exit inspect mode, enter canvas overlay with comment tool pre-selected
+      // Exit inspect mode, enter canvas overlay with captured element
       setInspectActive(false);
       setInspectHighlight(null);
       inspectHoveredEl.current = null;
       setActiveTool('pencil');
       setCanvasSubTool('text');
       setState('selecting');
-
-      // Notify side panel to switch its button state to canvas
       chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: 'pencil' } });
     };
 
@@ -1007,8 +1003,9 @@ const App = () => {
       return;
     }
     if (state === 'selecting' && !isDragging.current && !justFinishedDrag.current && !isPencilDrawing.current) {
-      // For canvas mode, don't dismiss if there are strokes or comments
+      // Don't dismiss if there's existing content
       if (activeTool === 'pencil' && (strokes.length > 0 || comments.length > 0)) return;
+      if (activeTool === 'select' && selections.length > 0) return;
       dismiss();
     }
   };
@@ -1487,8 +1484,10 @@ const App = () => {
                 </button>
                 <button
                   onClick={() => {
+                    setActiveTool('pencil');
                     setCanvasSubTool('draw');
                     setEditingComment(null);
+                    chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: 'pencil' } });
                   }}
                   title="Draw (D)"
                   style={{
@@ -1527,7 +1526,11 @@ const App = () => {
                   </span>
                 </button>
                 <button
-                  onClick={() => setCanvasSubTool('text')}
+                  onClick={() => {
+                    setActiveTool('pencil');
+                    setCanvasSubTool('text');
+                    chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: 'pencil' } });
+                  }}
                   title="Comment (C)"
                   style={{
                     height: 34,
@@ -1565,7 +1568,11 @@ const App = () => {
                   </span>
                 </button>
                 <button
-                  onClick={() => setCanvasSubTool('image')}
+                  onClick={() => {
+                    setActiveTool('pencil');
+                    setCanvasSubTool('image');
+                    chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: 'pencil' } });
+                  }}
                   title="Image (I)"
                   style={{
                     height: 34,

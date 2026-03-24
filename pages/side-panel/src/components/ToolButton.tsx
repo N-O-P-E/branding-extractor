@@ -87,7 +87,7 @@ export default function ToolButton({ icon, label, active, disabled, onClick }: T
         alignItems: 'center',
         justifyContent: 'center',
         gap: 8,
-        padding: '12px 0',
+        padding: '12px 8px',
         borderRadius: 10,
         border: `1px solid ${disabled ? 'rgba(148,163,184,0.1)' : active ? 'rgba(139,92,246,0.5)' : hovered ? 'rgba(139,92,246,0.4)' : 'rgba(139,92,246,0.3)'}`,
         background: disabled
