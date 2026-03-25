@@ -20,37 +20,70 @@ const STORAGE_KEY = 'onboardingProgress';
 
 const getInitialStep = (chapter: 1 | 2): number => (chapter === 1 ? 1 : CHAPTER_2_START);
 
-const WORKFLOW_YAML = `name: Visual Issue Claude Fix
+const DEFAULT_SYSTEM_PROMPT = `You fix visual issues reported via the Visual Issue Reporter Chrome extension.
+
+Each issue contains a screenshot (with annotations), a description, page/store details, environment info (browser, OS, viewport), console errors, and an HTML snippet of the affected element.
+
+The screenshot may have dashed rectangular selections in various colors (purple, red, amber, green, blue, pink, white, black) highlighting problem areas, freehand drawings circling issues, text comments as yellow note boxes, and pasted reference images.
+
+Steps:
+1. Read the description and study the annotated screenshot
+2. Cross-reference with the HTML snippet, console errors, and environment data
+3. Identify the relevant source files in the repository
+4. For Shopify themes: use template, theme name, and editor URL to locate the right section/block
+5. Create a minimal, targeted fix
+6. Open a PR with a clear title referencing the issue
+
+Do not refactor surrounding code. Do not add unrelated features. Fix only what was reported.`;
+
+const DEFAULT_MODEL = 'claude-sonnet-4-6';
+
+const buildWorkflowYaml = (systemPrompt: string, model: string = DEFAULT_MODEL): string => {
+  const escaped = systemPrompt.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+  return `name: Claude Code
 
 on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
   issues:
-    types: [labeled]
-
-permissions:
-  contents: write
-  pull-requests: write
-  issues: write
+    types: [opened, assigned, labeled]
+  pull_request_review:
+    types: [submitted]
 
 jobs:
-  auto-fix:
-    if: github.event.label.name == 'auto-fix'
+  claude:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude') && github.event.comment.user.type != 'Bot') ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude') && github.event.comment.user.type != 'Bot') ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'auto-fix') ||
+      (github.event_name == 'issues' && (github.event.action == 'opened' || github.event.action == 'assigned') && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read
     timeout-minutes: 30
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
-      - name: Run Claude
+      - name: Run Claude Code
+        id: claude
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: \${{ secrets.ANTHROPIC_API_KEY }}
-          prompt: |
-            You fix visual issues reported via the Visual Issue Reporter Chrome extension.
-            Read the issue description, study the annotated screenshot, cross-reference with
-            HTML snippets and console errors, identify the relevant source files, and create
-            a minimal targeted fix. Open a PR referencing the issue.`;
+          claude_args: |
+            --model ${model}
+            --append-system-prompt "${escaped}"
+            --allowedTools "Edit,MultiEdit,Glob,Grep,LS,Read,Write,Bash(git add:*),Bash(git checkout:*),Bash(git commit:*),Bash(git diff:*),Bash(git log:*),Bash(git status:*),Bash(git branch:*),Bash(git switch:*),Bash(git push:*),Bash(git restore:*),Bash(npm run:*),Bash(npm install:*),Bash(pnpm run:*),Bash(pnpm install:*),Bash(npx:*)"`;
+};
 
 const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => {
   const [currentStep, setCurrentStep] = useState(() => getInitialStep(chapter));
@@ -76,6 +109,10 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
   const [repoWorkflowStatus, setRepoWorkflowStatus] = useState<Record<string, 'checking' | 'exists' | 'missing'>>({});
   const [copiedYaml, setCopiedYaml] = useState(false);
 
+  // System prompt and model for workflow YAML
+  const [systemPrompt, setSystemPrompt] = useState(DEFAULT_SYSTEM_PROMPT);
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
+
   // Steps 6/7 shared: repo list from storage
   const [storedRepos, setStoredRepos] = useState<string[]>([]);
 
@@ -87,7 +124,7 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
   const [reposFetched, setReposFetched] = useState(false);
   const repoInputRef = useRef<HTMLInputElement>(null);
 
-  // On mount, read stored progress and resume if applicable
+  // On mount, read stored progress and pre-fill saved state
   useEffect(() => {
     chrome.storage.local.get(STORAGE_KEY, result => {
       const progress = result[STORAGE_KEY] as OnboardingProgress | undefined;
@@ -95,7 +132,6 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
         const shouldResume =
           (chapter === 1 && !progress.chapter1Complete) || (chapter === 2 && !progress.chapter2Complete);
         if (shouldResume && progress.lastStep >= 1 && progress.lastStep <= TOTAL_STEPS) {
-          // Only resume if lastStep belongs to this chapter
           const inChapter1 = progress.lastStep >= 1 && progress.lastStep <= 4;
           const inChapter2 = progress.lastStep >= CHAPTER_2_START && progress.lastStep <= TOTAL_STEPS;
           if ((chapter === 1 && inChapter1) || (chapter === 2 && inChapter2)) {
@@ -104,6 +140,37 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
         }
       }
       setInitialized(true);
+    });
+
+    // Pre-fill GitHub token status
+    chrome.runtime.sendMessage({ type: 'CHECK_TOKEN_STATUS' }, (response: { connected: boolean; login?: string }) => {
+      if (response?.connected) {
+        setPatStatus('success');
+        if (response.login) setPatLogin(response.login);
+      }
+    });
+
+    // Pre-fill Anthropic key and system prompt from saved settings
+    chrome.storage.local.get('autoFixSettings', result => {
+      if (result.autoFixSettings?.anthropicApiKey) {
+        setAnthropicApiKey(result.autoFixSettings.anthropicApiKey);
+        setAnthropicKeyStatus('success');
+      }
+      if (result.autoFixSettings?.systemPrompt) {
+        setSystemPrompt(result.autoFixSettings.systemPrompt);
+      }
+      if (result.autoFixSettings?.model) {
+        setSelectedModel(result.autoFixSettings.model);
+      }
+    });
+
+    // Pre-fill repos
+    chrome.storage.local.get('repoList', result => {
+      if (result.repoList) {
+        const list = result.repoList as string[];
+        setRepos(list.map(name => ({ full_name: name, description: null })));
+        setStoredRepos(list);
+      }
     });
   }, [chapter]);
 
@@ -340,11 +407,11 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
   }, [anthropicApiKey]);
 
   const handleCopyYaml = useCallback(() => {
-    navigator.clipboard.writeText(WORKFLOW_YAML).then(() => {
+    navigator.clipboard.writeText(buildWorkflowYaml(systemPrompt, selectedModel)).then(() => {
       setCopiedYaml(true);
       setTimeout(() => setCopiedYaml(false), 2000);
     });
-  }, []);
+  }, [systemPrompt, selectedModel]);
 
   // Determine canProceed for each step
   const canProceed =
@@ -790,7 +857,14 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
             <div>
               <h2 style={{ fontSize: 18, margin: '0 0 8px', color: '#a78bfa' }}>Anthropic API Key</h2>
               <p style={{ margin: 0, color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
-                Enter your API key to enable Claude Code auto-fix.
+                Enter your API key to enable Claude Code auto-fix. Get your key from{' '}
+                <a
+                  href="https://console.anthropic.com/settings/keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#c4b5fd' }}>
+                  console.anthropic.com
+                </a>
               </p>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
@@ -873,19 +947,6 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
             {anthropicKeyStatus === 'error' && (
               <div style={{ color: '#f87171', fontSize: 13 }}>{anthropicKeyError}</div>
             )}
-            <a
-              href="https://console.anthropic.com/settings/keys"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: '#a78bfa', fontSize: 12, textDecoration: 'none' }}
-              onMouseEnter={e => {
-                e.currentTarget.style.textDecoration = 'underline';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.textDecoration = 'none';
-              }}>
-              Get your key from console.anthropic.com
-            </a>
           </div>
         );
 
@@ -1036,7 +1097,7 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                   overflowY: 'auto',
                   whiteSpace: 'pre',
                 }}>
-                <code>{WORKFLOW_YAML}</code>
+                <code>{buildWorkflowYaml(systemPrompt, selectedModel)}</code>
               </pre>
             </div>
             <button
@@ -1265,60 +1326,75 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
         </div>
       )}
 
-      {/* Compact hero strip for non-welcome steps */}
+      {/* Header with hero background for non-welcome steps */}
       {currentStep !== 1 && (
         <div
           style={{
             position: 'relative',
             width: '100%',
-            height: 56,
             overflow: 'hidden',
             flexShrink: 0,
           }}>
+          {/* Hero background */}
           <img
             src={onboardingHero}
             alt=""
             style={{
+              position: 'absolute',
+              inset: 0,
               width: '100%',
-              height: 120,
+              height: '100%',
               objectFit: 'cover',
               objectPosition: 'center 40%',
-              display: 'block',
-              opacity: 0.4,
+              opacity: 0.25,
             }}
           />
           <div
             style={{
               position: 'absolute',
               inset: 0,
-              background: 'linear-gradient(to bottom, rgba(15,23,42,0.3) 0%, #0f172a 100%)',
+              background: 'linear-gradient(to bottom, rgba(15,23,42,0.4) 0%, #0f172a 100%)',
             }}
           />
-          {/* Skip / Close in the strip */}
-          <button
-            onClick={onClose}
+          {/* Header content */}
+          <div
             style={{
-              position: 'absolute',
-              top: 12,
-              right: 16,
-              background: 'none',
-              border: 'none',
-              color: 'rgba(241,245,249,0.45)',
-              fontSize: 12,
-              fontWeight: 500,
-              cursor: 'pointer',
-              padding: '4px 8px',
-              letterSpacing: '0.02em',
-              transition: 'color 0.15s',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.color = 'rgba(241,245,249,0.7)';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.color = 'rgba(241,245,249,0.45)';
+              position: 'relative',
+              padding: '20px 20px 16px',
             }}>
-            {currentStep <= 4 ? 'Skip' : 'Close'}
-          </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button
+                onClick={onClose}
+                aria-label="Back to settings"
+                style={{
+                  background: 'rgba(148,163,184,0.08)',
+                  border: '1px solid rgba(148,163,184,0.12)',
+                  borderRadius: 8,
+                  width: 32,
+                  height: 32,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: 'rgba(241,245,249,0.6)',
+                  fontSize: 16,
+                  padding: 0,
+                  flexShrink: 0,
+                  transition: 'all 0.15s',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(148,163,184,0.15)';
+                  e.currentTarget.style.color = '#f1f5f9';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'rgba(148,163,184,0.08)';
+                  e.currentTarget.style.color = 'rgba(241,245,249,0.6)';
+                }}>
+                ←
+              </button>
+              <h1 style={{ fontSize: 22, margin: 0, color: '#f1f5f9', lineHeight: 1.2 }}>Setup Guide</h1>
+            </div>
+          </div>
         </div>
       )}
 

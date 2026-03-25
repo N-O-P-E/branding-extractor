@@ -51,16 +51,33 @@ export default function HomeView({ onOpenSettings, onOpenWizard, onMount }: Home
     });
   }, []);
 
-  // Check auto-fix status based on selected repo
+  // Check auto-fix status based on selected repo (secret + workflow)
   useEffect(() => {
     if (!autoFixConfigured || !selectedRepo) {
       if (!autoFixConfigured) setAutoFixStatus('not-configured');
       return;
     }
+    let hasSecret = false;
+    let hasWorkflow = false;
+    let checks = 0;
+    const resolve = () => {
+      checks++;
+      if (checks === 2) {
+        setAutoFixStatus(hasSecret && hasWorkflow ? 'ready' : 'missing-secret');
+      }
+    };
     chrome.runtime.sendMessage(
       { type: 'CHECK_REPO_SECRET', payload: { repo: selectedRepo, secretName: 'ANTHROPIC_API_KEY' } },
       (response: { success: boolean; exists?: boolean }) => {
-        setAutoFixStatus(response?.exists ? 'ready' : 'missing-secret');
+        hasSecret = !!response?.exists;
+        resolve();
+      },
+    );
+    chrome.runtime.sendMessage(
+      { type: 'CHECK_REPO_WORKFLOW', payload: { repo: selectedRepo } },
+      (response: { success: boolean; exists?: boolean }) => {
+        hasWorkflow = !!response?.exists;
+        resolve();
       },
     );
   }, [autoFixConfigured, selectedRepo]);
@@ -378,7 +395,7 @@ export default function HomeView({ onOpenSettings, onOpenWizard, onMount }: Home
                         : colors.textSecondary,
                 }}>
                 {autoFixStatus === 'ready'
-                  ? 'Enabled'
+                  ? 'Ready'
                   : autoFixStatus === 'missing-secret'
                     ? 'Setup incomplete'
                     : 'Not configured'}
