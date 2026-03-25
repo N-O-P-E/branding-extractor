@@ -79,6 +79,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: \${{ secrets.ANTHROPIC_API_KEY }}
+          label_trigger: "auto-fix"
           claude_args: |
             --model ${model}
             --append-system-prompt "${escaped}"

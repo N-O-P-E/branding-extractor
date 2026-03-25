@@ -86,6 +86,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: \${{ secrets.ANTHROPIC_API_KEY }}
+          label_trigger: "auto-fix"
           claude_args: |
             --model ${model}
             --append-system-prompt "${escaped}"
@@ -776,15 +777,19 @@ export default function SetupView({ onDone, openSection, onOpenWizard }: SetupVi
           title="Auto-fix with Claude Code"
           status={(() => {
             if (anthropicKeyStatus !== 'valid') return 'Not configured';
-            const allReposReady =
-              repos.length > 0 && repos.every(r => repoSecretStatus[r] === true && repoWorkflowStatus[r] === true);
-            return allReposReady ? 'Ready' : 'Setup incomplete';
+            if (repos.length === 0) return 'No repos';
+            const readyCount = repos.filter(r => repoSecretStatus[r] === true && repoWorkflowStatus[r] === true).length;
+            if (readyCount === repos.length) return 'Ready';
+            if (readyCount > 0) return `${readyCount}/${repos.length} repos ready`;
+            return 'Setup incomplete';
           })()}
           statusColor={(() => {
             if (anthropicKeyStatus !== 'valid') return colors.textMuted;
-            const allReposReady =
-              repos.length > 0 && repos.every(r => repoSecretStatus[r] === true && repoWorkflowStatus[r] === true);
-            return allReposReady ? colors.green : '#F59E0B';
+            if (repos.length === 0) return colors.textMuted;
+            const readyCount = repos.filter(r => repoSecretStatus[r] === true && repoWorkflowStatus[r] === true).length;
+            if (readyCount === repos.length) return colors.green;
+            if (readyCount > 0) return '#F59E0B';
+            return '#F59E0B';
           })()}
           open={isAutoFixOpen}
           onToggle={() => setAutoFixOpen(o => !o)}
@@ -1095,7 +1100,27 @@ export default function SetupView({ onDone, openSection, onOpenWizard }: SetupVi
                           }}>
                           {repo}
                         </span>
-                        {allReady && <span style={{ color: colors.green, fontSize: 11, flexShrink: 0 }}>Ready</span>}
+                        {allReady && (
+                          <a
+                            href={`https://github.com/${repo}/blob/main/.github/workflows/visual-issue-claude-fix.yml`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              color: colors.green,
+                              fontSize: 11,
+                              flexShrink: 0,
+                              textDecoration: 'none',
+                              cursor: 'pointer',
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.textDecoration = 'underline';
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.textDecoration = 'none';
+                            }}>
+                            Ready →
+                          </a>
+                        )}
                         {hasSecret === null && hasWorkflow === null && (
                           <span style={{ color: colors.textMuted, fontSize: 11, flexShrink: 0 }}>Checking…</span>
                         )}

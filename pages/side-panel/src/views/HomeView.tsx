@@ -29,7 +29,11 @@ export default function HomeView({ onOpenSettings, onOpenWizard, onMount }: Home
   const [loading, setLoading] = useState(false);
   const [patConnected, setPatConnected] = useState(false);
   const [autoFixConfigured, setAutoFixConfigured] = useState(false);
-  const [autoFixStatus, setAutoFixStatus] = useState<'not-configured' | 'missing-secret' | 'ready'>('not-configured');
+  const [autoFixStatus, setAutoFixStatus] = useState<'not-configured' | 'missing-setup' | 'partial' | 'ready'>(
+    'not-configured',
+  );
+  const [autoFixReadyCount, setAutoFixReadyCount] = useState(0);
+  const [autoFixTotalCount, setAutoFixTotalCount] = useState(0);
 
   useEffect(() => {
     onMount?.();
@@ -51,36 +55,44 @@ export default function HomeView({ onOpenSettings, onOpenWizard, onMount }: Home
     });
   }, []);
 
-  // Check auto-fix status based on selected repo (secret + workflow)
+  // Check auto-fix status across all repos
   useEffect(() => {
-    if (!autoFixConfigured || !selectedRepo) {
+    if (!autoFixConfigured || repos.length === 0) {
       if (!autoFixConfigured) setAutoFixStatus('not-configured');
       return;
     }
-    let hasSecret = false;
-    let hasWorkflow = false;
-    let checks = 0;
+    const total = repos.length;
+    setAutoFixTotalCount(total);
+    let pending = total * 2; // 2 checks per repo (secret + workflow)
+    const secretResults: Record<string, boolean> = {};
+    const workflowResults: Record<string, boolean> = {};
     const resolve = () => {
-      checks++;
-      if (checks === 2) {
-        setAutoFixStatus(hasSecret && hasWorkflow ? 'ready' : 'missing-secret');
+      pending--;
+      if (pending === 0) {
+        const readyCount = repos.filter(r => secretResults[r] && workflowResults[r]).length;
+        setAutoFixReadyCount(readyCount);
+        if (readyCount === total) setAutoFixStatus('ready');
+        else if (readyCount > 0) setAutoFixStatus('partial');
+        else setAutoFixStatus('missing-setup');
       }
     };
-    chrome.runtime.sendMessage(
-      { type: 'CHECK_REPO_SECRET', payload: { repo: selectedRepo, secretName: 'ANTHROPIC_API_KEY' } },
-      (response: { success: boolean; exists?: boolean }) => {
-        hasSecret = !!response?.exists;
-        resolve();
-      },
-    );
-    chrome.runtime.sendMessage(
-      { type: 'CHECK_REPO_WORKFLOW', payload: { repo: selectedRepo } },
-      (response: { success: boolean; exists?: boolean }) => {
-        hasWorkflow = !!response?.exists;
-        resolve();
-      },
-    );
-  }, [autoFixConfigured, selectedRepo]);
+    for (const repo of repos) {
+      chrome.runtime.sendMessage(
+        { type: 'CHECK_REPO_SECRET', payload: { repo, secretName: 'ANTHROPIC_API_KEY' } },
+        (response: { success: boolean; exists?: boolean }) => {
+          secretResults[repo] = !!response?.exists;
+          resolve();
+        },
+      );
+      chrome.runtime.sendMessage(
+        { type: 'CHECK_REPO_WORKFLOW', payload: { repo } },
+        (response: { success: boolean; exists?: boolean }) => {
+          workflowResults[repo] = !!response?.exists;
+          resolve();
+        },
+      );
+    }
+  }, [autoFixConfigured, repos]);
 
   // Listen for tool switch messages from content-UI
   useEffect(() => {
@@ -380,7 +392,7 @@ export default function HomeView({ onOpenSettings, onOpenWizard, onMount }: Home
             </span>
           </button>
           <button
-            onClick={() => (autoFixStatus !== 'ready' ? onOpenWizard?.(2) : onOpenSettings('autofix'))}
+            onClick={() => (autoFixStatus === 'not-configured' ? onOpenWizard?.(2) : onOpenSettings('autofix'))}
             style={{ ...settingsRowStyle, borderBottom: 'none' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>Auto-fix with Claude Code</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -390,15 +402,19 @@ export default function HomeView({ onOpenSettings, onOpenWizard, onMount }: Home
                   color:
                     autoFixStatus === 'ready'
                       ? colors.green
-                      : autoFixStatus === 'missing-secret'
+                      : autoFixStatus === 'partial'
                         ? '#F59E0B'
-                        : colors.textSecondary,
+                        : autoFixStatus === 'missing-setup'
+                          ? '#F59E0B'
+                          : colors.textSecondary,
                 }}>
                 {autoFixStatus === 'ready'
                   ? 'Ready'
-                  : autoFixStatus === 'missing-secret'
-                    ? 'Setup incomplete'
-                    : 'Not configured'}
+                  : autoFixStatus === 'partial'
+                    ? `${autoFixReadyCount}/${autoFixTotalCount} repos`
+                    : autoFixStatus === 'missing-setup'
+                      ? 'Setup incomplete'
+                      : 'Not configured'}
               </span>
               <svg
                 width="12"
