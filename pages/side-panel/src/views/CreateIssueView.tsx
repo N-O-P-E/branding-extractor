@@ -483,7 +483,14 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
                 </div>
               )}
               {liveBrowserMetadata.consoleErrors.length > 0 && (
-                <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${colors.border}`, color: '#f87171' }}>
+                <div
+                  style={{
+                    marginTop: 8,
+                    paddingTop: 8,
+                    borderTop: `1px solid ${colors.border}`,
+                    color: colors.textSecondary,
+                    fontSize: 12,
+                  }}>
                   {liveBrowserMetadata.consoleErrors.length} console{' '}
                   {liveBrowserMetadata.consoleErrors.length === 1 ? 'error' : 'errors'} detected
                 </div>
