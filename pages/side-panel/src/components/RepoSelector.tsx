@@ -9,16 +9,16 @@ export default function RepoSelector({ selectedRepo, repos, onChange, onOpenSett
   if (repos.length === 0) {
     return (
       <div>
-        <h2 style={{ fontSize: 18, margin: '0 0 8px', color: '#a78bfa' }}>Repository</h2>
+        <h2 style={{ fontSize: 18, margin: '0 0 8px', color: 'var(--heading-color)' }}>Repository</h2>
         <button
           onClick={() => onOpenSettings?.('repos')}
           style={{
             width: '100%',
-            background: 'rgba(148,163,184,0.05)',
-            border: '1px dashed rgba(148,163,184,0.2)',
+            background: 'var(--bg-input-hover)',
+            border: '1px dashed var(--border-default)',
             borderRadius: 8,
             padding: '12px 14px',
-            color: 'rgba(241,245,249,0.4)',
+            color: 'var(--text-muted)',
             fontSize: 13,
             cursor: 'pointer',
             textAlign: 'left',
@@ -51,7 +51,7 @@ export default function RepoSelector({ selectedRepo, repos, onChange, onOpenSett
 
   return (
     <div>
-      <h2 style={{ fontSize: 18, margin: '0 0 8px', color: '#a78bfa' }}>
+      <h2 style={{ fontSize: 18, margin: '0 0 8px', color: 'var(--heading-color)' }}>
         <label htmlFor="repo-selector">Repository</label>
       </h2>
       <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
@@ -61,12 +61,12 @@ export default function RepoSelector({ selectedRepo, repos, onChange, onOpenSett
           onChange={e => onChange(e.target.value)}
           style={{
             width: '100%',
-            background: 'rgba(148,163,184,0.08)',
-            border: '1px solid rgba(148,163,184,0.15)',
+            background: 'var(--bg-input)',
+            border: '1px solid var(--border-default)',
             borderRadius: 8,
             padding: '10px 14px',
-            color: '#f1f5f9',
-            fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
+            color: 'var(--text-primary)',
+            fontFamily: 'var(--font-body)',
             fontSize: 14,
             outline: 'none',
             appearance: 'none',
@@ -80,7 +80,7 @@ export default function RepoSelector({ selectedRepo, repos, onChange, onOpenSett
             transition: 'all 0.15s',
           }}>
           {repos.map(repo => (
-            <option key={repo} value={repo} style={{ background: '#1e293b' }}>
+            <option key={repo} value={repo} style={{ background: 'var(--bg-secondary)' }}>
               {repo}
             </option>
           ))}
@@ -90,8 +90,8 @@ export default function RepoSelector({ selectedRepo, repos, onChange, onOpenSett
             onClick={() => chrome.tabs.create({ url: `https://github.com/${selectedRepo}` })}
             title="Open on GitHub"
             style={{
-              background: 'rgba(148,163,184,0.08)',
-              border: '1px solid rgba(148,163,184,0.15)',
+              background: 'var(--bg-input)',
+              border: '1px solid var(--border-default)',
               borderRadius: 8,
               width: 40,
               flexShrink: 0,
@@ -99,7 +99,7 @@ export default function RepoSelector({ selectedRepo, repos, onChange, onOpenSett
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              color: 'rgba(241,245,249,0.5)',
+              color: 'var(--text-secondary)',
               transition: 'all 0.15s',
             }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

@@ -12,12 +12,12 @@ interface Label {
 }
 
 const colors = {
-  inputBg: 'rgba(148,163,184,0.08)',
-  border: 'rgba(148,163,184,0.15)',
-  textPrimary: '#f1f5f9',
-  textMuted: 'rgba(241,245,249,0.3)',
-  purpleAccent: '#a78bfa',
-  dropdownBg: '#1e293b',
+  inputBg: 'var(--bg-input)',
+  border: 'var(--border-default)',
+  textPrimary: 'var(--text-primary)',
+  textMuted: 'var(--text-muted)',
+  purpleAccent: 'var(--accent-subtle)',
+  dropdownBg: 'var(--bg-secondary)',
 } as const;
 
 export default function LabelSelect({ repo, selected, onChange }: LabelSelectProps) {
@@ -78,7 +78,7 @@ export default function LabelSelect({ repo, selected, onChange }: LabelSelectPro
       <div style={{ flex: 1 }}>
         <label
           htmlFor="label-fallback-input"
-          style={{ fontSize: 12, color: 'rgba(241,245,249,0.4)', marginBottom: 6, display: 'block' }}>
+          style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
           Labels
         </label>
         <input
@@ -112,8 +112,8 @@ export default function LabelSelect({ repo, selected, onChange }: LabelSelectPro
                   fontSize: 11,
                   padding: '2px 8px',
                   borderRadius: 10,
-                  background: 'rgba(139,92,246,0.2)',
-                  color: '#c4b5fd',
+                  background: 'var(--accent-20)',
+                  color: 'var(--accent-link)',
                   cursor: 'pointer',
                   border: 'none',
                   transition: 'all 0.15s',
@@ -208,7 +208,7 @@ export default function LabelSelect({ repo, selected, onChange }: LabelSelectPro
             maxHeight: 200,
             overflowY: 'auto',
             zIndex: 10,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            boxShadow: '0 8px 24px var(--shadow-dropdown)',
           }}>
           {labels.length === 0 && (
             <div style={{ padding: '10px 12px', fontSize: 13, color: colors.textMuted }}>No labels found</div>
@@ -226,7 +226,7 @@ export default function LabelSelect({ repo, selected, onChange }: LabelSelectPro
                   alignItems: 'center',
                   gap: 8,
                   padding: '8px 12px',
-                  background: isSelected ? 'rgba(139,92,246,0.15)' : 'transparent',
+                  background: isSelected ? 'var(--accent-15)' : 'transparent',
                   border: 'none',
                   cursor: 'pointer',
                   color: colors.textPrimary,

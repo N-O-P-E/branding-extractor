@@ -40,16 +40,16 @@ export default function IssueCard({ issue }: IssueCardProps) {
         gap: 12,
         width: '100%',
         padding: '10px 12px',
-        background: hovered ? 'rgba(139,92,246,0.12)' : 'rgba(148,163,184,0.08)',
-        border: `1px solid ${hovered ? 'rgba(139,92,246,0.3)' : 'rgba(148,163,184,0.15)'}`,
+        background: hovered ? 'var(--accent-10)' : 'var(--bg-input)',
+        border: `1px solid ${hovered ? 'var(--accent-15)' : 'var(--border-default)'}`,
         borderRadius: 8,
         cursor: 'pointer',
         textAlign: 'left',
-        color: '#f1f5f9',
+        color: 'var(--text-primary)',
         boxSizing: 'border-box',
         transition: 'all 0.15s',
         transform: hovered ? 'translateY(-1px)' : 'none',
-        boxShadow: hovered ? '0 4px 12px rgba(139,92,246,0.15)' : 'none',
+        boxShadow: hovered ? '0 4px 12px var(--accent-10)' : 'none',
       }}>
       {/* Thumbnail placeholder */}
       <div
@@ -57,8 +57,8 @@ export default function IssueCard({ issue }: IssueCardProps) {
           width: 48,
           height: 36,
           borderRadius: 4,
-          background: 'rgba(139,92,246,0.15)',
-          border: '1px solid rgba(139,92,246,0.2)',
+          background: 'var(--accent-15)',
+          border: '1px solid var(--accent-20)',
           flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
@@ -73,9 +73,9 @@ export default function IssueCard({ issue }: IssueCardProps) {
           />
         ) : (
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect x="1" y="3" width="14" height="10" rx="1.5" stroke="#8b5cf6" strokeWidth="1" opacity="0.5" />
-            <circle cx="5" cy="7" r="1.5" stroke="#8b5cf6" strokeWidth="1" opacity="0.5" />
-            <path d="M4 12L7 9L9 11L11 8L13 12" stroke="#8b5cf6" strokeWidth="1" opacity="0.5" />
+            <rect x="1" y="3" width="14" height="10" rx="1.5" stroke="currentColor" strokeWidth="1" opacity="0.5" />
+            <circle cx="5" cy="7" r="1.5" stroke="currentColor" strokeWidth="1" opacity="0.5" />
+            <path d="M4 12L7 9L9 11L11 8L13 12" stroke="currentColor" strokeWidth="1" opacity="0.5" />
           </svg>
         )}
       </div>
@@ -100,7 +100,7 @@ export default function IssueCard({ issue }: IssueCardProps) {
             gap: 8,
             marginTop: 4,
             fontSize: 11,
-            color: 'rgba(241,245,249,0.45)',
+            color: 'var(--text-secondary)',
           }}>
           {/* Author avatar + name */}
           {issue.author && (
@@ -128,7 +128,7 @@ export default function IssueCard({ issue }: IssueCardProps) {
                 width: 6,
                 height: 6,
                 borderRadius: '50%',
-                background: isOpen ? '#4ade80' : '#94a3b8',
+                background: isOpen ? 'var(--status-success)' : 'var(--text-secondary)',
                 flexShrink: 0,
               }}
             />

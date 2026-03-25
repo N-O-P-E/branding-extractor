@@ -12,12 +12,12 @@ interface Assignee {
 }
 
 const colors = {
-  inputBg: 'rgba(148,163,184,0.08)',
-  border: 'rgba(148,163,184,0.15)',
-  textPrimary: '#f1f5f9',
-  textMuted: 'rgba(241,245,249,0.3)',
-  purpleAccent: '#a78bfa',
-  dropdownBg: '#1e293b',
+  inputBg: 'var(--bg-input)',
+  border: 'var(--border-default)',
+  textPrimary: 'var(--text-primary)',
+  textMuted: 'var(--text-muted)',
+  purpleAccent: 'var(--accent-subtle)',
+  dropdownBg: 'var(--bg-secondary)',
 } as const;
 
 export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSelectProps) {
@@ -28,6 +28,14 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
   const [highlightIndex, setHighlightIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const [tokenUser, setTokenUser] = useState('');
+
+  useEffect(() => {
+    // Get the authenticated user's login to put them first
+    chrome.runtime.sendMessage({ type: 'CHECK_TOKEN_STATUS' }, (response: { connected: boolean; login?: string }) => {
+      if (response?.login) setTokenUser(response.login);
+    });
+  }, []);
 
   useEffect(() => {
     if (!repo) return;
@@ -37,7 +45,17 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
       .sendMessage({ type: 'FETCH_ASSIGNEES', payload: { repo } })
       .then((response: { success: boolean; assignees?: Assignee[] }) => {
         if (response?.success && response.assignees) {
-          setAssignees(response.assignees);
+          // Sort: token user first, then alphabetical
+          const sorted = [...response.assignees].sort((a, b) => {
+            if (a.login === tokenUser) return -1;
+            if (b.login === tokenUser) return 1;
+            return a.login.localeCompare(b.login);
+          });
+          setAssignees(sorted);
+          // Pre-select the token user if nothing selected yet
+          if (!selected && tokenUser && sorted.some(a => a.login === tokenUser)) {
+            onChange(tokenUser);
+          }
         } else {
           setFallback(true);
         }
@@ -45,7 +63,7 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
       .catch(() => {
         setFallback(true);
       });
-  }, [repo]);
+  }, [repo, tokenUser]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -62,7 +80,7 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
       <div style={{ flex: 1 }}>
         <label
           htmlFor="assignee-fallback-input"
-          style={{ fontSize: 12, color: 'rgba(241,245,249,0.4)', marginBottom: 6, display: 'block' }}>
+          style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
           Assignee
         </label>
         <input
@@ -94,7 +112,7 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
         htmlFor="assignee-select-btn"
         style={{
           fontSize: 12,
-          color: 'rgba(241,245,249,0.4)',
+          color: 'var(--text-secondary)',
           marginBottom: 6,
           display: 'block',
         }}>
@@ -165,7 +183,7 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
             border: `1px solid ${colors.border}`,
             borderRadius: 8,
             zIndex: 10,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            boxShadow: '0 8px 24px var(--shadow-dropdown)',
             overflow: 'hidden',
           }}>
           {/* Search input */}
@@ -198,7 +216,7 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
               }}
               style={{
                 width: '100%',
-                background: 'rgba(148,163,184,0.06)',
+                background: 'var(--bg-input-hover)',
                 border: 'none',
                 borderRadius: 4,
                 padding: '6px 8px',
@@ -210,31 +228,6 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
             />
           </div>
           <div style={{ maxHeight: 180, overflowY: 'auto' }}>
-            {/* Unassign option */}
-            <button
-              type="button"
-              onClick={() => {
-                onChange('');
-                setOpen(false);
-              }}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '8px 12px',
-                background: !selected ? 'rgba(139,92,246,0.15)' : 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                color: colors.textMuted,
-                fontSize: 13,
-                textAlign: 'left',
-                fontStyle: 'italic',
-                boxSizing: 'border-box',
-                transition: 'all 0.15s',
-              }}>
-              None
-            </button>
             {assignees
               .filter(a => a.login.toLowerCase().includes(search.toLowerCase()))
               .map((assignee, idx) => {
@@ -254,11 +247,7 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
                       alignItems: 'center',
                       gap: 8,
                       padding: '8px 12px',
-                      background: isHighlighted
-                        ? 'rgba(139,92,246,0.2)'
-                        : isSelected
-                          ? 'rgba(139,92,246,0.1)'
-                          : 'transparent',
+                      background: isHighlighted ? 'var(--accent-20)' : isSelected ? 'var(--accent-10)' : 'transparent',
                       border: 'none',
                       cursor: 'pointer',
                       color: colors.textPrimary,

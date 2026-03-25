@@ -457,8 +457,10 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
         return (
           <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
             <div>
-              <h2 style={{ fontSize: 22, margin: '0 0 10px', color: '#f1f5f9', lineHeight: 1.2 }}>Welcome</h2>
-              <p style={{ margin: 0, color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.6 }}>
+              <h2 style={{ fontSize: 22, margin: '0 0 10px', color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                Welcome
+              </h2>
+              <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.6 }}>
                 Report visual issues directly from any website.
                 <br />
                 Let&apos;s get you connected in 2 minutes.
@@ -470,8 +472,8 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                 width: '100%',
                 borderRadius: 10,
                 border: 'none',
-                background: 'linear-gradient(135deg, #7c3aed, #9333ea)',
-                color: '#ffffff',
+                background: 'var(--accent-gradient)',
+                color: 'var(--text-on-accent)',
                 fontSize: 14,
                 fontWeight: 500,
                 padding: '12px 18px',
@@ -493,17 +495,17 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
               style={{
                 background: 'none',
                 border: 'none',
-                color: 'rgba(241,245,249,0.25)',
+                color: 'var(--text-muted)',
                 fontSize: 12,
                 cursor: 'pointer',
                 padding: '4px 8px',
                 transition: 'color 0.15s',
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.color = 'rgba(241,245,249,0.5)';
+                e.currentTarget.style.color = 'var(--text-secondary)';
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.color = 'rgba(241,245,249,0.25)';
+                e.currentTarget.style.color = 'var(--text-muted)';
               }}>
               Skip setup
             </button>
@@ -514,19 +516,19 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%' }}>
             <div>
-              <h2 style={{ fontSize: 18, margin: '0 0 8px', color: '#a78bfa' }}>GitHub Token</h2>
-              <p style={{ margin: 0, color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
+              <h2 style={{ fontSize: 18, margin: '0 0 8px', color: 'var(--accent-subtle)' }}>GitHub Token</h2>
+              <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.5 }}>
                 Create a{' '}
                 <a
                   href="https://github.com/settings/tokens/new?scopes=repo&description=Visual+Issue+Reporter"
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ color: '#c4b5fd' }}>
+                  style={{ color: 'var(--accent-link)' }}>
                   classic token
                 </a>{' '}
                 with the{' '}
-                <code style={{ background: 'rgba(148,163,184,0.08)', padding: '1px 5px', borderRadius: 4 }}>repo</code>{' '}
-                scope. Works across all your organizations.
+                <code style={{ background: 'var(--bg-input)', padding: '1px 5px', borderRadius: 4 }}>repo</code> scope.
+                Works across all your organizations.
               </p>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
@@ -543,21 +545,21 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                 placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
                 style={{
                   flex: 1,
-                  background: 'rgba(148,163,184,0.08)',
-                  border: '1px solid rgba(148,163,184,0.15)',
+                  background: 'var(--bg-input)',
+                  border: '1px solid var(--border-default)',
                   borderRadius: 8,
                   padding: '10px 14px',
-                  color: '#f1f5f9',
+                  color: 'var(--text-primary)',
                   fontSize: 14,
                   outline: 'none',
                   minWidth: 0,
                   transition: 'all 0.15s',
                 }}
                 onFocus={e => {
-                  e.currentTarget.style.borderColor = '#a78bfa';
+                  e.currentTarget.style.borderColor = 'var(--accent-subtle)';
                 }}
                 onBlur={e => {
-                  e.currentTarget.style.borderColor = 'rgba(148,163,184,0.15)';
+                  e.currentTarget.style.borderColor = 'var(--border-default)';
                 }}
                 onKeyDown={e => {
                   if (e.key === 'Enter') handleValidateToken();
@@ -567,11 +569,11 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                 onClick={handleValidateToken}
                 disabled={!pat.trim() || patStatus === 'validating'}
                 style={{
-                  background: 'linear-gradient(135deg, #7c3aed, #9333ea)',
+                  background: 'var(--accent-gradient)',
                   border: 'none',
                   borderRadius: 10,
                   padding: '10px 18px',
-                  color: '#fff',
+                  color: 'var(--text-on-accent)',
                   fontSize: 14,
                   fontWeight: 500,
                   cursor: !pat.trim() || patStatus === 'validating' ? 'not-allowed' : 'pointer',
@@ -592,13 +594,13 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                   alignItems: 'center',
                   justifyContent: 'space-between',
                 }}>
-                <span style={{ color: '#4ade80', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ color: 'var(--status-success)', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span
                     style={{
                       width: 8,
                       height: 8,
                       borderRadius: '50%',
-                      background: '#4ade80',
+                      background: 'var(--status-success)',
                       display: 'inline-block',
                       flexShrink: 0,
                     }}
@@ -607,7 +609,7 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                 </span>
               </div>
             )}
-            {patStatus === 'error' && <div style={{ color: '#f87171', fontSize: 13 }}>{patError}</div>}
+            {patStatus === 'error' && <div style={{ color: 'var(--status-error)', fontSize: 13 }}>{patError}</div>}
           </div>
         );
 
@@ -615,8 +617,8 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%' }}>
             <div>
-              <h2 style={{ fontSize: 18, margin: '0 0 8px', color: '#a78bfa' }}>Repositories</h2>
-              <p style={{ margin: 0, color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
+              <h2 style={{ fontSize: 18, margin: '0 0 8px', color: 'var(--accent-subtle)' }}>Repositories</h2>
+              <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.5 }}>
                 Choose which repos you want to report issues on.
               </p>
             </div>
@@ -636,11 +638,11 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                 placeholder="Search repositories..."
                 style={{
                   width: '100%',
-                  background: 'rgba(148,163,184,0.08)',
-                  border: '1px solid rgba(148,163,184,0.15)',
+                  background: 'var(--bg-input)',
+                  border: '1px solid var(--border-default)',
                   borderRadius: 8,
                   padding: '10px 14px',
-                  color: '#f1f5f9',
+                  color: 'var(--text-primary)',
                   fontSize: 14,
                   outline: 'none',
                   boxSizing: 'border-box',
@@ -648,10 +650,10 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                   transition: 'all 0.15s',
                 }}
                 onFocusCaptureCapture={e => {
-                  e.currentTarget.style.borderColor = '#a78bfa';
+                  e.currentTarget.style.borderColor = 'var(--accent-subtle)';
                 }}
                 onBlurCapture={e => {
-                  e.currentTarget.style.borderColor = 'rgba(148,163,184,0.15)';
+                  e.currentTarget.style.borderColor = 'var(--border-default)';
                 }}
               />
               {repoDropdownOpen && (
@@ -674,17 +676,17 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                       right: 0,
                       maxHeight: 160,
                       overflowY: 'auto',
-                      background: '#1e293b',
-                      border: '1px solid rgba(148,163,184,0.15)',
+                      background: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-default)',
                       borderRadius: 8,
                       zIndex: 2,
-                      boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                      boxShadow: '0 8px 24px var(--shadow-dropdown)',
                     }}>
                     {filteredRepos.length === 0 ? (
                       <div
                         style={{
                           padding: '10px 12px',
-                          color: 'rgba(241,245,249,0.3)',
+                          color: 'var(--text-muted)',
                           fontSize: 12,
                         }}>
                         {reposFetched ? 'No matching repositories' : 'Loading...'}
@@ -706,16 +708,16 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                             textAlign: 'left',
                           }}
                           onMouseEnter={e => {
-                            e.currentTarget.style.background = 'rgba(148,163,184,0.08)';
+                            e.currentTarget.style.background = 'var(--bg-input)';
                           }}
                           onMouseLeave={e => {
                             e.currentTarget.style.background = 'transparent';
                           }}>
-                          <div style={{ color: '#f1f5f9', fontSize: 13 }}>{repo.full_name}</div>
+                          <div style={{ color: 'var(--text-primary)', fontSize: 13 }}>{repo.full_name}</div>
                           {repo.description && (
                             <div
                               style={{
-                                color: 'rgba(241,245,249,0.3)',
+                                color: 'var(--text-muted)',
                                 fontSize: 11,
                                 marginTop: 2,
                                 overflow: 'hidden',
@@ -742,11 +744,11 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '8px 10px',
-                      background: 'rgba(148,163,184,0.06)',
+                      background: 'var(--bg-input-hover)',
                       borderRadius: 8,
-                      border: '1px solid rgba(148,163,184,0.1)',
+                      border: '1px solid var(--border-subtle)',
                     }}>
-                    <span style={{ color: '#f1f5f9', fontSize: 14 }}>{repo.full_name}</span>
+                    <span style={{ color: 'var(--text-primary)', fontSize: 14 }}>{repo.full_name}</span>
                     <button
                       onClick={() => handleRemoveRepo(repo.full_name)}
                       style={{
@@ -755,7 +757,7 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                         borderRadius: 6,
                         border: 'none',
                         background: 'transparent',
-                        color: 'rgba(241,245,249,0.3)',
+                        color: 'var(--text-muted)',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -766,10 +768,10 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                         transition: 'color 0.1s',
                       }}
                       onMouseEnter={e => {
-                        e.currentTarget.style.color = '#f87171';
+                        e.currentTarget.style.color = 'var(--status-error)';
                       }}
                       onMouseLeave={e => {
-                        e.currentTarget.style.color = 'rgba(241,245,249,0.3)';
+                        e.currentTarget.style.color = 'var(--text-muted)';
                       }}
                       aria-label={`Remove ${repo.full_name}`}>
                       <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
@@ -787,8 +789,10 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
         return (
           <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
             <div>
-              <h2 style={{ fontSize: 18, margin: '0 0 8px', color: '#a78bfa' }}>Auto-fix with Claude Code</h2>
-              <p style={{ margin: 0, color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
+              <h2 style={{ fontSize: 18, margin: '0 0 8px', color: 'var(--accent-subtle)' }}>
+                Auto-fix with Claude Code
+              </h2>
+              <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.5 }}>
                 Let Claude Code automatically analyze reported issues and open a PR with the fix.
               </p>
             </div>
@@ -801,9 +805,9 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                 style={{
                   flex: 1,
                   borderRadius: 10,
-                  border: '1px solid rgba(148,163,184,0.2)',
+                  border: '1px solid var(--border-default)',
                   background: 'transparent',
-                  color: 'rgba(241,245,249,0.5)',
+                  color: 'var(--text-secondary)',
                   fontSize: 14,
                   fontWeight: 500,
                   padding: '10px 18px',
@@ -811,12 +815,12 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                   transition: 'all 0.15s',
                 }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = 'rgba(148,163,184,0.35)';
-                  e.currentTarget.style.color = 'rgba(241,245,249,0.7)';
+                  e.currentTarget.style.borderColor = 'var(--border-default)';
+                  e.currentTarget.style.color = 'var(--text-primary)';
                 }}
                 onMouseLeave={e => {
-                  e.currentTarget.style.borderColor = 'rgba(148,163,184,0.2)';
-                  e.currentTarget.style.color = 'rgba(241,245,249,0.5)';
+                  e.currentTarget.style.borderColor = 'var(--border-default)';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
                 }}>
                 Skip for now
               </button>
@@ -829,8 +833,8 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                   flex: 1,
                   borderRadius: 10,
                   border: 'none',
-                  background: 'linear-gradient(135deg, #7c3aed, #9333ea)',
-                  color: '#ffffff',
+                  background: 'var(--accent-gradient)',
+                  color: 'var(--text-on-accent)',
                   fontSize: 14,
                   fontWeight: 500,
                   padding: '10px 18px',
@@ -855,14 +859,14 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%' }}>
             <div>
-              <h2 style={{ fontSize: 18, margin: '0 0 8px', color: '#a78bfa' }}>Anthropic API Key</h2>
-              <p style={{ margin: 0, color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
+              <h2 style={{ fontSize: 18, margin: '0 0 8px', color: 'var(--accent-subtle)' }}>Anthropic API Key</h2>
+              <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.5 }}>
                 Enter your API key to enable Claude Code auto-fix. Get your key from{' '}
                 <a
                   href="https://console.anthropic.com/settings/keys"
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ color: '#c4b5fd' }}>
+                  style={{ color: 'var(--accent-link)' }}>
                   console.anthropic.com
                 </a>
               </p>
@@ -881,21 +885,21 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                 placeholder="sk-ant-xxxxxxxxxxxx"
                 style={{
                   flex: 1,
-                  background: 'rgba(148,163,184,0.08)',
-                  border: '1px solid rgba(148,163,184,0.15)',
+                  background: 'var(--bg-input)',
+                  border: '1px solid var(--border-default)',
                   borderRadius: 8,
                   padding: '10px 14px',
-                  color: '#f1f5f9',
+                  color: 'var(--text-primary)',
                   fontSize: 14,
                   outline: 'none',
                   minWidth: 0,
                   transition: 'all 0.15s',
                 }}
                 onFocus={e => {
-                  e.currentTarget.style.borderColor = '#a78bfa';
+                  e.currentTarget.style.borderColor = 'var(--accent-subtle)';
                 }}
                 onBlur={e => {
-                  e.currentTarget.style.borderColor = 'rgba(148,163,184,0.15)';
+                  e.currentTarget.style.borderColor = 'var(--border-default)';
                 }}
                 onKeyDown={e => {
                   if (e.key === 'Enter') handleValidateAnthropicKey();
@@ -905,11 +909,11 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                 onClick={handleValidateAnthropicKey}
                 disabled={!anthropicApiKey.trim() || anthropicKeyStatus === 'validating'}
                 style={{
-                  background: 'linear-gradient(135deg, #7c3aed, #9333ea)',
+                  background: 'var(--accent-gradient)',
                   border: 'none',
                   borderRadius: 10,
                   padding: '10px 18px',
-                  color: '#fff',
+                  color: 'var(--text-on-accent)',
                   fontSize: 14,
                   fontWeight: 500,
                   cursor: !anthropicApiKey.trim() || anthropicKeyStatus === 'validating' ? 'not-allowed' : 'pointer',
@@ -929,13 +933,13 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                   display: 'flex',
                   alignItems: 'center',
                 }}>
-                <span style={{ color: '#4ade80', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ color: 'var(--status-success)', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span
                     style={{
                       width: 8,
                       height: 8,
                       borderRadius: '50%',
-                      background: '#4ade80',
+                      background: 'var(--status-success)',
                       display: 'inline-block',
                       flexShrink: 0,
                     }}
@@ -945,7 +949,7 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
               </div>
             )}
             {anthropicKeyStatus === 'error' && (
-              <div style={{ color: '#f87171', fontSize: 13 }}>{anthropicKeyError}</div>
+              <div style={{ color: 'var(--status-error)', fontSize: 13 }}>{anthropicKeyError}</div>
             )}
           </div>
         );
@@ -954,10 +958,10 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%' }}>
             <div>
-              <h2 style={{ fontSize: 18, margin: '0 0 8px', color: '#a78bfa' }}>Repository Secrets</h2>
-              <p style={{ margin: 0, color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
+              <h2 style={{ fontSize: 18, margin: '0 0 8px', color: 'var(--accent-subtle)' }}>Repository Secrets</h2>
+              <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.5 }}>
                 Each repo needs a secret named{' '}
-                <code style={{ background: 'rgba(148,163,184,0.08)', padding: '1px 5px', borderRadius: 4 }}>
+                <code style={{ background: 'var(--bg-input)', padding: '1px 5px', borderRadius: 4 }}>
                   ANTHROPIC_API_KEY
                 </code>{' '}
                 for the GitHub Action to work.
@@ -967,9 +971,9 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
               onClick={handleCopyApiKey}
               style={{
                 borderRadius: 10,
-                border: copiedApiKey ? '1px solid rgba(74,222,128,0.3)' : '1px solid rgba(148,163,184,0.15)',
-                background: copiedApiKey ? 'rgba(74,222,128,0.08)' : 'rgba(148,163,184,0.08)',
-                color: copiedApiKey ? '#4ade80' : '#f1f5f9',
+                border: copiedApiKey ? '1px solid var(--success-30)' : '1px solid var(--border-default)',
+                background: copiedApiKey ? 'var(--success-10)' : 'var(--bg-input)',
+                color: copiedApiKey ? 'var(--status-success)' : 'var(--text-primary)',
                 fontSize: 14,
                 fontWeight: 500,
                 padding: '10px 18px',
@@ -1008,11 +1012,11 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '8px 10px',
-                      background: 'rgba(148,163,184,0.06)',
+                      background: 'var(--bg-input-hover)',
                       borderRadius: 8,
-                      border: '1px solid rgba(148,163,184,0.1)',
+                      border: '1px solid var(--border-subtle)',
                     }}>
-                    <span style={{ color: '#f1f5f9', fontSize: 13 }}>{repo}</span>
+                    <span style={{ color: 'var(--text-primary)', fontSize: 13 }}>{repo}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, flexShrink: 0 }}>
                       <div
                         style={{
@@ -1021,20 +1025,20 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                           borderRadius: '50%',
                           background:
                             status === 'exists'
-                              ? '#4ade80'
+                              ? 'var(--status-success)'
                               : status === 'missing'
-                                ? '#f87171'
-                                : 'rgba(148,163,184,0.4)',
+                                ? 'var(--status-error)'
+                                : 'var(--text-muted)',
                           flexShrink: 0,
                         }}
                       />
-                      {status === 'exists' && <span style={{ color: '#4ade80' }}>Ready</span>}
+                      {status === 'exists' && <span style={{ color: 'var(--status-success)' }}>Ready</span>}
                       {status === 'missing' && (
                         <a
                           href={`https://github.com/${repo}/settings/secrets/actions/new?secret_name=ANTHROPIC_API_KEY`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          style={{ color: '#f87171', textDecoration: 'none' }}
+                          style={{ color: 'var(--status-error)', textDecoration: 'none' }}
                           onMouseEnter={e => {
                             e.currentTarget.style.textDecoration = 'underline';
                           }}
@@ -1044,7 +1048,7 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                           Add secret &rarr;
                         </a>
                       )}
-                      {status === 'checking' && <span style={{ color: 'rgba(148,163,184,0.4)' }}>Checking...</span>}
+                      {status === 'checking' && <span style={{ color: 'var(--text-muted)' }}>Checking...</span>}
                     </div>
                   </div>
                 );
@@ -1055,7 +1059,7 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
               style={{
                 background: 'none',
                 border: 'none',
-                color: 'rgba(241,245,249,0.45)',
+                color: 'var(--text-secondary)',
                 fontSize: 12,
                 cursor: 'pointer',
                 textDecoration: 'underline',
@@ -1071,17 +1075,17 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%' }}>
             <div>
-              <h2 style={{ fontSize: 18, margin: '0 0 8px', color: '#a78bfa' }}>Workflow File</h2>
-              <p style={{ margin: 0, color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
+              <h2 style={{ fontSize: 18, margin: '0 0 8px', color: 'var(--accent-subtle)' }}>Workflow File</h2>
+              <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.5 }}>
                 Each repo needs a GitHub Action workflow file.
               </p>
             </div>
             <div
               style={{
                 position: 'relative',
-                background: 'rgba(148,163,184,0.08)',
+                background: 'var(--bg-input)',
                 borderRadius: 8,
-                border: '1px solid rgba(148,163,184,0.15)',
+                border: '1px solid var(--border-default)',
                 overflow: 'hidden',
               }}>
               <pre
@@ -1090,7 +1094,7 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                   padding: '12px',
                   fontSize: 11,
                   lineHeight: 1.5,
-                  color: '#c4b5fd',
+                  color: 'var(--accent-link)',
                   fontFamily: 'monospace',
                   overflowX: 'auto',
                   maxHeight: 160,
@@ -1104,9 +1108,9 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
               onClick={handleCopyYaml}
               style={{
                 borderRadius: 10,
-                border: copiedYaml ? '1px solid rgba(74,222,128,0.3)' : '1px solid rgba(148,163,184,0.15)',
-                background: copiedYaml ? 'rgba(74,222,128,0.08)' : 'rgba(148,163,184,0.08)',
-                color: copiedYaml ? '#4ade80' : '#f1f5f9',
+                border: copiedYaml ? '1px solid var(--success-30)' : '1px solid var(--border-default)',
+                background: copiedYaml ? 'var(--success-10)' : 'var(--bg-input)',
+                color: copiedYaml ? 'var(--status-success)' : 'var(--text-primary)',
                 fontSize: 14,
                 fontWeight: 500,
                 padding: '10px 18px',
@@ -1145,11 +1149,11 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '8px 10px',
-                      background: 'rgba(148,163,184,0.06)',
+                      background: 'var(--bg-input-hover)',
                       borderRadius: 8,
-                      border: '1px solid rgba(148,163,184,0.1)',
+                      border: '1px solid var(--border-subtle)',
                     }}>
-                    <span style={{ color: '#f1f5f9', fontSize: 13 }}>{repo}</span>
+                    <span style={{ color: 'var(--text-primary)', fontSize: 13 }}>{repo}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, flexShrink: 0 }}>
                       <div
                         style={{
@@ -1158,20 +1162,20 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                           borderRadius: '50%',
                           background:
                             status === 'exists'
-                              ? '#4ade80'
+                              ? 'var(--status-success)'
                               : status === 'missing'
-                                ? '#f87171'
-                                : 'rgba(148,163,184,0.4)',
+                                ? 'var(--status-error)'
+                                : 'var(--text-muted)',
                           flexShrink: 0,
                         }}
                       />
-                      {status === 'exists' && <span style={{ color: '#4ade80' }}>Ready</span>}
+                      {status === 'exists' && <span style={{ color: 'var(--status-success)' }}>Ready</span>}
                       {status === 'missing' && (
                         <a
                           href={`https://github.com/${repo}/new/main?filename=.github/workflows/visual-issue-claude-fix.yml`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          style={{ color: '#f87171', textDecoration: 'none' }}
+                          style={{ color: 'var(--status-error)', textDecoration: 'none' }}
                           onMouseEnter={e => {
                             e.currentTarget.style.textDecoration = 'underline';
                           }}
@@ -1181,7 +1185,7 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                           Add workflow &rarr;
                         </a>
                       )}
-                      {status === 'checking' && <span style={{ color: 'rgba(148,163,184,0.4)' }}>Checking...</span>}
+                      {status === 'checking' && <span style={{ color: 'var(--text-muted)' }}>Checking...</span>}
                     </div>
                   </div>
                 );
@@ -1192,7 +1196,7 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
               style={{
                 background: 'none',
                 border: 'none',
-                color: 'rgba(241,245,249,0.45)',
+                color: 'var(--text-secondary)',
                 fontSize: 12,
                 cursor: 'pointer',
                 textDecoration: 'underline',
@@ -1212,8 +1216,8 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                 width: 48,
                 height: 48,
                 borderRadius: 12,
-                background: 'rgba(74,222,128,0.12)',
-                border: '1px solid rgba(74,222,128,0.2)',
+                background: 'var(--success-10)',
+                border: '1px solid var(--success-20)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1229,8 +1233,8 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
               </svg>
             </div>
             <div>
-              <h2 style={{ fontSize: 18, margin: '0 0 8px', color: '#a78bfa' }}>You&apos;re all set!</h2>
-              <p style={{ margin: 0, color: 'rgba(241,245,249,0.45)', fontSize: 13, lineHeight: 1.5 }}>
+              <h2 style={{ fontSize: 18, margin: '0 0 8px', color: 'var(--accent-subtle)' }}>You&apos;re all set!</h2>
+              <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.5 }}>
                 Claude Code will automatically analyze issues and open PRs with fixes.
               </p>
             </div>
@@ -1240,8 +1244,8 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                 width: '100%',
                 borderRadius: 10,
                 border: 'none',
-                background: 'linear-gradient(135deg, #7c3aed, #9333ea)',
-                color: '#ffffff',
+                background: 'var(--accent-gradient)',
+                color: 'var(--text-on-accent)',
                 fontSize: 14,
                 fontWeight: 500,
                 padding: '10px 18px',
@@ -1287,8 +1291,8 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
     <div
       style={{
         flex: 1,
-        background: '#0f172a',
-        color: '#f1f5f9',
+        background: 'var(--bg-primary)',
+        color: 'var(--text-primary)',
         fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif",
         boxSizing: 'border-box',
         minHeight: '100vh',
@@ -1320,7 +1324,7 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
             style={{
               position: 'absolute',
               inset: 0,
-              background: 'linear-gradient(to bottom, transparent 40%, #0f172a)',
+              background: 'linear-gradient(to bottom, transparent 40%, var(--bg-primary))',
             }}
           />
         </div>
@@ -1353,7 +1357,8 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
             style={{
               position: 'absolute',
               inset: 0,
-              background: 'linear-gradient(to bottom, rgba(15,23,42,0.4) 0%, #0f172a 100%)',
+              background:
+                'linear-gradient(to bottom, color-mix(in srgb, var(--bg-primary) 40%, transparent) 0%, var(--bg-primary) 100%)',
             }}
           />
           {/* Header content */}
@@ -1367,8 +1372,8 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                 onClick={onClose}
                 aria-label="Back to settings"
                 style={{
-                  background: 'rgba(148,163,184,0.08)',
-                  border: '1px solid rgba(148,163,184,0.12)',
+                  background: 'var(--bg-input)',
+                  border: '1px solid var(--border-input)',
                   borderRadius: 8,
                   width: 32,
                   height: 32,
@@ -1376,23 +1381,23 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  color: 'rgba(241,245,249,0.6)',
+                  color: 'var(--text-secondary)',
                   fontSize: 16,
                   padding: 0,
                   flexShrink: 0,
                   transition: 'all 0.15s',
                 }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.background = 'rgba(148,163,184,0.15)';
-                  e.currentTarget.style.color = '#f1f5f9';
+                  e.currentTarget.style.background = 'var(--border-default)';
+                  e.currentTarget.style.color = 'var(--text-primary)';
                 }}
                 onMouseLeave={e => {
-                  e.currentTarget.style.background = 'rgba(148,163,184,0.08)';
-                  e.currentTarget.style.color = 'rgba(241,245,249,0.6)';
+                  e.currentTarget.style.background = 'var(--bg-input)';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
                 }}>
                 ←
               </button>
-              <h1 style={{ fontSize: 22, margin: 0, color: '#f1f5f9', lineHeight: 1.2 }}>Setup Guide</h1>
+              <h1 style={{ fontSize: 22, margin: 0, color: 'var(--text-primary)', lineHeight: 1.2 }}>Setup Guide</h1>
             </div>
           </div>
         </div>
@@ -1440,9 +1445,9 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                 width: 40,
                 height: 40,
                 borderRadius: 10,
-                border: '1px solid rgba(148,163,184,0.12)',
-                background: 'rgba(148,163,184,0.06)',
-                color: isFirstStepOfChapter ? 'rgba(148,163,184,0.15)' : 'rgba(241,245,249,0.6)',
+                border: '1px solid var(--border-input)',
+                background: 'var(--bg-input-hover)',
+                color: isFirstStepOfChapter ? 'var(--border-default)' : 'var(--text-secondary)',
                 cursor: isFirstStepOfChapter ? 'default' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -1454,16 +1459,16 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
               }}
               onMouseEnter={e => {
                 if (!isFirstStepOfChapter) {
-                  e.currentTarget.style.background = 'rgba(148,163,184,0.12)';
-                  e.currentTarget.style.borderColor = 'rgba(148,163,184,0.2)';
-                  e.currentTarget.style.color = '#f1f5f9';
+                  e.currentTarget.style.background = 'var(--border-input)';
+                  e.currentTarget.style.borderColor = 'var(--border-default)';
+                  e.currentTarget.style.color = 'var(--text-primary)';
                 }
               }}
               onMouseLeave={e => {
                 if (!isFirstStepOfChapter) {
-                  e.currentTarget.style.background = 'rgba(148,163,184,0.06)';
-                  e.currentTarget.style.borderColor = 'rgba(148,163,184,0.12)';
-                  e.currentTarget.style.color = 'rgba(241,245,249,0.6)';
+                  e.currentTarget.style.background = 'var(--bg-input-hover)';
+                  e.currentTarget.style.borderColor = 'var(--border-input)';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
                 }
               }}
               aria-label="Previous step">
@@ -1485,7 +1490,7 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                   display: 'flex',
                   alignItems: 'center',
                   gap: 6,
-                  color: 'rgba(241,245,249,0.35)',
+                  color: 'var(--text-muted)',
                   fontSize: 12,
                   fontWeight: 500,
                   letterSpacing: '0.05em',
@@ -1493,7 +1498,7 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                   minWidth: 32,
                   justifyContent: 'center',
                 }}>
-                <span style={{ color: '#a78bfa', fontWeight: 600 }}>{stepIndicator.current}</span>
+                <span style={{ color: 'var(--accent-subtle)', fontWeight: 600 }}>{stepIndicator.current}</span>
                 <span style={{ fontSize: 10 }}>/</span>
                 <span>{stepIndicator.total}</span>
               </div>
@@ -1508,11 +1513,11 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
                 height: 40,
                 borderRadius: 10,
                 border: 'none',
-                background: canProceed ? 'linear-gradient(135deg, #7c3aed, #9333ea)' : 'rgba(148,163,184,0.06)',
+                background: canProceed ? 'var(--accent-gradient)' : 'var(--bg-input-hover)',
                 borderStyle: canProceed ? 'none' : 'solid',
                 borderWidth: canProceed ? 0 : 1,
-                borderColor: canProceed ? 'transparent' : 'rgba(148,163,184,0.12)',
-                color: canProceed ? '#ffffff' : 'rgba(148,163,184,0.15)',
+                borderColor: canProceed ? 'transparent' : 'var(--border-input)',
+                color: canProceed ? 'var(--text-on-accent)' : 'var(--border-default)',
                 cursor: canProceed ? 'pointer' : 'default',
                 display: 'flex',
                 alignItems: 'center',

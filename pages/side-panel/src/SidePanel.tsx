@@ -1,4 +1,5 @@
 import OnboardingWizard from './components/OnboardingWizard';
+import { useTheme } from './useTheme';
 import CreateIssueView from './views/CreateIssueView';
 import HomeView from './views/HomeView';
 import SetupView from './views/SetupView';
@@ -15,6 +16,7 @@ export default function SidePanel() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardChapter, setWizardChapter] = useState<1 | 2>(1);
   const [refreshKey, setRefreshKey] = useState(0);
+  const { theme, changeTheme, availableThemes, tryActivateCode } = useTheme();
 
   const openWizard = (chapter: 1 | 2) => {
     setWizardChapter(chapter);
@@ -103,6 +105,10 @@ export default function SidePanel() {
             onDone={() => setView('home')}
             openSection={settingsSection}
             onOpenWizard={openWizard}
+            theme={theme}
+            onChangeTheme={changeTheme}
+            availableThemes={availableThemes}
+            onActivateCode={tryActivateCode}
           />
         )}
         {view === 'home' && (
@@ -113,6 +119,7 @@ export default function SidePanel() {
               setView('setup');
             }}
             onOpenWizard={openWizard}
+            themeLabel={theme === 'default' ? 'Default' : (availableThemes.find(t => t.id === theme)?.label ?? theme)}
             onMount={() => {
               // Dismiss any stale overlay when returning to home
               chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
@@ -145,24 +152,51 @@ export default function SidePanel() {
         )}
       </div>
       {/* Footer */}
-      <a
-        href="https://studionope.nl"
-        target="_blank"
-        rel="noopener noreferrer"
+      <div
         style={{
-          display: 'block',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
           padding: '12px 20px',
           textAlign: 'center',
-          fontSize: 15,
+          fontSize: 18,
+          fontWeight: 600,
+          letterSpacing: 0,
           fontFamily: "'Instrument Serif', serif",
-          color: '#ffffff',
-          background: '#8B5CF6',
+          color: 'var(--brand-footer-text)',
+          background: 'var(--brand-footer-bg)',
           marginTop: 8,
-          textDecoration: 'none',
-          cursor: 'pointer',
         }}>
-        Built by <strong>Studio N.O.P.E.</strong>
-      </a>
+        {theme === 'default' ? (
+          <a
+            href="https://studionope.nl"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'inherit', textDecoration: 'none' }}>
+            Built by <strong>Studio N.O.P.E.</strong>
+          </a>
+        ) : (
+          <>
+            <a
+              href="https://studionope.nl"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'inherit', textDecoration: 'none' }}>
+              Studio N.O.P.E.
+            </a>
+            <span style={{ opacity: 0.6, fontWeight: 400, fontSize: 13 }}>x</span>
+            <strong
+              style={{
+                fontSize: 20,
+                fontFamily: 'var(--font-heading)',
+                letterSpacing: 'var(--font-heading-tracking)',
+              }}>
+              {theme === 'ask-phill' ? 'Ask Phill' : ''}
+            </strong>
+          </>
+        )}
+      </div>
     </div>
   );
 }

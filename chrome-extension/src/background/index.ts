@@ -55,6 +55,10 @@ chrome.runtime.onMessage.addListener(
       handleFetchAssignees(message, sendResponse as (response: FetchAssigneesResponse) => void);
       return true;
     }
+    if (message.type === 'FETCH_BRANCHES') {
+      handleFetchBranches(message, sendResponse);
+      return true;
+    }
     if (message.type === 'FETCH_REPOS') {
       handleFetchRepos(sendResponse as (response: FetchReposResponse) => void);
       return true;
@@ -170,9 +174,29 @@ const handleStartReport = async (tool: 'select' | 'pencil', sendResponse: (respo
 
     const screenshotDataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 80 });
 
+    // Read theme for overlay
+    const { extensionTheme, unlockedThemes } = await chrome.storage.local.get(['extensionTheme', 'unlockedThemes']);
+    const themeId = extensionTheme as string | undefined;
+    const isThemed =
+      themeId &&
+      themeId !== 'default' &&
+      (unlockedThemes as Array<{ id: string }> | undefined)?.some(t => t.id === themeId);
+
+    const overlayTheme =
+      isThemed && themeId === 'ask-phill'
+        ? {
+            accent: '#D8CCB5',
+            accentLight: 'rgba(216,204,181,0.2)',
+            surface: '#1C1C1C',
+            textPrimary: '#FAF8F7',
+            textSecondary: 'rgba(250,248,247,0.5)',
+            border: 'rgba(255,255,255,0.1)',
+          }
+        : undefined;
+
     const payload: ShowScreenshotMessage = {
       type: 'SHOW_SCREENSHOT',
-      payload: { screenshotDataUrl, tool },
+      payload: { screenshotDataUrl, tool, theme: overlayTheme },
     };
 
     await chrome.tabs.sendMessage(tab.id, payload);
@@ -355,6 +379,7 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
       htmlSnippet,
       labels: userLabels,
       assignee,
+      branch,
       browserMetadata,
       autoFix,
     } = message.payload;
@@ -439,6 +464,7 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
       body += `- **Page Title:** ${browserMetadata.page.title}\n`;
       body += `- **Language:** ${browserMetadata.page.language}\n`;
       body += `- **Connection:** ${browserMetadata.network.online ? 'online' : 'offline'}${browserMetadata.network.connectionType ? ` (${browserMetadata.network.connectionType})` : ''}\n`;
+      if (branch) body += `- **Target Branch:** ${branch}\n`;
     }
 
     // Console Errors section
@@ -573,6 +599,40 @@ const handleFetchLabels = async (
     sendResponse({
       success: true,
       labels: data.filter(l => !hiddenLabels.includes(l.name)).map(l => ({ name: l.name, color: l.color })),
+    });
+  } catch (err) {
+    await check401(err);
+    sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
+  }
+};
+
+const handleFetchBranches = async (
+  message: { payload: { repo: string } },
+  sendResponse: (response: {
+    success: boolean;
+    branches?: Array<{ name: string; default: boolean }>;
+    error?: string;
+  }) => void,
+) => {
+  try {
+    const parsed = parseRepoName(message.payload.repo);
+    if (!parsed) {
+      sendResponse({ success: false, error: 'Invalid repository name format.' });
+      return;
+    }
+    const octokit = await getOctokit();
+    // Get default branch
+    const { data: repoData } = await octokit.repos.get({ owner: parsed.owner, repo: parsed.repo });
+    const defaultBranch = repoData.default_branch;
+    // Fetch branches
+    const { data } = await octokit.repos.listBranches({
+      owner: parsed.owner,
+      repo: parsed.repo,
+      per_page: 100,
+    });
+    sendResponse({
+      success: true,
+      branches: data.map(b => ({ name: b.name, default: b.name === defaultBranch })),
     });
   } catch (err) {
     await check401(err);

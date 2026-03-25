@@ -8,20 +8,21 @@ interface HomeViewProps {
   onOpenSettings: (section?: string) => void;
   onOpenWizard?: (chapter: 1 | 2) => void;
   onMount?: () => void;
+  themeLabel?: string;
 }
 
 const colors = {
-  textPrimary: '#f1f5f9',
-  textSecondary: 'rgba(241,245,249,0.45)',
-  textMuted: 'rgba(241,245,249,0.3)',
-  purpleAccent: '#a78bfa',
-  purple500: '#8b5cf6',
-  border: 'rgba(148,163,184,0.15)',
-  divider: 'rgba(148,163,184,0.1)',
-  green: '#4ade80',
+  textPrimary: 'var(--text-primary)',
+  textSecondary: 'var(--text-secondary)',
+  textMuted: 'var(--text-muted)',
+  purpleAccent: 'var(--accent-subtle)',
+  purple500: 'var(--accent-primary)',
+  border: 'var(--border-default)',
+  divider: 'var(--border-subtle)',
+  green: 'var(--status-success)',
 } as const;
 
-export default function HomeView({ onOpenSettings, onOpenWizard, onMount }: HomeViewProps) {
+export default function HomeView({ onOpenSettings, onMount, themeLabel }: HomeViewProps) {
   const [repos, setRepos] = useState<string[]>([]);
   const [selectedRepo, setSelectedRepo] = useState('');
   const [activeTool, setActiveTool] = useState<'select' | 'pencil' | 'inspect' | null>(null);
@@ -29,7 +30,11 @@ export default function HomeView({ onOpenSettings, onOpenWizard, onMount }: Home
   const [loading, setLoading] = useState(false);
   const [patConnected, setPatConnected] = useState(false);
   const [autoFixConfigured, setAutoFixConfigured] = useState(false);
-  const [autoFixStatus, setAutoFixStatus] = useState<'not-configured' | 'missing-secret' | 'ready'>('not-configured');
+  const [autoFixStatusLabel, setAutoFixStatusLabel] = useState('');
+  const [autoFixStatusColor, setAutoFixStatusColor] = useState('');
+  const [branches, setBranches] = useState<Array<{ name: string; default: boolean }>>([]);
+  const [selectedBranch, setSelectedBranch] = useState('');
+  const [branchesLoading, setBranchesLoading] = useState(false);
 
   useEffect(() => {
     onMount?.();
@@ -51,36 +56,59 @@ export default function HomeView({ onOpenSettings, onOpenWizard, onMount }: Home
     });
   }, []);
 
-  // Check auto-fix status based on selected repo (secret + workflow)
+  // Check auto-fix status across all repos
   useEffect(() => {
-    if (!autoFixConfigured || !selectedRepo) {
-      if (!autoFixConfigured) setAutoFixStatus('not-configured');
+    if (!autoFixConfigured) {
+      setAutoFixStatusLabel('Not configured');
+      setAutoFixStatusColor(colors.textSecondary);
       return;
     }
-    let hasSecret = false;
-    let hasWorkflow = false;
-    let checks = 0;
-    const resolve = () => {
-      checks++;
-      if (checks === 2) {
-        setAutoFixStatus(hasSecret && hasWorkflow ? 'ready' : 'missing-secret');
-      }
-    };
-    chrome.runtime.sendMessage(
-      { type: 'CHECK_REPO_SECRET', payload: { repo: selectedRepo, secretName: 'ANTHROPIC_API_KEY' } },
-      (response: { success: boolean; exists?: boolean }) => {
-        hasSecret = !!response?.exists;
-        resolve();
-      },
-    );
-    chrome.runtime.sendMessage(
-      { type: 'CHECK_REPO_WORKFLOW', payload: { repo: selectedRepo } },
-      (response: { success: boolean; exists?: boolean }) => {
-        hasWorkflow = !!response?.exists;
-        resolve();
-      },
-    );
-  }, [autoFixConfigured, selectedRepo]);
+    if (repos.length === 0) {
+      setAutoFixStatusLabel('No repos');
+      setAutoFixStatusColor(colors.textSecondary);
+      return;
+    }
+    let completed = 0;
+    let readyCount = 0;
+    for (const repo of repos) {
+      let hasSecret = false;
+      let hasWorkflow = false;
+      let checks = 0;
+      const resolve = () => {
+        checks++;
+        if (checks === 2) {
+          if (hasSecret && hasWorkflow) readyCount++;
+          completed++;
+          if (completed === repos.length) {
+            if (readyCount === repos.length) {
+              setAutoFixStatusLabel('Ready');
+              setAutoFixStatusColor(colors.green);
+            } else if (readyCount > 0) {
+              setAutoFixStatusLabel(`${readyCount}/${repos.length} repos ready`);
+              setAutoFixStatusColor('var(--status-warning)');
+            } else {
+              setAutoFixStatusLabel('Setup incomplete');
+              setAutoFixStatusColor('var(--status-warning)');
+            }
+          }
+        }
+      };
+      chrome.runtime.sendMessage(
+        { type: 'CHECK_REPO_SECRET', payload: { repo, secretName: 'ANTHROPIC_API_KEY' } },
+        (response: { success: boolean; exists?: boolean }) => {
+          hasSecret = !!response?.exists;
+          resolve();
+        },
+      );
+      chrome.runtime.sendMessage(
+        { type: 'CHECK_REPO_WORKFLOW', payload: { repo } },
+        (response: { success: boolean; exists?: boolean }) => {
+          hasWorkflow = !!response?.exists;
+          resolve();
+        },
+      );
+    }
+  }, [autoFixConfigured, repos]);
 
   // Listen for tool switch messages from content-UI
   useEffect(() => {
@@ -124,10 +152,14 @@ export default function HomeView({ onOpenSettings, onOpenWizard, onMount }: Home
   useEffect(() => {
     const onUpdated = (_tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
       if (changeInfo.url || changeInfo.status === 'complete') {
+        setToolError('');
+        setActiveTool(null);
         void fetchIssues();
       }
     };
     const onActivated = () => {
+      setToolError('');
+      setActiveTool(null);
       void fetchIssues();
     };
     chrome.tabs.onUpdated.addListener(onUpdated);
@@ -140,8 +172,36 @@ export default function HomeView({ onOpenSettings, onOpenWizard, onMount }: Home
 
   const handleRepoChange = (repo: string) => {
     setSelectedRepo(repo);
-    chrome.storage.local.set({ selectedRepo: repo });
+    setSelectedBranch('');
+    setBranches([]);
+    chrome.storage.local.set({ selectedRepo: repo, selectedBranch: '' });
   };
+
+  // Fetch branches when repo changes
+  useEffect(() => {
+    if (!selectedRepo) return;
+    setBranchesLoading(true);
+    chrome.runtime.sendMessage(
+      { type: 'FETCH_BRANCHES', payload: { repo: selectedRepo } },
+      (response: { success: boolean; branches?: Array<{ name: string; default: boolean }> }) => {
+        setBranchesLoading(false);
+        if (response?.success && response.branches) {
+          setBranches(response.branches);
+          // Load saved branch or use default
+          chrome.storage.local.get('selectedBranch').then(result => {
+            const saved = result.selectedBranch as string | undefined;
+            if (saved && response.branches!.some(b => b.name === saved)) {
+              setSelectedBranch(saved);
+            } else {
+              const defaultBranch = response.branches!.find(b => b.default)?.name ?? '';
+              setSelectedBranch(defaultBranch);
+              chrome.storage.local.set({ selectedBranch: defaultBranch });
+            }
+          });
+        }
+      },
+    );
+  }, [selectedRepo]);
 
   const [toolError, setToolError] = useState('');
 
@@ -167,7 +227,7 @@ export default function HomeView({ onOpenSettings, onOpenWizard, onMount }: Home
   const sectionHeadingStyle: React.CSSProperties = {
     fontSize: 18,
     margin: 0,
-    color: colors.purpleAccent,
+    color: 'var(--heading-color)',
     display: 'flex',
     alignItems: 'center',
     gap: 8,
@@ -195,7 +255,7 @@ export default function HomeView({ onOpenSettings, onOpenWizard, onMount }: Home
     <div
       style={{
         flex: 1,
-        background: '#0f172a',
+        background: 'var(--bg-primary)',
         color: colors.textPrimary,
         boxSizing: 'border-box',
       }}>
@@ -221,8 +281,8 @@ export default function HomeView({ onOpenSettings, onOpenWizard, onMount }: Home
           onClick={onOpenSettings}
           title="Settings"
           style={{
-            background: 'rgba(148,163,184,0.08)',
-            border: '1px solid rgba(148,163,184,0.12)',
+            background: 'var(--bg-input)',
+            border: '1px solid var(--border-input)',
             borderRadius: 8,
             width: 32,
             height: 32,
@@ -230,7 +290,7 @@ export default function HomeView({ onOpenSettings, onOpenWizard, onMount }: Home
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            color: 'rgba(241,245,249,0.5)',
+            color: 'var(--text-secondary)',
             padding: 0,
             flexShrink: 0,
             transition: 'all 0.15s',
@@ -261,6 +321,62 @@ export default function HomeView({ onOpenSettings, onOpenWizard, onMount }: Home
           onChange={handleRepoChange}
           onOpenSettings={onOpenSettings}
         />
+        {/* Branch selector — inline below repo */}
+        {selectedRepo && (branchesLoading || branches.length > 1) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, minWidth: 0, height: 20 }}>
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              style={{ color: colors.textMuted, flexShrink: 0 }}>
+              <path
+                d="M6 3v12M18 9a3 3 0 100-6 3 3 0 000 6zM6 21a3 3 0 100-6 3 3 0 000 6zM18 9a9 9 0 01-9 9"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            {branchesLoading ? (
+              <span style={{ fontSize: 12, color: colors.textMuted }}>Loading...</span>
+            ) : (
+              <select
+                value={selectedBranch}
+                onChange={e => {
+                  setSelectedBranch(e.target.value);
+                  chrome.storage.local.set({ selectedBranch: e.target.value });
+                }}
+                style={{
+                  flex: 1,
+                  background: 'transparent',
+                  border: 'none',
+                  color: colors.textSecondary,
+                  fontFamily: 'var(--font-body)',
+                  fontSize: 12,
+                  outline: 'none',
+                  appearance: 'none',
+                  WebkitAppearance: 'none',
+                  cursor: 'pointer',
+                  padding: '2px 0',
+                  textDecoration: 'underline',
+                  textDecorationColor: colors.textMuted,
+                  textUnderlineOffset: '3px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  minWidth: 0,
+                }}>
+                {branches.map(b => (
+                  <option key={b.name} value={b.name} style={{ background: 'var(--bg-secondary)' }}>
+                    {b.name}
+                    {b.default ? ' (default)' : ''}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Divider */}
@@ -291,7 +407,7 @@ export default function HomeView({ onOpenSettings, onOpenWizard, onMount }: Home
             onClick={() => handleToolClick('inspect')}
           />
         </div>
-        {toolError && <p style={{ margin: '8px 0 0', fontSize: 12, color: '#f87171' }}>{toolError}</p>}
+        {toolError && <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--status-error)' }}>{toolError}</p>}
       </div>
 
       {/* Divider */}
@@ -305,11 +421,16 @@ export default function HomeView({ onOpenSettings, onOpenWizard, onMount }: Home
             style={{
               fontSize: 12,
               fontWeight: 500,
-              background: 'rgba(139,92,246,0.2)',
-              color: '#c4b5fd',
-              padding: '2px 8px',
-              borderRadius: 10,
-              lineHeight: 1.4,
+              background: 'var(--badge-bg)',
+              color: 'var(--badge-text)',
+              minWidth: 22,
+              height: 22,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 11,
+              padding: '0 6px',
+              boxSizing: 'border-box',
             }}>
             {issues.length}
           </span>
@@ -333,7 +454,7 @@ export default function HomeView({ onOpenSettings, onOpenWizard, onMount }: Home
           Settings
         </h2>
         <div style={{ marginTop: 8 }}>
-          <button onClick={() => onOpenSettings('token')} style={settingsRowStyle}>
+          <button className="settings-row" onClick={() => onOpenSettings('token')} style={settingsRowStyle}>
             <span>GitHub Token</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: 12, color: patConnected ? colors.green : colors.textSecondary }}>
@@ -356,7 +477,7 @@ export default function HomeView({ onOpenSettings, onOpenWizard, onMount }: Home
               </svg>
             </span>
           </button>
-          <button onClick={() => onOpenSettings('repos')} style={settingsRowStyle}>
+          <button className="settings-row" onClick={() => onOpenSettings('repos')} style={settingsRowStyle}>
             <span>Repositories</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: 12, color: colors.textSecondary }}>
@@ -379,27 +500,34 @@ export default function HomeView({ onOpenSettings, onOpenWizard, onMount }: Home
               </svg>
             </span>
           </button>
+          <button className="settings-row" onClick={() => onOpenSettings('theme')} style={settingsRowStyle}>
+            <span>Theme</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 12, color: colors.textSecondary }}>{themeLabel || 'Default'}</span>
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                style={{ transform: 'rotate(-90deg)', opacity: 0.3 }}>
+                <path
+                  d="M5.75 9.5L12 15.75L18.25 9.5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+          </button>
           <button
-            onClick={() => (autoFixStatus !== 'ready' ? onOpenWizard?.(2) : onOpenSettings('autofix'))}
+            className="settings-row"
+            onClick={() => onOpenSettings('autofix')}
             style={{ ...settingsRowStyle, borderBottom: 'none' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>Auto-fix with Claude Code</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span
-                style={{
-                  fontSize: 12,
-                  color:
-                    autoFixStatus === 'ready'
-                      ? colors.green
-                      : autoFixStatus === 'missing-secret'
-                        ? '#F59E0B'
-                        : colors.textSecondary,
-                }}>
-                {autoFixStatus === 'ready'
-                  ? 'Ready'
-                  : autoFixStatus === 'missing-secret'
-                    ? 'Setup incomplete'
-                    : 'Not configured'}
-              </span>
+              <span style={{ fontSize: 12, color: autoFixStatusColor }}>{autoFixStatusLabel}</span>
               <svg
                 width="12"
                 height="12"
