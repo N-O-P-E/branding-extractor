@@ -52,6 +52,10 @@ on:
   pull_request_review:
     types: [submitted]
 
+concurrency:
+  group: claude-\${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   claude:
     if: |
@@ -79,6 +83,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: \${{ secrets.ANTHROPIC_API_KEY }}
+          label_trigger: "auto-fix"
           claude_args: |
             --model ${model}
             --append-system-prompt "${escaped}"
