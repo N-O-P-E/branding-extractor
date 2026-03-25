@@ -1,7 +1,7 @@
 import AssigneeSelect from '../components/AssigneeSelect';
 import LabelSelect from '../components/LabelSelect';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { BrowserMetadata } from '@extension/shared';
+import type { BrowserMetadata, AutoFixSettings } from '@extension/shared';
 
 interface CaptureData {
   screenshotDataUrl: string;
@@ -19,6 +19,7 @@ interface CreateIssueViewProps {
   browserMetadata: BrowserMetadata | null;
   onBack: () => void;
   onSuccess: () => void;
+  onOpenWizard?: (chapter: 1 | 2) => void;
 }
 
 const colors = {
@@ -32,7 +33,13 @@ const colors = {
   error: '#f87171',
 } as const;
 
-export default function CreateIssueView({ captureData, browserMetadata, onBack, onSuccess }: CreateIssueViewProps) {
+export default function CreateIssueView({
+  captureData,
+  browserMetadata,
+  onBack,
+  onSuccess,
+  onOpenWizard,
+}: CreateIssueViewProps) {
   const [description, setDescription] = useState('');
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [selectedAssignee, setSelectedAssignee] = useState('');
@@ -40,6 +47,13 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [successUrl, setSuccessUrl] = useState('');
+  const [autoFixResult, setAutoFixResult] = useState<string | null>(null);
+  const [autoFixError, setAutoFixError] = useState<string | null>(null);
+
+  // Auto-fix state
+  const [autoFixAvailable, setAutoFixAvailable] = useState(false);
+  const [autoFixChecked, setAutoFixChecked] = useState(false);
+  const [repoHasSecret, setRepoHasSecret] = useState<boolean | null>(null);
 
   const [liveBrowserMetadata, setLiveBrowserMetadata] = useState<BrowserMetadata | null>(browserMetadata);
 
@@ -47,7 +61,32 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
     chrome.storage.local.get('selectedRepo').then(result => {
       if (result.selectedRepo) setSelectedRepo(result.selectedRepo as string);
     });
+    // Check if auto-fix is available — enabled by default when API key is configured
+    chrome.storage.local.get('autoFixSettings').then(result => {
+      if (result.autoFixSettings) {
+        const settings = result.autoFixSettings as AutoFixSettings;
+        const available = !!settings.anthropicApiKey;
+        setAutoFixAvailable(available);
+      }
+    });
   }, []);
+
+  // Check if selected repo has the ANTHROPIC_API_KEY secret
+  useEffect(() => {
+    if (!autoFixAvailable || !selectedRepo) return;
+    setRepoHasSecret(null);
+    chrome.runtime.sendMessage(
+      { type: 'CHECK_REPO_SECRET', payload: { repo: selectedRepo, secretName: 'ANTHROPIC_API_KEY' } },
+      (response: { success: boolean; exists?: boolean }) => {
+        if (response?.success) {
+          const exists = !!response.exists;
+          setRepoHasSecret(exists);
+          if (exists) setAutoFixChecked(true);
+          else setAutoFixChecked(false);
+        }
+      },
+    );
+  }, [autoFixAvailable, selectedRepo]);
 
   // Listen for BROWSER_METADATA directly in this component
   useEffect(() => {
@@ -122,11 +161,19 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
           browserMetadata: data.browserMetadata,
           labels: selectedLabels,
           assignee: selectedAssignee || undefined,
+          autoFix: autoFixChecked && autoFixAvailable,
         },
-      })) as { success: boolean; issueUrl?: string; error?: string };
+      })) as { success: boolean; issueUrl?: string; error?: string; autoFixResult?: string; autoFixError?: string };
 
       if (response?.success) {
         setSuccessUrl(response.issueUrl ?? '');
+        if (response.autoFixResult) {
+          setAutoFixResult(response.autoFixResult);
+          if (response.autoFixError) {
+            setAutoFixError(response.autoFixError);
+            console.error('[VIR] Auto-fix error:', response.autoFixError);
+          }
+        }
       } else {
         setError(response?.error ?? 'Failed to create issue');
         setSubmitting(false);
@@ -135,7 +182,7 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
       setError(err instanceof Error ? err.message : 'Failed to create issue');
       setSubmitting(false);
     }
-  }, [submitting, selectedRepo, description, captureData, selectedLabels, selectedAssignee, onSuccess]);
+  }, [submitting, selectedRepo, description, selectedLabels, selectedAssignee, autoFixChecked, autoFixAvailable]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -214,16 +261,22 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
           Issue reported
         </h2>
 
-        {/* Subtitle */}
+        {/* Subtitle — context-aware based on auto-fix result */}
         <p
           style={{
             fontSize: 13,
             color: 'rgba(241,245,249,0.45)',
             margin: '0 0 24px',
             lineHeight: 1.5,
-            maxWidth: 260,
+            maxWidth: 280,
           }}>
-          Now use your favorite claw to fix this issue properly.
+          {autoFixResult === 'triggered'
+            ? 'Claude Code is analyzing the issue and will open a PR with the fix.'
+            : autoFixResult === 'no-workflow'
+              ? 'Issue labeled for auto-fix, but the workflow file is missing. Add it via Settings to enable Claude Code.'
+              : autoFixResult === 'failed'
+                ? `Auto-fix setup failed${autoFixError ? `: ${autoFixError}` : '.'}`
+                : 'Now use your favorite claw to fix this issue properly.'}
         </p>
 
         {/* View on GitHub button */}
@@ -272,6 +325,21 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
           }}>
           Report another issue
         </button>
+        {autoFixResult === 'no-workflow' && (
+          <button
+            onClick={() => onOpenWizard?.(2)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#c4b5fd',
+              fontSize: 12,
+              cursor: 'pointer',
+              marginTop: 8,
+              textDecoration: 'underline',
+            }}>
+            Complete Claude Code setup
+          </button>
+        )}
       </div>
     );
   }
@@ -357,13 +425,19 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
               background: 'rgba(248,113,113,0.1)',
               border: `1px solid rgba(248,113,113,0.3)`,
               borderRadius: 8,
-              fontSize: 13,
+              fontSize: 12,
               color: colors.error,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              lineHeight: 1.5,
+              wordBreak: 'break-word' as const,
             }}>
-            <span>{error}</span>
+            <span
+              dangerouslySetInnerHTML={{
+                __html: error.replace(
+                  /(https?:\/\/[^\s]+)/g,
+                  '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:#c4b5fd;word-break:break-all">$1</a>',
+                ),
+              }}
+            />
             <button
               onClick={() => {
                 setError('');
@@ -372,13 +446,13 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
               style={{
                 background: 'none',
                 border: 'none',
-                color: colors.error,
+                color: colors.textMuted,
                 cursor: 'pointer',
-                fontSize: 13,
-                fontWeight: 600,
+                fontSize: 11,
                 textDecoration: 'underline',
                 padding: 0,
-                flexShrink: 0,
+                marginTop: 6,
+                display: 'block',
                 marginLeft: 8,
                 transition: 'all 0.15s',
               }}>
@@ -489,7 +563,7 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
                     paddingTop: 8,
                     borderTop: `1px solid ${colors.border}`,
                     color: colors.textSecondary,
-                    fontSize: 12,
+                    fontSize: 11,
                   }}>
                   {liveBrowserMetadata.consoleErrors.length} console{' '}
                   {liveBrowserMetadata.consoleErrors.length === 1 ? 'error' : 'errors'} detected
@@ -521,8 +595,73 @@ export default function CreateIssueView({ captureData, browserMetadata, onBack, 
           {submitting ? 'Submitting...' : 'Submit Issue'}
         </button>
 
+        {/* Auto-fix toggle — inline below submit */}
+        {autoFixAvailable && (
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginTop: 12,
+              cursor: repoHasSecret === false ? 'default' : 'pointer',
+              padding: '0 2px',
+              opacity: repoHasSecret === false ? 0.45 : 1,
+              transition: 'opacity 0.15s',
+            }}
+            title={repoHasSecret === false ? 'Add ANTHROPIC_API_KEY secret to this repo in Settings first' : undefined}>
+            <span
+              style={{
+                fontSize: 13,
+                color: autoFixChecked ? colors.textPrimary : colors.textSecondary,
+                transition: 'color 0.15s',
+              }}>
+              Auto-fix with Claude Code
+              {repoHasSecret === false && (
+                <span style={{ display: 'block', fontSize: 10, color: colors.textMuted, marginTop: 1 }}>
+                  Secret missing on this repo
+                </span>
+              )}
+            </span>
+            {/* Toggle switch */}
+            <div
+              style={{
+                position: 'relative',
+                width: 36,
+                height: 20,
+                borderRadius: 10,
+                background: autoFixChecked ? '#7c3aed' : 'rgba(148,163,184,0.2)',
+                transition: 'background 0.2s',
+                flexShrink: 0,
+              }}>
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 2,
+                  left: autoFixChecked ? 18 : 2,
+                  width: 16,
+                  height: 16,
+                  borderRadius: '50%',
+                  background: '#fff',
+                  transition: 'left 0.2s ease',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                }}
+              />
+            </div>
+            <input
+              type="checkbox"
+              checked={autoFixChecked}
+              disabled={repoHasSecret === false}
+              onChange={e => {
+                if (repoHasSecret !== false) setAutoFixChecked(e.target.checked);
+              }}
+              aria-label="Auto-fix with Claude Code"
+              style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
+            />
+          </label>
+        )}
+
         {/* Shortcut hint */}
-        <p style={{ marginTop: 8, fontSize: 12, color: colors.textMuted, textAlign: 'center' }}>{'\u2318'} + Enter</p>
+        <p style={{ marginTop: 10, fontSize: 12, color: colors.textMuted, textAlign: 'center' }}>{'\u2318'} + Enter</p>
       </div>
     </div>
   );

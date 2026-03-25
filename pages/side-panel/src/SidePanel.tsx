@@ -1,3 +1,4 @@
+import OnboardingWizard from './components/OnboardingWizard';
 import CreateIssueView from './views/CreateIssueView';
 import HomeView from './views/HomeView';
 import SetupView from './views/SetupView';
@@ -10,10 +11,19 @@ export default function SidePanel() {
   const [view, setView] = useState<View>('home');
   const [captureData, setCaptureData] = useState<CaptureCompleteMessage['payload'] | null>(null);
   const [browserMetadata, setBrowserMetadata] = useState<BrowserMetadata | null>(null);
+  const [settingsSection, setSettingsSection] = useState<string | undefined>();
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardChapter, setWizardChapter] = useState<1 | 2>(1);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const openWizard = (chapter: 1 | 2) => {
+    setWizardChapter(chapter);
+    setWizardOpen(true);
+  };
 
   useEffect(() => {
     chrome.runtime.sendMessage({ type: 'CHECK_TOKEN_STATUS' }, (response: { connected: boolean }) => {
-      if (!response?.connected) setView('setup');
+      if (!response?.connected) openWizard(1);
     });
   }, []);
 
@@ -37,6 +47,10 @@ export default function SidePanel() {
       if (message.type === 'TOOL_SWITCHED' && (message as { payload?: { tool: string } }).payload?.tool === '') {
         setView('home');
         setCaptureData(null);
+      }
+      // Token revoked — force back to setup
+      if (message.type === 'TOKEN_REVOKED') {
+        setView('setup');
       }
     };
     chrome.runtime.onMessage.addListener(listener);
@@ -67,15 +81,51 @@ export default function SidePanel() {
     };
   }, [view]);
 
+  if (wizardOpen) {
+    return (
+      <OnboardingWizard
+        open={wizardOpen}
+        chapter={wizardChapter}
+        onClose={() => {
+          setWizardOpen(false);
+          setRefreshKey(k => k + 1);
+        }}
+      />
+    );
+  }
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 1 }}>
-        {view === 'setup' && <SetupView onDone={() => setView('home')} />}
-        {view === 'home' && <HomeView onOpenSettings={() => setView('setup')} />}
+        {view === 'setup' && (
+          <SetupView
+            key={refreshKey}
+            onDone={() => setView('home')}
+            openSection={settingsSection}
+            onOpenWizard={openWizard}
+          />
+        )}
+        {view === 'home' && (
+          <HomeView
+            key={refreshKey}
+            onOpenSettings={(section?: string) => {
+              setSettingsSection(section);
+              setView('setup');
+            }}
+            onOpenWizard={openWizard}
+            onMount={() => {
+              // Dismiss any stale overlay when returning to home
+              chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
+                if (tab?.id) chrome.tabs.sendMessage(tab.id, { type: 'DISMISS_OVERLAY' }).catch(() => {});
+              });
+            }}
+          />
+        )}
         {view === 'create-issue' && (
           <CreateIssueView
             captureData={captureData}
             browserMetadata={browserMetadata}
+            onOpenWizard={openWizard}
             onBack={() => {
               setView('home');
               // Dismiss the overlay on the page

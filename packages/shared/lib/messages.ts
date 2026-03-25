@@ -102,6 +102,7 @@ export interface CreateIssueMessage {
     labels?: string[];
     assignee?: string;
     browserMetadata?: BrowserMetadata;
+    autoFix?: boolean;
   };
 }
 
@@ -185,6 +186,38 @@ export interface CheckTokenStatusResponse {
   login?: string;
 }
 
+// Auto-fix with Claude
+export interface AutoFixSettings {
+  enabled: boolean;
+  anthropicApiKey?: string;
+  systemPrompt?: string;
+}
+
+export interface SaveAutoFixSettingsMessage {
+  type: 'SAVE_AUTO_FIX_SETTINGS';
+  payload: AutoFixSettings;
+}
+
+export interface GetAutoFixSettingsMessage {
+  type: 'GET_AUTO_FIX_SETTINGS';
+}
+
+export interface GetAutoFixSettingsResponse {
+  success: boolean;
+  settings?: AutoFixSettings;
+}
+
+export interface EnsureAutoFixWorkflowMessage {
+  type: 'ENSURE_AUTO_FIX_WORKFLOW';
+  payload: { repo: string };
+}
+
+export interface EnsureAutoFixWorkflowResponse {
+  success: boolean;
+  created?: boolean;
+  error?: string;
+}
+
 export type ExtensionMessage =
   | StartReportMessage
   | ShowScreenshotMessage
@@ -200,7 +233,10 @@ export type ExtensionMessage =
   | RequestCaptureMessage
   | ValidateTokenMessage
   | RemoveTokenMessage
-  | CheckTokenStatusMessage;
+  | CheckTokenStatusMessage
+  | SaveAutoFixSettingsMessage
+  | GetAutoFixSettingsMessage
+  | EnsureAutoFixWorkflowMessage;
 
 export interface MessageResponse {
   success: boolean;
