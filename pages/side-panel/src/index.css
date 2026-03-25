@@ -24,20 +24,266 @@
   font-display: swap;
 }
 
+/* Poppins — loaded for Strix theme */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+/* ============================================
+   Theme System — CSS Custom Properties
+   ============================================ */
+
+:root {
+  /* Backgrounds */
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-hover: #334155;
+  --bg-input: rgba(148,163,184,0.08);
+  --bg-input-hover: rgba(148,163,184,0.06);
+
+  /* Accent */
+  --accent-primary: #8b5cf6;
+  --accent-hover: #7c3aed;
+  --accent-subtle: #a78bfa;
+  --accent-link: #c4b5fd;
+  --accent-gradient: linear-gradient(135deg, #7c3aed, #9333ea);
+  --accent-gradient-disabled: rgba(124,58,237,0.4);
+  --accent-10: rgba(139,92,246,0.1);
+  --accent-15: rgba(139,92,246,0.15);
+  --accent-20: rgba(139,92,246,0.2);
+
+  /* Text */
+  --text-primary: #f1f5f9;
+  --text-secondary: rgba(241,245,249,0.45);
+  --text-muted: rgba(241,245,249,0.3);
+  --text-on-accent: #ffffff;
+
+  /* Borders */
+  --border-default: rgba(148,163,184,0.15);
+  --border-subtle: rgba(148,163,184,0.1);
+  --border-input: rgba(148,163,184,0.12);
+  --shadow-dropdown: rgba(0,0,0,0.4);
+
+  /* Status */
+  --status-success: #4ade80;
+  --status-error: #f87171;
+  --status-warning: #F59E0B;
+  --success-10: rgba(74,222,128,0.08);
+  --success-20: rgba(74,222,128,0.2);
+  --success-30: rgba(74,222,128,0.3);
+  --error-10: rgba(248,113,113,0.1);
+  --error-30: rgba(248,113,113,0.3);
+
+  /* Typography */
+  --font-heading: 'Instrument Serif', serif;
+  --font-heading-weight: 400;
+  --font-heading-tracking: normal;
+  --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body-tracking: normal;
+
+  /* Tool buttons */
+  --tool-border: var(--accent-15);
+  --tool-border-hover: var(--accent-20);
+  --tool-bg-active: var(--accent-20);
+  --tool-bg-hover: var(--accent-10);
+  --tool-text: var(--text-primary);
+  --tool-shadow: var(--accent-15);
+  --tool-shadow-hover: var(--accent-10);
+
+  /* Headings */
+  --heading-color: #a78bfa;
+
+  /* Badge */
+  --badge-bg: #8b5cf6;
+  --badge-text: #ffffff;
+
+  /* Footer / Branding */
+  --brand-footer-bg: #8B5CF6;
+  --brand-footer-text: #ffffff;
+}
+
+/* ============================================
+   Ask Phill Theme
+   ============================================ */
+
+[data-theme="ask-phill"] {
+  /* Backgrounds */
+  --bg-primary: #121212;
+  --bg-secondary: #1C1C1C;
+  --bg-hover: #2A2A2A;
+  --bg-input: rgba(255,255,255,0.06);
+  --bg-input-hover: rgba(255,255,255,0.04);
+
+  /* Accent — red primary, brown subtle */
+  --accent-primary: #DE0015;
+  --accent-hover: #B80011;
+  --accent-subtle: #D8CCB5;
+  --accent-link: #D8CCB5;
+  --accent-gradient: linear-gradient(135deg, #DE0015, #B80011);
+  --accent-gradient-disabled: rgba(222,0,21,0.35);
+  --accent-10: rgba(222,0,21,0.1);
+  --accent-15: rgba(222,0,21,0.15);
+  --accent-20: rgba(222,0,21,0.2);
+
+  /* Text */
+  --text-primary: #FAF8F7;
+  --text-secondary: rgba(250,248,247,0.5);
+  --text-muted: rgba(250,248,247,0.3);
+  --text-on-accent: #FAF8F7;
+
+  /* Borders */
+  --border-default: rgba(255,255,255,0.1);
+  --border-subtle: rgba(255,255,255,0.06);
+  --border-input: rgba(255,255,255,0.08);
+  --shadow-dropdown: rgba(0,0,0,0.6);
+
+  /* Status */
+  --status-success: #25B845;
+  --status-error: #DE0015;
+  --status-warning: #F59E0B;
+  --success-10: rgba(37,184,69,0.1);
+  --success-20: rgba(37,184,69,0.2);
+  --success-30: rgba(37,184,69,0.3);
+  --error-10: rgba(222,0,21,0.1);
+  --error-30: rgba(222,0,21,0.3);
+
+  /* Typography — Inter with tight tracking per brand guidelines */
+  --font-heading: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-heading-weight: 700;
+  --font-heading-tracking: -0.08em;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body-tracking: -0.08em;
+
+  /* Tool buttons — brown with dark text */
+  --tool-border: rgba(216,204,181,0.3);
+  --tool-border-hover: rgba(216,204,181,0.5);
+  --tool-bg-active: rgba(216,204,181,0.2);
+  --tool-bg-hover: rgba(216,204,181,0.1);
+  --tool-text: #121212;
+  --tool-shadow: rgba(216,204,181,0.2);
+  --tool-shadow-hover: rgba(216,204,181,0.15);
+
+  /* Headings */
+  --heading-color: #FAF8F7;
+
+  /* Badge */
+  --badge-bg: rgba(255,255,255,0.12);
+  --badge-text: #FAF8F7;
+
+  /* Footer / Branding */
+  --brand-footer-bg: #DE0015;
+  --brand-footer-text: #FAF8F7;
+}
+
+/* ============================================
+   Strix Theme
+   ============================================ */
+
+[data-theme="strix"] {
+  /* Backgrounds */
+  --bg-primary: #1A1A1A;
+  --bg-secondary: #222222;
+  --bg-hover: #2E2E2E;
+  --bg-input: rgba(255,255,255,0.06);
+  --bg-input-hover: rgba(255,255,255,0.04);
+
+  /* Accent — yellow primary */
+  --accent-primary: #FFDB32;
+  --accent-hover: #E6C52D;
+  --accent-subtle: rgba(255,219,50,0.7);
+  --accent-link: rgba(255,219,50,0.7);
+  --accent-gradient: linear-gradient(135deg, #FFDB32, #E6C52D);
+  --accent-gradient-disabled: rgba(255,219,50,0.3);
+  --accent-10: rgba(255,219,50,0.1);
+  --accent-15: rgba(255,219,50,0.15);
+  --accent-20: rgba(255,219,50,0.2);
+
+  /* Text */
+  --text-primary: #FFFFFF;
+  --text-secondary: rgba(255,255,255,0.55);
+  --text-muted: rgba(255,255,255,0.3);
+  --text-on-accent: #1A1A1A;
+
+  /* Borders */
+  --border-default: rgba(255,255,255,0.1);
+  --border-subtle: rgba(255,255,255,0.06);
+  --border-input: rgba(255,255,255,0.08);
+  --shadow-dropdown: rgba(0,0,0,0.6);
+
+  /* Status */
+  --status-success: #4ade80;
+  --status-error: #f87171;
+  --status-warning: #FFDB32;
+  --success-10: rgba(74,222,128,0.08);
+  --success-20: rgba(74,222,128,0.2);
+  --success-30: rgba(74,222,128,0.3);
+  --error-10: rgba(248,113,113,0.1);
+  --error-30: rgba(248,113,113,0.3);
+
+  /* Typography — Poppins with slightly tighter tracking */
+  --font-heading: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-heading-weight: 600;
+  --font-heading-tracking: -0.03em;
+  --font-body: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body-tracking: -0.02em;
+
+  /* Tool buttons — yellow accent with dark text */
+  --tool-border: rgba(255,219,50,0.25);
+  --tool-border-hover: rgba(255,219,50,0.45);
+  --tool-bg-active: rgba(255,219,50,0.15);
+  --tool-bg-hover: rgba(255,219,50,0.08);
+  --tool-text: #FFFFFF;
+  --tool-shadow: rgba(255,219,50,0.15);
+  --tool-shadow-hover: rgba(255,219,50,0.1);
+
+  /* Headings */
+  --heading-color: #FFFFFF;
+
+  /* Badge */
+  --badge-bg: #FFDB32;
+  --badge-text: #1A1A1A;
+
+  /* Footer / Branding */
+  --brand-footer-bg: #FFDB32;
+  --brand-footer-text: #1A1A1A;
+}
+
+/* ============================================
+   Base Styles
+   ============================================ */
+
 body {
   width: 100%;
   min-height: 100vh;
-  background: #0f172a;
-  color: #f1f5f9;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   margin: 0;
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-body);
+  letter-spacing: var(--font-body-tracking);
 }
 
 h1, h2, h3 {
-  font-family: 'Instrument Serif', serif;
-  font-weight: 400;
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  letter-spacing: var(--font-heading-tracking);
 }
 
 a {
-  color: #c4b5fd;
+  color: var(--accent-link);
+}
+
+/* Interactive card/button hover states */
+.hover-card {
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.hover-card:hover {
+  background: var(--accent-10) !important;
+  border-color: var(--accent-20) !important;
+}
+
+/* Subtle text nudge on hover for settings rows */
+.settings-row > span:first-child {
+  transition: transform 0.15s ease;
+}
+.settings-row:hover > span:first-child {
+  transform: translateX(3px);
 }

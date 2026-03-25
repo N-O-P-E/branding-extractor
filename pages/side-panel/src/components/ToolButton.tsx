@@ -89,24 +89,24 @@ export default function ToolButton({ icon, label, active, disabled, onClick }: T
         gap: 8,
         padding: '12px 8px',
         borderRadius: 10,
-        border: `1px solid ${disabled ? 'rgba(148,163,184,0.1)' : active ? 'rgba(139,92,246,0.5)' : hovered ? 'rgba(139,92,246,0.4)' : 'rgba(139,92,246,0.3)'}`,
+        border: `1px solid ${disabled ? 'var(--border-subtle)' : active ? 'var(--tool-border-hover)' : hovered ? 'var(--tool-border-hover)' : 'var(--tool-border)'}`,
         background: disabled
           ? 'transparent'
           : active
-            ? 'rgba(139,92,246,0.2)'
+            ? 'var(--tool-bg-active)'
             : hovered
-              ? 'rgba(139,92,246,0.08)'
+              ? 'var(--tool-bg-hover)'
               : 'transparent',
-        color: disabled ? 'rgba(148,163,184,0.25)' : active ? '#a78bfa' : hovered ? '#c4b5fd' : '#f1f5f9',
-        fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
+        color: disabled ? 'var(--text-muted)' : 'var(--text-primary)',
+        fontFamily: 'var(--font-body)',
         fontSize: 13,
         minWidth: 0,
         fontWeight: 500,
         cursor: disabled ? 'not-allowed' : 'pointer',
         boxShadow: active
-          ? '0 0 16px rgba(139,92,246,0.25), inset 0 0 12px rgba(139,92,246,0.1)'
+          ? '0 0 16px var(--tool-shadow), inset 0 0 12px var(--tool-shadow-hover)'
           : hovered
-            ? '0 4px 12px rgba(139,92,246,0.15)'
+            ? '0 4px 12px var(--tool-shadow-hover)'
             : 'none',
         transform: hovered && !active && !disabled ? 'translateY(-1px)' : 'none',
         transition: 'all 0.15s ease',

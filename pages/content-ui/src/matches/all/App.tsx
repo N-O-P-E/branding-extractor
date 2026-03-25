@@ -1,7 +1,13 @@
 /* eslint-disable jsx-a11y/no-static-element-interactions, jsx-a11y/no-noninteractive-element-interactions */
 import { collectBrowserMetadata } from '@extension/shared/lib/utils/browser-metadata.js';
 import { useEffect, useState, useCallback, useRef } from 'react';
-import type { Region, ShowScreenshotMessage, ActivateToolMessage, CaptureCompleteMessage } from '@extension/shared';
+import type {
+  Region,
+  ShowScreenshotMessage,
+  ActivateToolMessage,
+  CaptureCompleteMessage,
+  OverlayTheme,
+} from '@extension/shared';
 
 type OverlayState = 'idle' | 'selecting';
 
@@ -85,6 +91,15 @@ const STROKE_WIDTHS = [
   { value: 4, label: 'M' },
   { value: 8, label: 'L' },
 ];
+
+const DEFAULT_OVERLAY_THEME: OverlayTheme = {
+  accent: '#8B5CF6',
+  accentLight: 'rgba(139, 92, 246, 0.25)',
+  surface: '#1e293b',
+  textPrimary: '#f1f5f9',
+  textSecondary: 'rgba(148, 163, 184, 0.6)',
+  border: 'rgba(148, 163, 184, 0.2)',
+};
 
 const renderPencilStrokes = (
   ctx: CanvasRenderingContext2D,
@@ -190,6 +205,7 @@ const App = () => {
   const strokeColorRef = useRef('#8B5CF6');
   const [strokeWidth, setStrokeWidth] = useState(4);
   const [canvasSubTool, setCanvasSubTool] = useState<CanvasSubTool>('draw');
+  const [overlayTheme, setOverlayTheme] = useState<OverlayTheme>(DEFAULT_OVERLAY_THEME);
   const [comments, setComments] = useState<Comment[]>([]);
   const [editingComment, setEditingComment] = useState<{ x: number; y: number } | null>(null);
   const editingCommentRef = useRef<{ x: number; y: number } | null>(null);
@@ -225,6 +241,29 @@ const App = () => {
   const screenshotUrlRef = useRef<string | null>(null);
   const handleDoneRef = useRef<((shouldDismiss?: boolean) => void) | null>(null);
   const orderCounter = useRef(0);
+  const closedDialogs = useRef<HTMLDialogElement[]>([]);
+
+  // Close all open <dialog> elements on the host page so they don't render
+  // above our overlay (the browser top layer beats any z-index).
+  const closeHostDialogs = useCallback(() => {
+    const openDialogs = document.querySelectorAll('dialog[open]');
+    closedDialogs.current = [];
+    openDialogs.forEach(d => {
+      const dialog = d as HTMLDialogElement;
+      closedDialogs.current.push(dialog);
+      dialog.close();
+    });
+  }, []);
+
+  // Re-open dialogs that we closed when overlay activated
+  const restoreHostDialogs = useCallback(() => {
+    closedDialogs.current.forEach(dialog => {
+      if (dialog.isConnected) {
+        dialog.showModal();
+      }
+    });
+    closedDialogs.current = [];
+  }, []);
 
   const dismiss = useCallback(() => {
     setState('idle');
@@ -251,14 +290,21 @@ const App = () => {
     actionHistory.current = [];
     orderCounter.current = 0;
 
+    // Re-open any dialogs we closed when the overlay activated
+    restoreHostDialogs();
+
     // Notify side panel that overlay is closed so buttons reset
     chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: '' } });
-  }, []);
+  }, [restoreHostDialogs]);
 
   useEffect(() => {
     const listener = (message: ShowScreenshotMessage | ActivateToolMessage) => {
       if (message.type === 'SHOW_SCREENSHOT') {
         const tool = message.payload.tool ?? 'select';
+        if (message.payload.theme) setOverlayTheme(message.payload.theme);
+
+        // Close any open <dialog> elements so they don't render above our overlay
+        closeHostDialogs();
 
         // If overlay is already active with content, just switch the tool
         if (stateRef.current === 'selecting' && screenshotUrlRef.current) {
@@ -523,6 +569,11 @@ const App = () => {
   useEffect(() => {
     if (state === 'idle') return;
     const blockHostKeys = (e: KeyboardEvent) => {
+      // Cmd+Escape dismisses overlay regardless of focus location
+      if (e.key === 'Escape' && e.metaKey) {
+        dismiss();
+        return;
+      }
       // Allow browser shortcuts (Cmd+T, Cmd+R, Cmd+W, etc.)
       if ((e.metaKey || e.ctrlKey) && e.key !== 'z') return;
       // Allow F-keys
@@ -919,7 +970,12 @@ const App = () => {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        // Plain Escape exits inspect mode; Cmd+Escape handled by backdrop handler
+        if (e.metaKey) {
+          // Cmd+Escape dismisses the entire overlay
+          dismiss();
+          return;
+        }
+        // Plain Escape exits inspect mode
         setInspectActive(false);
         setInspectHighlight(null);
         inspectHoveredEl.current = null;
@@ -1082,13 +1138,13 @@ const App = () => {
             top: 24,
             left: '50%',
             transform: 'translateX(-50%)',
-            background: '#1e293b',
-            border: '1px solid rgba(148,163,184,0.2)',
+            background: overlayTheme.surface,
+            border: `1px solid ${overlayTheme.border}`,
             borderRadius: 12,
             padding: '8px 16px',
             fontSize: 13,
             fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-            color: 'rgba(241,245,249,0.6)',
+            color: overlayTheme.textSecondary,
             zIndex: 2147483647,
             pointerEvents: 'none',
             boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
@@ -1096,7 +1152,7 @@ const App = () => {
           }}>
           {inspectElInfo ? (
             <>
-              <span style={{ color: '#c4b5fd', fontFamily: 'monospace, monospace', fontSize: 12 }}>
+              <span style={{ color: overlayTheme.textPrimary, fontFamily: 'monospace, monospace', fontSize: 12 }}>
                 {inspectElInfo}
               </span>
               <span style={{ opacity: 0.4, margin: '0 6px' }}>·</span>
@@ -1124,8 +1180,16 @@ const App = () => {
           }}
           onKeyUp={e => e.stopPropagation()}
           onKeyPress={e => e.stopPropagation()}>
-          <button style={styles.closeButton} onClick={dismiss} aria-label="Close overlay">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <button
+            style={{
+              ...styles.closeButton,
+              background: overlayTheme.surface,
+              color: overlayTheme.textPrimary,
+              border: `1px solid ${overlayTheme.border}`,
+            }}
+            onClick={dismiss}
+            aria-label="Close overlay">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path
                 d="M6.25 6.25L17.75 17.75M17.75 6.25L6.25 17.75"
                 stroke="currentColor"
@@ -1133,6 +1197,7 @@ const App = () => {
                 strokeLinecap="round"
               />
             </svg>
+            <span style={{ fontSize: 11, opacity: 0.5 }}>Esc</span>
           </button>
 
           {/* Captured element info bar */}
@@ -1154,13 +1219,13 @@ const App = () => {
                 <div
                   key={i}
                   style={{
-                    background: '#1e293b',
-                    border: '1px solid rgba(148,163,184,0.2)',
+                    background: overlayTheme.surface,
+                    border: `1px solid ${overlayTheme.border}`,
                     borderRadius: 8,
                     padding: '5px 12px',
                     fontSize: 11,
                     fontFamily: 'monospace, monospace',
-                    color: '#c4b5fd',
+                    color: overlayTheme.textPrimary,
                     boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
                     whiteSpace: 'nowrap',
                   }}>
@@ -1436,8 +1501,8 @@ const App = () => {
                 display: 'flex',
                 gap: '4px',
                 padding: '8px 14px',
-                background: '#1e293b',
-                border: '1px solid rgba(148,163,184,0.2)',
+                background: overlayTheme.surface,
+                border: `1px solid ${overlayTheme.border}`,
                 borderRadius: '14px',
                 boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.1)',
                 fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
@@ -1460,7 +1525,7 @@ const App = () => {
                     height: 34,
                     borderRadius: '8px',
                     border: 'none',
-                    background: activeTool === 'select' ? 'rgba(139,92,246,0.25)' : 'transparent',
+                    background: activeTool === 'select' ? overlayTheme.accentLight : 'transparent',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -1468,7 +1533,7 @@ const App = () => {
                     gap: 4,
                     transition: 'all 0.15s ease-out',
                     padding: '0 6px',
-                    color: activeTool === 'select' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
+                    color: activeTool === 'select' ? overlayTheme.textPrimary : overlayTheme.textSecondary,
                     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                   }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1495,7 +1560,7 @@ const App = () => {
                     borderRadius: '8px',
                     border: 'none',
                     background:
-                      activeTool === 'pencil' && canvasSubTool === 'draw' ? 'rgba(139,92,246,0.25)' : 'transparent',
+                      activeTool === 'pencil' && canvasSubTool === 'draw' ? overlayTheme.accentLight : 'transparent',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -1503,7 +1568,10 @@ const App = () => {
                     gap: 4,
                     transition: 'all 0.15s ease-out',
                     padding: '0 6px',
-                    color: activeTool === 'pencil' && canvasSubTool === 'draw' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
+                    color:
+                      activeTool === 'pencil' && canvasSubTool === 'draw'
+                        ? overlayTheme.textPrimary
+                        : overlayTheme.textSecondary,
                     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                   }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1537,7 +1605,7 @@ const App = () => {
                     borderRadius: '8px',
                     border: 'none',
                     background:
-                      activeTool === 'pencil' && canvasSubTool === 'text' ? 'rgba(139,92,246,0.25)' : 'transparent',
+                      activeTool === 'pencil' && canvasSubTool === 'text' ? overlayTheme.accentLight : 'transparent',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -1545,7 +1613,10 @@ const App = () => {
                     gap: 4,
                     transition: 'all 0.15s ease-out',
                     padding: '0 6px',
-                    color: activeTool === 'pencil' && canvasSubTool === 'text' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
+                    color:
+                      activeTool === 'pencil' && canvasSubTool === 'text'
+                        ? overlayTheme.textPrimary
+                        : overlayTheme.textSecondary,
                     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                   }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1579,7 +1650,7 @@ const App = () => {
                     borderRadius: '8px',
                     border: 'none',
                     background:
-                      activeTool === 'pencil' && canvasSubTool === 'image' ? 'rgba(139,92,246,0.25)' : 'transparent',
+                      activeTool === 'pencil' && canvasSubTool === 'image' ? overlayTheme.accentLight : 'transparent',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -1587,7 +1658,10 @@ const App = () => {
                     gap: 4,
                     transition: 'all 0.15s ease-out',
                     padding: '0 6px',
-                    color: activeTool === 'pencil' && canvasSubTool === 'image' ? '#f1f5f9' : 'rgba(148,163,184,0.6)',
+                    color:
+                      activeTool === 'pencil' && canvasSubTool === 'image'
+                        ? overlayTheme.textPrimary
+                        : overlayTheme.textSecondary,
                     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                   }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1616,7 +1690,7 @@ const App = () => {
               </div>
 
               {/* Divider */}
-              <div style={{ width: 1, height: 24, background: 'rgba(148,163,184,0.2)', margin: '0 6px' }} />
+              <div style={{ width: 1, height: 24, background: overlayTheme.border, margin: '0 6px' }} />
 
               {/* Stroke width presets */}
               <div style={{ display: 'flex', gap: '2px', alignItems: 'center', padding: '0 4px' }}>
@@ -1630,7 +1704,7 @@ const App = () => {
                       height: 28,
                       borderRadius: '6px',
                       border: 'none',
-                      background: strokeWidth === sw.value ? 'rgba(139,92,246,0.25)' : 'transparent',
+                      background: strokeWidth === sw.value ? overlayTheme.accentLight : 'transparent',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -1643,7 +1717,7 @@ const App = () => {
                         width: sw.value + 4,
                         height: sw.value + 4,
                         borderRadius: '50%',
-                        background: strokeWidth === sw.value ? '#f1f5f9' : 'rgba(148,163,184,0.5)',
+                        background: strokeWidth === sw.value ? overlayTheme.textPrimary : 'rgba(148,163,184,0.5)',
                         transition: 'all 0.15s ease-out',
                       }}
                     />
@@ -1652,7 +1726,7 @@ const App = () => {
               </div>
 
               {/* Divider */}
-              <div style={{ width: 1, height: 24, background: 'rgba(148,163,184,0.2)', margin: '0 6px' }} />
+              <div style={{ width: 1, height: 24, background: overlayTheme.border, margin: '0 6px' }} />
 
               {/* Color swatches */}
               <div style={{ display: 'flex', gap: '3px', alignItems: 'center', padding: '0 4px' }}>
@@ -1667,7 +1741,7 @@ const App = () => {
                       borderRadius: '50%',
                       border:
                         strokeColor === color
-                          ? '2px solid #f1f5f9'
+                          ? `2px solid ${overlayTheme.textPrimary}`
                           : color === '#000000'
                             ? '1px solid rgba(148,163,184,0.3)'
                             : '1px solid rgba(0,0,0,0.15)',
@@ -1687,7 +1761,7 @@ const App = () => {
               </div>
 
               {/* Divider */}
-              <div style={{ width: 1, height: 24, background: 'rgba(148,163,184,0.2)', margin: '0 6px' }} />
+              <div style={{ width: 1, height: 24, background: overlayTheme.border, margin: '0 6px' }} />
 
               {/* Undo */}
               <button
@@ -1726,15 +1800,6 @@ const App = () => {
                     strokeLinejoin="round"
                   />
                 </svg>
-              </button>
-            </div>
-          )}
-
-          {/* Cancel pill - shown when no content yet */}
-          {!hasCanvasContent && (
-            <div style={styles.pillContainer}>
-              <button style={styles.pill} onClick={dismiss}>
-                Cancel · Esc
               </button>
             </div>
           )}
@@ -1779,8 +1844,9 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'rgba(241, 245, 249, 0.7)',
     border: '1px solid rgba(148, 163, 184, 0.15)',
     borderRadius: '12px',
-    width: '40px',
+    padding: '0 14px',
     height: '40px',
+    gap: '6px',
     fontSize: '18px',
     cursor: 'pointer',
     display: 'flex',

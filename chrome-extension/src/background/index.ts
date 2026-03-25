@@ -55,6 +55,10 @@ chrome.runtime.onMessage.addListener(
       handleFetchAssignees(message, sendResponse as (response: FetchAssigneesResponse) => void);
       return true;
     }
+    if (message.type === 'FETCH_BRANCHES') {
+      handleFetchBranches(message, sendResponse);
+      return true;
+    }
     if (message.type === 'FETCH_REPOS') {
       handleFetchRepos(sendResponse as (response: FetchReposResponse) => void);
       return true;
@@ -91,6 +95,10 @@ chrome.runtime.onMessage.addListener(
     if (message.type === 'SHOW_ISSUES_PANEL') {
       handleShowIssuesPanel(message);
       return true;
+    }
+    if (message.type === 'UPDATE_ICON_THEME') {
+      updateIconForTheme(message.payload?.theme as string);
+      return false;
     }
     return false;
   },
@@ -170,9 +178,47 @@ const handleStartReport = async (tool: 'select' | 'pencil', sendResponse: (respo
 
     const screenshotDataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 80 });
 
+    // Read theme for overlay
+    const { extensionTheme, unlockedThemes } = await chrome.storage.local.get(['extensionTheme', 'unlockedThemes']);
+    const themeId = extensionTheme as string | undefined;
+    const isThemed =
+      themeId &&
+      themeId !== 'default' &&
+      (unlockedThemes as Array<{ id: string }> | undefined)?.some(t => t.id === themeId);
+
+    const overlayThemes: Record<
+      string,
+      {
+        accent: string;
+        accentLight: string;
+        surface: string;
+        textPrimary: string;
+        textSecondary: string;
+        border: string;
+      }
+    > = {
+      'ask-phill': {
+        accent: '#D8CCB5',
+        accentLight: 'rgba(216,204,181,0.2)',
+        surface: '#1C1C1C',
+        textPrimary: '#FAF8F7',
+        textSecondary: 'rgba(250,248,247,0.5)',
+        border: 'rgba(255,255,255,0.1)',
+      },
+      strix: {
+        accent: '#FFDB32',
+        accentLight: 'rgba(255,219,50,0.15)',
+        surface: '#222222',
+        textPrimary: '#FFFFFF',
+        textSecondary: 'rgba(255,255,255,0.55)',
+        border: 'rgba(255,255,255,0.1)',
+      },
+    };
+    const overlayTheme = isThemed && themeId ? overlayThemes[themeId] : undefined;
+
     const payload: ShowScreenshotMessage = {
       type: 'SHOW_SCREENSHOT',
-      payload: { screenshotDataUrl, tool },
+      payload: { screenshotDataUrl, tool, theme: overlayTheme },
     };
 
     await chrome.tabs.sendMessage(tab.id, payload);
@@ -355,6 +401,7 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
       htmlSnippet,
       labels: userLabels,
       assignee,
+      branch,
       browserMetadata,
       autoFix,
     } = message.payload;
@@ -439,6 +486,7 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
       body += `- **Page Title:** ${browserMetadata.page.title}\n`;
       body += `- **Language:** ${browserMetadata.page.language}\n`;
       body += `- **Connection:** ${browserMetadata.network.online ? 'online' : 'offline'}${browserMetadata.network.connectionType ? ` (${browserMetadata.network.connectionType})` : ''}\n`;
+      if (branch) body += `- **Target Branch:** ${branch}\n`;
     }
 
     // Console Errors section
@@ -573,6 +621,40 @@ const handleFetchLabels = async (
     sendResponse({
       success: true,
       labels: data.filter(l => !hiddenLabels.includes(l.name)).map(l => ({ name: l.name, color: l.color })),
+    });
+  } catch (err) {
+    await check401(err);
+    sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
+  }
+};
+
+const handleFetchBranches = async (
+  message: { payload: { repo: string } },
+  sendResponse: (response: {
+    success: boolean;
+    branches?: Array<{ name: string; default: boolean }>;
+    error?: string;
+  }) => void,
+) => {
+  try {
+    const parsed = parseRepoName(message.payload.repo);
+    if (!parsed) {
+      sendResponse({ success: false, error: 'Invalid repository name format.' });
+      return;
+    }
+    const octokit = await getOctokit();
+    // Get default branch
+    const { data: repoData } = await octokit.repos.get({ owner: parsed.owner, repo: parsed.repo });
+    const defaultBranch = repoData.default_branch;
+    // Fetch branches
+    const { data } = await octokit.repos.listBranches({
+      owner: parsed.owner,
+      repo: parsed.repo,
+      per_page: 100,
+    });
+    sendResponse({
+      success: true,
+      branches: data.map(b => ({ name: b.name, default: b.name === defaultBranch })),
     });
   } catch (err) {
     await check401(err);
@@ -778,3 +860,50 @@ const handleShowIssuesPanel = async (message: ShowIssuesPanelMessage) => {
     // Content script may not be injected; silently ignore
   }
 };
+
+/** Theme icon colors — maps theme ID to the target tint color [r,g,b] */
+const THEME_ICON_COLORS: Record<string, [number, number, number]> = {
+  default: [139, 92, 246], // purple #8B5CF6
+  'ask-phill': [222, 0, 21], // red #DE0015
+  strix: [255, 219, 50], // yellow #FFDB32
+};
+
+const updateIconForTheme = async (themeId: string) => {
+  const targetColor = THEME_ICON_COLORS[themeId] ?? THEME_ICON_COLORS.default;
+
+  try {
+    const response = await fetch(chrome.runtime.getURL('icon-34.png'));
+    const blob = await response.blob();
+    const bitmap = await createImageBitmap(blob);
+
+    const canvas = new OffscreenCanvas(34, 34);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.drawImage(bitmap, 0, 0, 34, 34);
+    const imageData = ctx.getImageData(0, 0, 34, 34);
+    const data = imageData.data;
+
+    // Tint: replace non-transparent pixels with the target color, keeping alpha
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] > 0) {
+        data[i] = targetColor[0];
+        data[i + 1] = targetColor[1];
+        data[i + 2] = targetColor[2];
+        // Keep original alpha
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    await chrome.action.setIcon({ imageData: imageData as unknown as ImageData });
+  } catch {
+    // Fallback to default icon
+    await chrome.action.setIcon({ path: 'icon-34.png' });
+  }
+};
+
+// Apply saved theme icon on startup
+chrome.storage.local.get('extensionTheme', result => {
+  const theme = (result.extensionTheme as string) ?? 'default';
+  updateIconForTheme(theme);
+});

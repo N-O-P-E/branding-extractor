@@ -23,14 +23,14 @@ interface CreateIssueViewProps {
 }
 
 const colors = {
-  bgPrimary: '#0f172a',
-  inputBg: 'rgba(148,163,184,0.08)',
-  border: 'rgba(148,163,184,0.15)',
-  textPrimary: '#f1f5f9',
-  textSecondary: 'rgba(241,245,249,0.45)',
-  textMuted: 'rgba(241,245,249,0.3)',
-  success: '#4ade80',
-  error: '#f87171',
+  bgPrimary: 'var(--bg-primary)',
+  inputBg: 'var(--bg-input)',
+  border: 'var(--border-default)',
+  textPrimary: 'var(--text-primary)',
+  textSecondary: 'var(--text-secondary)',
+  textMuted: 'var(--text-muted)',
+  success: 'var(--status-success)',
+  error: 'var(--status-error)',
 } as const;
 
 export default function CreateIssueView({
@@ -54,19 +54,22 @@ export default function CreateIssueView({
   const [autoFixAvailable, setAutoFixAvailable] = useState(false);
   const [autoFixChecked, setAutoFixChecked] = useState(false);
   const [repoHasSecret, setRepoHasSecret] = useState<boolean | null>(null);
+  const [selectedBranch, setSelectedBranch] = useState('');
 
   const [liveBrowserMetadata, setLiveBrowserMetadata] = useState<BrowserMetadata | null>(browserMetadata);
 
   useEffect(() => {
-    chrome.storage.local.get('selectedRepo').then(result => {
+    chrome.storage.local.get(['selectedRepo', 'selectedBranch']).then(result => {
       if (result.selectedRepo) setSelectedRepo(result.selectedRepo as string);
+      if (result.selectedBranch) setSelectedBranch(result.selectedBranch as string);
     });
-    // Check if auto-fix is available — enabled by default when API key is configured
+    // Check if auto-fix is available and load default preference
     chrome.storage.local.get('autoFixSettings').then(result => {
       if (result.autoFixSettings) {
         const settings = result.autoFixSettings as AutoFixSettings;
         const available = !!settings.anthropicApiKey;
         setAutoFixAvailable(available);
+        if (settings.autoFixByDefault) setAutoFixChecked(true);
       }
     });
   }, []);
@@ -81,8 +84,12 @@ export default function CreateIssueView({
         if (response?.success) {
           const exists = !!response.exists;
           setRepoHasSecret(exists);
-          if (exists) setAutoFixChecked(true);
-          else setAutoFixChecked(false);
+          // Read fresh from storage to avoid stale state
+          chrome.storage.local.get('autoFixSettings').then(result => {
+            const s = result.autoFixSettings as AutoFixSettings | undefined;
+            if (exists && s?.autoFixByDefault) setAutoFixChecked(true);
+            else if (!exists) setAutoFixChecked(false);
+          });
         }
       },
     );
@@ -161,6 +168,7 @@ export default function CreateIssueView({
           browserMetadata: data.browserMetadata,
           labels: selectedLabels,
           assignee: selectedAssignee || undefined,
+          branch: selectedBranch || undefined,
           autoFix: autoFixChecked && autoFixAvailable,
         },
       })) as { success: boolean; issueUrl?: string; error?: string; autoFixResult?: string; autoFixError?: string };
@@ -182,7 +190,16 @@ export default function CreateIssueView({
       setError(err instanceof Error ? err.message : 'Failed to create issue');
       setSubmitting(false);
     }
-  }, [submitting, selectedRepo, description, selectedLabels, selectedAssignee, autoFixChecked, autoFixAvailable]);
+  }, [
+    submitting,
+    selectedRepo,
+    description,
+    selectedLabels,
+    selectedAssignee,
+    selectedBranch,
+    autoFixChecked,
+    autoFixAvailable,
+  ]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -216,8 +233,8 @@ export default function CreateIssueView({
             width: 64,
             height: 64,
             borderRadius: 16,
-            background: 'rgba(139,92,246,0.12)',
-            border: '1px solid rgba(139,92,246,0.2)',
+            background: 'var(--accent-10)',
+            border: '1px solid var(--accent-20)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -229,7 +246,7 @@ export default function CreateIssueView({
             viewBox="0 0 24 24"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
-            style={{ color: '#a78bfa' }}>
+            style={{ color: 'var(--accent-subtle)' }}>
             <path
               d="M10.7998 14.0147L8.78539 13.4853L8.28179 11.8971L6.77099 11.3676L6.53209 10.3631C6.37692 9.71056 5.79399 9.25 5.12329 9.25C4.4703 9.25 3.9 9.68951 3.83879 10.3396C3.7639 11.1349 3.7654 12.2732 4.13328 13.4372C4.85399 15.7174 7.73342 18.25 7.73342 18.25"
               stroke="currentColor"
@@ -265,7 +282,7 @@ export default function CreateIssueView({
         <p
           style={{
             fontSize: 13,
-            color: 'rgba(241,245,249,0.45)',
+            color: 'var(--text-secondary)',
             margin: '0 0 24px',
             lineHeight: 1.5,
             maxWidth: 280,
@@ -290,14 +307,14 @@ export default function CreateIssueView({
             alignItems: 'center',
             gap: 8,
             padding: '10px 20px',
-            background: 'linear-gradient(135deg, #7c3aed, #9333ea)',
-            color: '#fff',
+            background: 'var(--accent-gradient)',
+            color: 'var(--text-on-accent)',
             borderRadius: 10,
             fontSize: 14,
             fontWeight: 600,
             textDecoration: 'none',
             transition: 'all 0.15s',
-            boxShadow: '0 4px 16px rgba(139,92,246,0.3)',
+            boxShadow: '0 4px 16px var(--accent-15)',
           }}>
           View on GitHub
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -316,7 +333,7 @@ export default function CreateIssueView({
           style={{
             background: 'none',
             border: 'none',
-            color: 'rgba(241,245,249,0.3)',
+            color: 'var(--text-muted)',
             fontSize: 12,
             cursor: 'pointer',
             marginTop: 16,
@@ -331,7 +348,7 @@ export default function CreateIssueView({
             style={{
               background: 'none',
               border: 'none',
-              color: '#c4b5fd',
+              color: 'var(--accent-link)',
               fontSize: 12,
               cursor: 'pointer',
               marginTop: 8,
@@ -385,7 +402,7 @@ export default function CreateIssueView({
 
       <div style={{ padding: '12px 20px 20px' }}>
         {/* Description */}
-        <span style={{ fontSize: 12, color: 'rgba(241,245,249,0.4)', marginBottom: 6, display: 'block' }}>
+        <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
           Description
         </span>
         <textarea
@@ -422,8 +439,8 @@ export default function CreateIssueView({
             style={{
               marginTop: 12,
               padding: '10px 14px',
-              background: 'rgba(248,113,113,0.1)',
-              border: `1px solid rgba(248,113,113,0.3)`,
+              background: 'var(--error-10)',
+              border: `1px solid var(--error-30)`,
               borderRadius: 8,
               fontSize: 12,
               color: colors.error,
@@ -467,7 +484,7 @@ export default function CreateIssueView({
             <span
               style={{
                 fontSize: 12,
-                color: 'rgba(241,245,249,0.4)',
+                color: 'var(--text-secondary)',
                 marginTop: 14,
                 marginBottom: 6,
                 display: 'block',
@@ -477,7 +494,7 @@ export default function CreateIssueView({
             <div
               style={{
                 padding: '10px 12px',
-                background: 'rgba(148,163,184,0.05)',
+                background: 'var(--bg-input)',
                 border: `1px solid ${colors.border}`,
                 borderRadius: 8,
                 fontSize: 11,
@@ -485,17 +502,17 @@ export default function CreateIssueView({
                 lineHeight: 1.7,
               }}>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                <span style={{ background: 'var(--border-subtle)', padding: '2px 6px', borderRadius: 4 }}>
                   {liveBrowserMetadata.browser.name} {liveBrowserMetadata.browser.version}
                 </span>
-                <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                <span style={{ background: 'var(--border-subtle)', padding: '2px 6px', borderRadius: 4 }}>
                   {liveBrowserMetadata.os.name} {liveBrowserMetadata.os.version}
                 </span>
-                <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                <span style={{ background: 'var(--border-subtle)', padding: '2px 6px', borderRadius: 4 }}>
                   {liveBrowserMetadata.device.screenWidth}×{liveBrowserMetadata.device.screenHeight} @
                   {liveBrowserMetadata.device.pixelRatio}x
                 </span>
-                <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                <span style={{ background: 'var(--border-subtle)', padding: '2px 6px', borderRadius: 4 }}>
                   {liveBrowserMetadata.device.colorScheme}
                 </span>
               </div>
@@ -511,8 +528,8 @@ export default function CreateIssueView({
                   }}>
                   <span
                     style={{
-                      background: 'rgba(139,92,246,0.1)',
-                      color: '#c4b5fd',
+                      background: 'var(--accent-10)',
+                      color: 'var(--accent-link)',
                       padding: '2px 6px',
                       borderRadius: 4,
                     }}>
@@ -520,8 +537,8 @@ export default function CreateIssueView({
                   </span>
                   <span
                     style={{
-                      background: 'rgba(139,92,246,0.1)',
-                      color: '#c4b5fd',
+                      background: 'var(--accent-10)',
+                      color: 'var(--accent-link)',
                       padding: '2px 6px',
                       borderRadius: 4,
                     }}>
@@ -530,8 +547,8 @@ export default function CreateIssueView({
                   {liveBrowserMetadata.shopify.template && (
                     <span
                       style={{
-                        background: 'rgba(139,92,246,0.1)',
-                        color: '#c4b5fd',
+                        background: 'var(--accent-10)',
+                        color: 'var(--accent-link)',
                         padding: '2px 6px',
                         borderRadius: 4,
                       }}>
@@ -541,8 +558,8 @@ export default function CreateIssueView({
                   {liveBrowserMetadata.shopify.themeName && (
                     <span
                       style={{
-                        background: 'rgba(139,92,246,0.1)',
-                        color: '#c4b5fd',
+                        background: 'var(--accent-10)',
+                        color: 'var(--accent-link)',
                         padding: '2px 6px',
                         borderRadius: 4,
                       }}>
@@ -550,7 +567,7 @@ export default function CreateIssueView({
                     </span>
                   )}
                   {liveBrowserMetadata.shopify.themeId && (
-                    <span style={{ background: 'rgba(148,163,184,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                    <span style={{ background: 'var(--border-subtle)', padding: '2px 6px', borderRadius: 4 }}>
                       Theme #{liveBrowserMetadata.shopify.themeId}
                     </span>
                   )}
@@ -580,19 +597,36 @@ export default function CreateIssueView({
           style={{
             width: '100%',
             marginTop: 16,
-            background:
-              submitting || !selectedRepo ? 'rgba(124,58,237,0.4)' : 'linear-gradient(135deg, #7c3aed, #9333ea)',
+            background: submitting || !selectedRepo ? 'var(--accent-gradient-disabled)' : 'var(--accent-gradient)',
             border: 'none',
             borderRadius: 10,
             padding: '13px',
-            color: '#fff',
+            color: 'var(--text-on-accent)',
             fontSize: 15,
             fontWeight: 500,
             cursor: submitting || !selectedRepo ? 'not-allowed' : 'pointer',
             textAlign: 'center' as const,
             transition: 'all 0.15s',
           }}>
-          {submitting ? 'Submitting...' : 'Submit Issue'}
+          {submitting ? (
+            'Submitting...'
+          ) : (
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+              Submit Issue
+              <span
+                style={{
+                  fontSize: 11,
+                  opacity: 0.6,
+                  background: 'rgba(255,255,255,0.15)',
+                  padding: '2px 8px',
+                  borderRadius: 5,
+                  fontWeight: 400,
+                  letterSpacing: '0.02em',
+                }}>
+                {'\u2318'} + Enter
+              </span>
+            </span>
+          )}
         </button>
 
         {/* Auto-fix toggle — inline below submit */}
@@ -629,7 +663,7 @@ export default function CreateIssueView({
                 width: 36,
                 height: 20,
                 borderRadius: 10,
-                background: autoFixChecked ? '#7c3aed' : 'rgba(148,163,184,0.2)',
+                background: autoFixChecked ? 'var(--accent-hover)' : 'var(--border-default)',
                 transition: 'background 0.2s',
                 flexShrink: 0,
               }}>
@@ -641,9 +675,9 @@ export default function CreateIssueView({
                   width: 16,
                   height: 16,
                   borderRadius: '50%',
-                  background: '#fff',
+                  background: 'var(--text-on-accent)',
                   transition: 'left 0.2s ease',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                  boxShadow: '0 1px 3px var(--shadow-dropdown)',
                 }}
               />
             </div>
@@ -659,9 +693,6 @@ export default function CreateIssueView({
             />
           </label>
         )}
-
-        {/* Shortcut hint */}
-        <p style={{ marginTop: 10, fontSize: 12, color: colors.textMuted, textAlign: 'center' }}>{'\u2318'} + Enter</p>
       </div>
     </div>
   );

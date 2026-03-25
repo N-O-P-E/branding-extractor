@@ -38,11 +38,21 @@ export interface StartReportMessage {
   type: 'START_REPORT';
 }
 
+export interface OverlayTheme {
+  accent: string;
+  accentLight: string;
+  surface: string;
+  textPrimary: string;
+  textSecondary: string;
+  border: string;
+}
+
 export interface ShowScreenshotMessage {
   type: 'SHOW_SCREENSHOT';
   payload: {
     screenshotDataUrl: string;
     tool: 'select' | 'pencil' | 'inspect';
+    theme?: OverlayTheme;
   };
 }
 
@@ -87,6 +97,17 @@ export interface FetchAssigneesResponse {
   error?: string;
 }
 
+export interface FetchBranchesMessage {
+  type: 'FETCH_BRANCHES';
+  payload: { repo: string };
+}
+
+export interface FetchBranchesResponse {
+  success: boolean;
+  branches?: Array<{ name: string; default: boolean }>;
+  error?: string;
+}
+
 export interface CreateIssueMessage {
   type: 'CREATE_ISSUE';
   payload: {
@@ -101,6 +122,7 @@ export interface CreateIssueMessage {
     htmlSnippet?: string;
     labels?: string[];
     assignee?: string;
+    branch?: string;
     browserMetadata?: BrowserMetadata;
     autoFix?: boolean;
   };
@@ -192,6 +214,7 @@ export interface AutoFixSettings {
   anthropicApiKey?: string;
   systemPrompt?: string;
   model?: string;
+  autoFixByDefault?: boolean;
 }
 
 export interface SaveAutoFixSettingsMessage {
