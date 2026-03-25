@@ -191,6 +191,7 @@ export interface AutoFixSettings {
   enabled: boolean;
   anthropicApiKey?: string;
   systemPrompt?: string;
+  model?: string;
 }
 
 export interface SaveAutoFixSettingsMessage {
