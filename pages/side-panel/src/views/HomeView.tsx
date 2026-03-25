@@ -1,14 +1,16 @@
 import IssueCard from '../components/IssueCard';
 import RepoSelector from '../components/RepoSelector';
 import ToolButton from '../components/ToolButton';
-import { useState, useEffect, useCallback } from 'react';
-import type { PageIssue } from '@extension/shared';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import type { PageIssue, RecordingCompleteMessage } from '@extension/shared';
 
 interface HomeViewProps {
   onOpenSettings: (section?: string) => void;
   onOpenWizard?: (chapter: 1 | 2) => void;
   onMount?: () => void;
   themeLabel?: string;
+  onRecordingComplete?: (data: RecordingCompleteMessage['payload']) => void;
+  onRecordingStateChange?: (active: boolean) => void;
 }
 
 const colors = {
@@ -20,9 +22,109 @@ const colors = {
   border: 'var(--border-default)',
   divider: 'var(--border-subtle)',
   green: 'var(--status-success)',
+  red: '#ef4444',
 } as const;
 
-export default function HomeView({ onOpenSettings, onMount, themeLabel }: HomeViewProps) {
+const formatTime = (seconds: number): string => {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+};
+
+/** Upload video via GitHub's user-attachments system (inline embed in issues).
+ *  Delegates to background service worker which can set restricted headers like Cookie. */
+const uploadViaUserAttachments = async (
+  owner: string,
+  repo: string,
+  filename: string,
+  contentType: string,
+  blob: Blob,
+  pat: string,
+): Promise<string> => {
+  // Get repo ID
+  const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+    headers: { Authorization: `Bearer ${pat}`, Accept: 'application/vnd.github+json' },
+  });
+  if (!repoRes.ok) throw new Error('Failed to get repo');
+  const repoData = await repoRes.json();
+  const repositoryId = repoData.id;
+
+  // Get GitHub session cookies — use url for reliable matching across .github.com subdomains
+  const cookies = await chrome.cookies.getAll({ url: 'https://github.com' });
+  const cookieStr = cookies.map((c: chrome.cookies.Cookie) => `${c.name}=${c.value}`).join('; ');
+  if (!cookieStr.includes('user_session'))
+    throw new Error('No GitHub session — make sure you are logged into github.com');
+
+  // Convert blob to ArrayBuffer for message transfer
+  const videoArrayBuffer = await blob.arrayBuffer();
+
+  // Send to background service worker which can set Cookie headers
+  const response = (await chrome.runtime.sendMessage({
+    type: 'UPLOAD_VIDEO_ATTACHMENT',
+    payload: { repositoryId, fileName: filename, contentType, videoArrayBuffer, cookieStr },
+  })) as { success: boolean; videoUrl?: string; error?: string };
+
+  if (!response?.success || !response.videoUrl) {
+    throw new Error(response?.error || 'Upload failed');
+  }
+
+  return response.videoUrl;
+};
+
+/** Fallback: upload video via GitHub release assets (download link) */
+const uploadViaReleaseAsset = async (
+  owner: string,
+  repo: string,
+  filename: string,
+  contentType: string,
+  blob: Blob,
+  pat: string,
+): Promise<string> => {
+  const releaseTag = 'vir-screenshots';
+  let releaseId: number;
+  const releaseRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases/tags/${releaseTag}`, {
+    headers: { Authorization: `Bearer ${pat}`, Accept: 'application/vnd.github+json' },
+  });
+  if (releaseRes.ok) {
+    releaseId = (await releaseRes.json()).id;
+  } else {
+    const createRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${pat}`,
+        Accept: 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        tag_name: releaseTag,
+        name: 'Visual Issue Screenshots',
+        body: 'Screenshots uploaded by Visual Issue Reporter. Do not delete this release.',
+      }),
+    });
+    releaseId = (await createRes.json()).id;
+  }
+
+  const arrayBuffer = await blob.arrayBuffer();
+  const uploadRes = await fetch(
+    `https://uploads.github.com/repos/${owner}/${repo}/releases/${releaseId}/assets?name=${encodeURIComponent(filename)}`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${pat}`, 'Content-Type': contentType },
+      body: arrayBuffer,
+    },
+  );
+  if (!uploadRes.ok) throw new Error(`Upload failed: ${uploadRes.status}`);
+  return (await uploadRes.json()).browser_download_url;
+};
+
+export default function HomeView({
+  onOpenSettings,
+  onOpenWizard,
+  onMount,
+  themeLabel,
+  onRecordingComplete,
+  onRecordingStateChange,
+}: HomeViewProps) {
   const [repos, setRepos] = useState<string[]>([]);
   const [selectedRepo, setSelectedRepo] = useState('');
   const [activeTool, setActiveTool] = useState<'select' | 'pencil' | 'inspect' | null>(null);
@@ -35,6 +137,18 @@ export default function HomeView({ onOpenSettings, onMount, themeLabel }: HomeVi
   const [branches, setBranches] = useState<Array<{ name: string; default: boolean }>>([]);
   const [selectedBranch, setSelectedBranch] = useState('');
   const [branchesLoading, setBranchesLoading] = useState(false);
+
+  // Recording state
+  const [recording, setRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [recordingError, setRecordingError] = useState('');
+  const [micEnabled, setMicEnabled] = useState(false);
+  const [processingRecording, setProcessingRecording] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const recordingStartRef = useRef(0);
+  const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     onMount?.();
@@ -121,6 +235,24 @@ export default function HomeView({ onOpenSettings, onMount, themeLabel }: HomeVi
     chrome.runtime.onMessage.addListener(listener);
     return () => chrome.runtime.onMessage.removeListener(listener);
   }, []);
+
+  // Recording timer
+  useEffect(() => {
+    if (recording) {
+      setRecordingSeconds(0);
+      timerRef.current = setInterval(() => {
+        setRecordingSeconds(s => s + 1);
+      }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [recording]);
 
   // Fetch issues when repo changes or on mount
   const fetchIssues = useCallback(async () => {
@@ -222,6 +354,175 @@ export default function HomeView({ onOpenSettings, onMount, themeLabel }: HomeVi
         }
       },
     );
+  };
+
+  const finishRecording = useCallback(
+    async (blob: Blob, mimeType: string, durationMs: number) => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const pageUrl = tab?.url ?? '';
+
+      try {
+        const { githubPat } = await chrome.storage.local.get('githubPat');
+        const { selectedRepo } = await chrome.storage.local.get('selectedRepo');
+        if (!githubPat || !selectedRepo) throw new Error('Not configured');
+
+        const [owner, repo] = selectedRepo.split('/');
+        const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `recording-${timestamp}.${ext}`;
+        const contentType = mimeType.split(';')[0] || `video/${ext}`;
+
+        console.log('[VIR] Video blob size:', blob.size, 'bytes, type:', blob.type);
+
+        // Try GitHub's user-attachments upload (renders inline in issues)
+        let videoUrl: string | undefined;
+        try {
+          videoUrl = await uploadViaUserAttachments(owner, repo, filename, contentType, blob, githubPat);
+          console.log('[VIR] Video uploaded via user-attachments:', videoUrl);
+        } catch (uploadErr) {
+          console.warn('[VIR] User-attachments upload failed, falling back to release assets:', uploadErr);
+          // Fall back to release asset upload (download link only)
+          videoUrl = await uploadViaReleaseAsset(owner, repo, filename, contentType, blob, githubPat);
+          console.log('[VIR] Video uploaded via release assets:', videoUrl);
+        }
+
+        onRecordingComplete?.({ mimeType, durationMs, pageUrl, videoUrl });
+      } catch (err) {
+        console.error('[VIR] Video upload failed:', err);
+        onRecordingComplete?.({ mimeType, durationMs, pageUrl });
+      }
+    },
+    [onRecordingComplete],
+  );
+
+  const handleRecordClick = async () => {
+    if (recording) return;
+    setRecordingError('');
+    setToolError('');
+    // Dismiss any active tool overlay before recording
+    if (activeTool) {
+      setActiveTool(null);
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab?.id) chrome.tabs.sendMessage(tab.id, { type: 'DISMISS_OVERLAY' }).catch(() => {});
+    }
+
+    try {
+      // Call getDisplayMedia directly from the side panel — proper previews, no offscreen doc needed
+      const displayStream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: true,
+        selfBrowserSurface: 'exclude',
+      } as DisplayMediaStreamOptions);
+
+      // If mic is enabled, get mic stream and mix it with tab audio
+      let stream: MediaStream;
+      let micStream: MediaStream | null = null;
+      let audioCtx: AudioContext | null = null;
+
+      if (micEnabled) {
+        try {
+          micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          audioCtx = new AudioContext();
+          const dest = audioCtx.createMediaStreamDestination();
+
+          // Mix tab audio (if any) + mic audio
+          const tabAudioTracks = displayStream.getAudioTracks();
+          if (tabAudioTracks.length > 0) {
+            const tabSource = audioCtx.createMediaStreamSource(new MediaStream(tabAudioTracks));
+            tabSource.connect(dest);
+          }
+          const micSource = audioCtx.createMediaStreamSource(micStream);
+          micSource.connect(dest);
+
+          // Create combined stream: display video + mixed audio
+          stream = new MediaStream([...displayStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
+        } catch (micErr) {
+          console.warn('[VIR] Mic access failed, recording without mic:', micErr);
+          stream = displayStream;
+          setMicEnabled(false);
+        }
+      } else {
+        stream = displayStream;
+      }
+
+      let mimeType = 'video/webm;codecs=vp8,opus';
+      if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) {
+        mimeType = 'video/webm;codecs=vp9,opus';
+      }
+
+      chunksRef.current = [];
+      recordingStartRef.current = Date.now();
+
+      const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 5000000 });
+      recorderRef.current = recorder;
+
+      recorder.ondataavailable = (e: BlobEvent) => {
+        console.log('[VIR] Recording chunk:', e.data.size, 'bytes');
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        if (maxDurationTimerRef.current) clearTimeout(maxDurationTimerRef.current);
+        const durationMs = Date.now() - recordingStartRef.current;
+        const blob = new Blob(chunksRef.current, { type: mimeType });
+        chunksRef.current = [];
+        // Stop all tracks from all streams
+        displayStream.getTracks().forEach(t => t.stop());
+        micStream?.getTracks().forEach(t => t.stop());
+        void audioCtx?.close();
+        setRecording(false);
+        onRecordingStateChange?.(false);
+        setRecordingSeconds(0);
+        setProcessingRecording(true);
+        // Dismiss the drawing overlay on the page
+        chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
+          if (tab?.id) chrome.tabs.sendMessage(tab.id, { type: 'STOP_RECORDING_OVERLAY' }).catch(() => {});
+        });
+        finishRecording(blob, mimeType, durationMs).finally(() => setProcessingRecording(false));
+      };
+
+      recorder.onerror = () => {
+        displayStream.getTracks().forEach(t => t.stop());
+        micStream?.getTracks().forEach(t => t.stop());
+        void audioCtx?.close();
+        setRecording(false);
+        onRecordingStateChange?.(false);
+        setRecordingError('Recording failed');
+      };
+
+      // If user stops sharing via Chrome's "Stop sharing" button
+      stream.getVideoTracks()[0]?.addEventListener('ended', () => {
+        if (recorder.state === 'recording') recorder.stop();
+      });
+
+      recorder.start(); // No timeslice — produces a single valid WebM on stop
+      setRecording(true);
+      onRecordingStateChange?.(true);
+
+      // Activate transparent drawing overlay on the page
+      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (activeTab?.id) {
+        chrome.tabs.sendMessage(activeTab.id, { type: 'ACTIVATE_RECORDING_OVERLAY' }).catch(() => {});
+      }
+
+      // Auto-stop after 60 seconds
+      maxDurationTimerRef.current = setTimeout(() => {
+        if (recorder.state === 'recording') recorder.stop();
+      }, 60000);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      if (msg.includes('Permission denied') || msg.includes('NotAllowedError')) {
+        // User cancelled the picker — not an error
+      } else {
+        setRecordingError(msg);
+      }
+    }
+  };
+
+  const handleStopRecording = () => {
+    if (recorderRef.current?.state === 'recording') {
+      recorderRef.current.stop();
+    }
   };
 
   const sectionHeadingStyle: React.CSSProperties = {
@@ -390,24 +691,187 @@ export default function HomeView({ onOpenSettings, onMount, themeLabel }: HomeVi
             icon="select"
             label="Select"
             active={activeTool === 'select'}
-            disabled={activeTool !== null && activeTool !== 'select'}
+            disabled={recording || (activeTool !== null && activeTool !== 'select')}
             onClick={() => handleToolClick('select')}
           />
           <ToolButton
             icon="pencil"
             label="Canvas"
             active={activeTool === 'pencil'}
+            disabled={recording || (activeTool !== null && activeTool !== 'pencil')}
             onClick={() => handleToolClick('pencil')}
           />
           <ToolButton
             icon="inspect"
             label="Inspect"
             active={activeTool === 'inspect'}
-            disabled={activeTool !== null && activeTool !== 'inspect'}
+            disabled={recording || (activeTool !== null && activeTool !== 'inspect')}
             onClick={() => handleToolClick('inspect')}
           />
+          {!recording ? (
+            <ToolButton icon="record" label="Record" active={false} disabled={false} onClick={handleRecordClick} />
+          ) : (
+            <button
+              onClick={handleStopRecording}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                padding: '12px 0',
+                borderRadius: 10,
+                border: '1px solid rgba(239,68,68,0.4)',
+                background: 'rgba(239,68,68,0.15)',
+                cursor: 'pointer',
+                fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
+                fontSize: 13,
+                fontWeight: 500,
+                color: '#fca5a5',
+                transition: 'all 0.15s ease',
+                boxShadow: '0 0 16px rgba(239,68,68,0.15), inset 0 0 12px rgba(239,68,68,0.05)',
+              }}>
+              {/* Stop icon (square) */}
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="12" height="12" rx="2" fill={colors.red} />
+              </svg>
+              <span>Stop</span>
+              <span style={{ fontVariantNumeric: 'tabular-nums', opacity: 0.7 }}>{formatTime(recordingSeconds)}</span>
+            </button>
+          )}
         </div>
+
+        {/* Processing recording loading state */}
+        {processingRecording && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
+              padding: '16px 0',
+              color: colors.purpleAccent,
+              fontSize: 13,
+              fontWeight: 500,
+            }}>
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              style={{ animation: 'spin 1s linear infinite' }}>
+              <path
+                d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+            <span>Uploading recording...</span>
+          </div>
+        )}
+
+        {/* Mic toggle -- shown when not recording */}
+        {!recording && !processingRecording && (
+          <button
+            onClick={async () => {
+              if (micEnabled) {
+                setMicEnabled(false);
+                return;
+              }
+              setRecordingError('');
+              // Check if mic permission is already granted
+              try {
+                const testStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                testStream.getTracks().forEach(t => t.stop());
+                setMicEnabled(true);
+                return;
+              } catch {
+                /* Side panel can't show prompts -- open a tab instead */
+              }
+              // Open a regular tab that can show Chrome's standard mic permission prompt
+              const result = await new Promise<boolean>(resolve => {
+                const listener = (msg: { type: string; granted?: boolean }) => {
+                  if (msg.type === 'MIC_PERMISSION_RESULT') {
+                    chrome.runtime.onMessage.removeListener(listener);
+                    resolve(!!msg.granted);
+                  }
+                };
+                chrome.runtime.onMessage.addListener(listener);
+                chrome.tabs.create({
+                  url: chrome.runtime.getURL('mic-permission.html'),
+                  active: true,
+                });
+                // Timeout after 60s
+                setTimeout(() => {
+                  chrome.runtime.onMessage.removeListener(listener);
+                  resolve(false);
+                }, 60000);
+              });
+              if (result) {
+                setMicEnabled(true);
+              } else {
+                setRecordingError('Microphone access denied. Check Windows Settings > Privacy > Microphone.');
+              }
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              marginTop: 10,
+              padding: '8px 12px',
+              background: micEnabled ? 'rgba(139,92,246,0.1)' : 'rgba(148,163,184,0.05)',
+              border: `1px solid ${micEnabled ? 'rgba(139,92,246,0.3)' : 'rgba(148,163,184,0.1)'}`,
+              borderRadius: 8,
+              cursor: 'pointer',
+              fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
+              fontSize: 12,
+              fontWeight: 500,
+              color: micEnabled ? colors.purpleAccent : colors.textSecondary,
+              transition: 'all 0.15s',
+              width: '100%',
+            }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {micEnabled ? (
+                <>
+                  <path
+                    d="M12 2.75C10.4812 2.75 9.25 3.98122 9.25 5.5V12C9.25 13.5188 10.4812 14.75 12 14.75C13.5188 14.75 14.75 13.5188 14.75 12V5.5C14.75 3.98122 13.5188 2.75 12 2.75Z"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  />
+                  <path
+                    d="M6.25 11C6.25 14.1756 8.82436 16.75 12 16.75C15.1756 16.75 17.75 14.1756 17.75 11"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                  <path d="M12 17.75V21.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </>
+              ) : (
+                <>
+                  <path
+                    d="M9.25 5.5C9.25 3.98122 10.4812 2.75 12 2.75C13.5188 2.75 14.75 3.98122 14.75 5.5V9"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M6.25 11C6.25 14.1756 8.82436 16.75 12 16.75C15.1756 16.75 17.75 14.1756 17.75 11"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                  <path d="M12 17.75V21.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <path d="M3.75 3.75L20.25 20.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </>
+              )}
+            </svg>
+            {micEnabled ? 'Microphone on' : 'Microphone off'}
+          </button>
+        )}
+
         {toolError && <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--status-error)' }}>{toolError}</p>}
+        {recordingError && <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--status-error)' }}>{recordingError}</p>}
       </div>
 
       {/* Divider */}
@@ -547,6 +1011,18 @@ export default function HomeView({ onOpenSettings, onMount, themeLabel }: HomeVi
           </button>
         </div>
       </div>
+
+      {/* Keyframe animation for pulsing dot */}
+      <style>{`
+        @keyframes pulse-dot {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(1.3); }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

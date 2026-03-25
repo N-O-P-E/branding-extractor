@@ -1,7 +1,7 @@
 import AssigneeSelect from '../components/AssigneeSelect';
 import LabelSelect from '../components/LabelSelect';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { BrowserMetadata, AutoFixSettings } from '@extension/shared';
+import type { BrowserMetadata, AutoFixSettings, RecordingCompleteMessage } from '@extension/shared';
 
 interface CaptureData {
   screenshotDataUrl: string;
@@ -17,6 +17,7 @@ interface CaptureData {
 interface CreateIssueViewProps {
   captureData: CaptureData | null;
   browserMetadata: BrowserMetadata | null;
+  recordingData?: RecordingCompleteMessage['payload'] | null;
   onBack: () => void;
   onSuccess: () => void;
   onOpenWizard?: (chapter: 1 | 2) => void;
@@ -36,6 +37,7 @@ const colors = {
 export default function CreateIssueView({
   captureData,
   browserMetadata,
+  recordingData,
   onBack,
   onSuccess,
   onOpenWizard,
@@ -170,6 +172,12 @@ export default function CreateIssueView({
           assignee: selectedAssignee || undefined,
           branch: selectedBranch || undefined,
           autoFix: autoFixChecked && autoFixAvailable,
+          ...(recordingData?.videoUrl
+            ? {
+                videoUrl: recordingData.videoUrl,
+                videoDurationMs: recordingData.durationMs,
+              }
+            : {}),
         },
       })) as { success: boolean; issueUrl?: string; error?: string; autoFixResult?: string; autoFixError?: string };
 
@@ -199,6 +207,7 @@ export default function CreateIssueView({
     selectedBranch,
     autoFixChecked,
     autoFixAvailable,
+    recordingData,
   ]);
 
   useEffect(() => {

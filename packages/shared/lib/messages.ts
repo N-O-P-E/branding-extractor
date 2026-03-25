@@ -125,6 +125,8 @@ export interface CreateIssueMessage {
     branch?: string;
     browserMetadata?: BrowserMetadata;
     autoFix?: boolean;
+    videoUrl?: string;
+    videoDurationMs?: number;
   };
 }
 
@@ -242,6 +244,37 @@ export interface EnsureAutoFixWorkflowResponse {
   error?: string;
 }
 
+// Screen recording
+export interface StartRecordingMessage {
+  type: 'START_RECORDING';
+}
+
+export interface StopRecordingMessage {
+  type: 'STOP_RECORDING';
+}
+
+export interface RecordingCompleteMessage {
+  type: 'RECORDING_COMPLETE';
+  payload: {
+    mimeType: string;
+    durationMs: number;
+    pageUrl: string;
+    videoUrl?: string;
+  };
+}
+
+export interface RecordingStatusMessage {
+  type: 'RECORDING_STATUS';
+  payload: {
+    status: 'started' | 'stopped' | 'error';
+    error?: string;
+  };
+}
+
+export interface OffscreenReadyMessage {
+  type: 'OFFSCREEN_READY';
+}
+
 export type ExtensionMessage =
   | StartReportMessage
   | ShowScreenshotMessage
@@ -260,7 +293,12 @@ export type ExtensionMessage =
   | CheckTokenStatusMessage
   | SaveAutoFixSettingsMessage
   | GetAutoFixSettingsMessage
-  | EnsureAutoFixWorkflowMessage;
+  | EnsureAutoFixWorkflowMessage
+  | StartRecordingMessage
+  | StopRecordingMessage
+  | RecordingCompleteMessage
+  | RecordingStatusMessage
+  | OffscreenReadyMessage;
 
 export interface MessageResponse {
   success: boolean;
