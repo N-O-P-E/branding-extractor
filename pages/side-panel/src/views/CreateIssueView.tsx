@@ -167,6 +167,8 @@ export default function CreateIssueView({
 
       if (response?.success) {
         setSuccessUrl(response.issueUrl ?? '');
+        // Auto-close after 4 seconds
+        setTimeout(() => onSuccess(), 4000);
         if (response.autoFixResult) {
           setAutoFixResult(response.autoFixResult);
           if (response.autoFixError) {
