@@ -1189,7 +1189,7 @@ const App = () => {
             }}
             onClick={dismiss}
             aria-label="Close overlay">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path
                 d="M6.25 6.25L17.75 17.75M17.75 6.25L6.25 17.75"
                 stroke="currentColor"
@@ -1197,6 +1197,7 @@ const App = () => {
                 strokeLinecap="round"
               />
             </svg>
+            <span style={{ fontSize: 11, opacity: 0.5 }}>Esc</span>
           </button>
 
           {/* Captured element info bar */}
@@ -1803,22 +1804,6 @@ const App = () => {
             </div>
           )}
 
-          {/* Cancel pill - shown when no content yet */}
-          {!hasCanvasContent && (
-            <div style={styles.pillContainer}>
-              <button
-                style={{
-                  ...styles.pill,
-                  background: overlayTheme.surface,
-                  color: overlayTheme.textPrimary,
-                  border: `1px solid ${overlayTheme.border}`,
-                }}
-                onClick={dismiss}>
-                Cancel · Esc
-              </button>
-            </div>
-          )}
-
           {activeTool === 'select' && !isDragging.current && !hasCanvasContent && (
             <div style={styles.hint}>Click and drag to select a region</div>
           )}
@@ -1859,8 +1844,9 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'rgba(241, 245, 249, 0.7)',
     border: '1px solid rgba(148, 163, 184, 0.15)',
     borderRadius: '12px',
-    width: '40px',
+    padding: '0 14px',
     height: '40px',
+    gap: '6px',
     fontSize: '18px',
     cursor: 'pointer',
     display: 'flex',

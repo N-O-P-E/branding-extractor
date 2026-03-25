@@ -97,7 +97,7 @@ export default function SidePanel() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', paddingBottom: 48 }}>
       <div style={{ flex: 1 }}>
         {view === 'setup' && (
           <SetupView
@@ -166,7 +166,11 @@ export default function SidePanel() {
           fontFamily: "'Instrument Serif', serif",
           color: 'var(--brand-footer-text)',
           background: 'var(--brand-footer-bg)',
-          marginTop: 8,
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 50,
         }}>
         {theme === 'default' ? (
           <a
@@ -192,7 +196,7 @@ export default function SidePanel() {
                 fontFamily: 'var(--font-heading)',
                 letterSpacing: 'var(--font-heading-tracking)',
               }}>
-              {theme === 'ask-phill' ? 'Ask Phill' : ''}
+              {availableThemes.find(t => t.id === theme)?.label ?? ''}
             </strong>
           </>
         )}

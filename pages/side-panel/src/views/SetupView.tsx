@@ -873,11 +873,6 @@ export default function SetupView({
                 }}
                 style={{
                   ...inputStyle,
-                  ...(activationStatus === 'success'
-                    ? { borderColor: 'var(--status-success)' }
-                    : activationStatus === 'error'
-                      ? { borderColor: 'var(--status-error)' }
-                      : {}),
                 }}
               />
               <button
@@ -1188,29 +1183,31 @@ export default function SetupView({
                 </span>
               )}
             </span>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
-              <input
-                type="password"
-                placeholder="sk-ant-..."
-                value={anthropicApiKey}
-                onChange={e => {
-                  setAnthropicApiKey(e.target.value);
-                  setAnthropicKeyStatus('idle');
-                }}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') void validateAnthropicKey();
-                }}
-                style={inputStyle}
-              />
-              <button
-                style={
-                  anthropicKeyStatus === 'validating' || !anthropicApiKey.trim() ? buttonDisabledStyle : buttonStyle
-                }
-                onClick={() => void validateAnthropicKey()}
-                disabled={anthropicKeyStatus === 'validating' || !anthropicApiKey.trim()}>
-                {anthropicKeyStatus === 'validating' ? '…' : 'Validate'}
-              </button>
-            </div>
+            {anthropicKeyStatus !== 'valid' && (
+              <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+                <input
+                  type="password"
+                  placeholder="sk-ant-..."
+                  value={anthropicApiKey}
+                  onChange={e => {
+                    setAnthropicApiKey(e.target.value);
+                    setAnthropicKeyStatus('idle');
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') void validateAnthropicKey();
+                  }}
+                  style={inputStyle}
+                />
+                <button
+                  style={
+                    anthropicKeyStatus === 'validating' || !anthropicApiKey.trim() ? buttonDisabledStyle : buttonStyle
+                  }
+                  onClick={() => void validateAnthropicKey()}
+                  disabled={anthropicKeyStatus === 'validating' || !anthropicApiKey.trim()}>
+                  {anthropicKeyStatus === 'validating' ? '…' : 'Validate'}
+                </button>
+              </div>
+            )}
             {anthropicKeyStatus === 'valid' && (
               <div
                 style={{
@@ -1378,8 +1375,8 @@ export default function SetupView({
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 5,
-                    background: keyCopied ? 'var(--success-10)' : colors.inputBg,
-                    border: `1px solid ${keyCopied ? 'var(--success-20)' : colors.border}`,
+                    background: keyCopied ? 'var(--success-20)' : colors.inputBg,
+                    border: `1px solid ${keyCopied ? 'var(--status-success)' : colors.border}`,
                     borderRadius: 8,
                     padding: '8px 10px',
                     fontSize: 11,
@@ -1424,8 +1421,8 @@ export default function SetupView({
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 5,
-                    background: yamlCopied ? 'var(--success-10)' : colors.inputBg,
-                    border: `1px solid ${yamlCopied ? 'var(--success-20)' : colors.border}`,
+                    background: yamlCopied ? 'var(--success-20)' : colors.inputBg,
+                    border: `1px solid ${yamlCopied ? 'var(--status-success)' : colors.border}`,
                     borderRadius: 8,
                     padding: '8px 10px',
                     fontSize: 11,

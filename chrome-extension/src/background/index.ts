@@ -96,6 +96,10 @@ chrome.runtime.onMessage.addListener(
       handleShowIssuesPanel(message);
       return true;
     }
+    if (message.type === 'UPDATE_ICON_THEME') {
+      updateIconForTheme(message.payload?.theme as string);
+      return false;
+    }
     return false;
   },
 );
@@ -182,17 +186,35 @@ const handleStartReport = async (tool: 'select' | 'pencil', sendResponse: (respo
       themeId !== 'default' &&
       (unlockedThemes as Array<{ id: string }> | undefined)?.some(t => t.id === themeId);
 
-    const overlayTheme =
-      isThemed && themeId === 'ask-phill'
-        ? {
-            accent: '#D8CCB5',
-            accentLight: 'rgba(216,204,181,0.2)',
-            surface: '#1C1C1C',
-            textPrimary: '#FAF8F7',
-            textSecondary: 'rgba(250,248,247,0.5)',
-            border: 'rgba(255,255,255,0.1)',
-          }
-        : undefined;
+    const overlayThemes: Record<
+      string,
+      {
+        accent: string;
+        accentLight: string;
+        surface: string;
+        textPrimary: string;
+        textSecondary: string;
+        border: string;
+      }
+    > = {
+      'ask-phill': {
+        accent: '#D8CCB5',
+        accentLight: 'rgba(216,204,181,0.2)',
+        surface: '#1C1C1C',
+        textPrimary: '#FAF8F7',
+        textSecondary: 'rgba(250,248,247,0.5)',
+        border: 'rgba(255,255,255,0.1)',
+      },
+      strix: {
+        accent: '#FFDB32',
+        accentLight: 'rgba(255,219,50,0.15)',
+        surface: '#222222',
+        textPrimary: '#FFFFFF',
+        textSecondary: 'rgba(255,255,255,0.55)',
+        border: 'rgba(255,255,255,0.1)',
+      },
+    };
+    const overlayTheme = isThemed && themeId ? overlayThemes[themeId] : undefined;
 
     const payload: ShowScreenshotMessage = {
       type: 'SHOW_SCREENSHOT',
@@ -838,3 +860,50 @@ const handleShowIssuesPanel = async (message: ShowIssuesPanelMessage) => {
     // Content script may not be injected; silently ignore
   }
 };
+
+/** Theme icon colors — maps theme ID to the target tint color [r,g,b] */
+const THEME_ICON_COLORS: Record<string, [number, number, number]> = {
+  default: [139, 92, 246], // purple #8B5CF6
+  'ask-phill': [222, 0, 21], // red #DE0015
+  strix: [255, 219, 50], // yellow #FFDB32
+};
+
+const updateIconForTheme = async (themeId: string) => {
+  const targetColor = THEME_ICON_COLORS[themeId] ?? THEME_ICON_COLORS.default;
+
+  try {
+    const response = await fetch(chrome.runtime.getURL('icon-34.png'));
+    const blob = await response.blob();
+    const bitmap = await createImageBitmap(blob);
+
+    const canvas = new OffscreenCanvas(34, 34);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.drawImage(bitmap, 0, 0, 34, 34);
+    const imageData = ctx.getImageData(0, 0, 34, 34);
+    const data = imageData.data;
+
+    // Tint: replace non-transparent pixels with the target color, keeping alpha
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] > 0) {
+        data[i] = targetColor[0];
+        data[i + 1] = targetColor[1];
+        data[i + 2] = targetColor[2];
+        // Keep original alpha
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    await chrome.action.setIcon({ imageData: imageData as unknown as ImageData });
+  } catch {
+    // Fallback to default icon
+    await chrome.action.setIcon({ path: 'icon-34.png' });
+  }
+};
+
+// Apply saved theme icon on startup
+chrome.storage.local.get('extensionTheme', result => {
+  const theme = (result.extensionTheme as string) ?? 'default';
+  updateIconForTheme(theme);
+});

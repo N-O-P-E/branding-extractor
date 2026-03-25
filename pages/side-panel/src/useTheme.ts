@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-type ThemeId = 'default' | 'ask-phill';
+type ThemeId = 'default' | 'ask-phill' | 'strix';
 
 interface ThemeInfo {
   id: ThemeId;
@@ -9,7 +9,8 @@ interface ThemeInfo {
 
 /** Theme registry — maps activation codes (lowercased) to themes */
 const THEME_CODES: Record<string, ThemeInfo> = {
-  askphill2025: { id: 'ask-phill', label: 'Ask Phill' },
+  askphillanything: { id: 'ask-phill', label: 'Ask Phill' },
+  pushboundaries: { id: 'strix', label: 'Strix' },
 };
 
 /** All available themes (default is always available) */
@@ -24,6 +25,8 @@ const applyTheme = (theme: ThemeId) => {
   } else {
     document.documentElement.setAttribute('data-theme', theme);
   }
+  // Notify background to update the extension icon color
+  chrome.runtime.sendMessage({ type: 'UPDATE_ICON_THEME', payload: { theme } }).catch(() => {});
 };
 
 const useTheme = () => {
