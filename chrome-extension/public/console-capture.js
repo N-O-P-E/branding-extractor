@@ -14,36 +14,44 @@
   var origWarn = console.warn;
 
   console.error = function () {
-    var msg = Array.prototype.slice
-      .call(arguments)
-      .map(function (a) {
-        try {
-          return typeof a === 'string' ? a : JSON.stringify(a);
-        } catch (e) {
-          return String(a);
-        }
-      })
-      .join(' ')
-      .slice(0, MAX_MSG_LENGTH);
-    entries.push({ level: 'error', message: msg, timestamp: Date.now() });
-    if (entries.length > MAX_ENTRIES) entries.shift();
+    try {
+      var msg = Array.prototype.slice
+        .call(arguments)
+        .map(function (a) {
+          try {
+            return typeof a === 'string' ? a : JSON.stringify(a);
+          } catch (e) {
+            return String(a);
+          }
+        })
+        .join(' ')
+        .slice(0, MAX_MSG_LENGTH);
+      entries.push({ level: 'error', message: msg, timestamp: Date.now() });
+      if (entries.length > MAX_ENTRIES) entries.shift();
+    } catch (e) {
+      /* silently ignore capture failures */
+    }
     return origError.apply(console, arguments);
   };
 
   console.warn = function () {
-    var msg = Array.prototype.slice
-      .call(arguments)
-      .map(function (a) {
-        try {
-          return typeof a === 'string' ? a : JSON.stringify(a);
-        } catch (e) {
-          return String(a);
-        }
-      })
-      .join(' ')
-      .slice(0, MAX_MSG_LENGTH);
-    entries.push({ level: 'warn', message: msg, timestamp: Date.now() });
-    if (entries.length > MAX_ENTRIES) entries.shift();
+    try {
+      var msg = Array.prototype.slice
+        .call(arguments)
+        .map(function (a) {
+          try {
+            return typeof a === 'string' ? a : JSON.stringify(a);
+          } catch (e) {
+            return String(a);
+          }
+        })
+        .join(' ')
+        .slice(0, MAX_MSG_LENGTH);
+      entries.push({ level: 'warn', message: msg, timestamp: Date.now() });
+      if (entries.length > MAX_ENTRIES) entries.shift();
+    } catch (e) {
+      /* silently ignore capture failures */
+    }
     return origWarn.apply(console, arguments);
   };
 
