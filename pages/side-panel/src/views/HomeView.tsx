@@ -22,6 +22,15 @@ const requestVideoUploadPermissions = async (): Promise<boolean> => {
   return chrome.permissions.request(perms);
 };
 
+const fetchWithTimeout = (url: string, options: RequestInit = {}, timeoutMs: number): Promise<Response> => {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(id));
+};
+
+const API_TIMEOUT = 30_000;
+const UPLOAD_TIMEOUT = 300_000;
+
 const colors = {
   textPrimary: 'var(--text-primary)',
   textSecondary: 'var(--text-secondary)',
@@ -51,9 +60,13 @@ const uploadViaUserAttachments = async (
   pat: string,
 ): Promise<string> => {
   // Get repo ID
-  const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-    headers: { Authorization: `Bearer ${pat}`, Accept: 'application/vnd.github+json' },
-  });
+  const repoRes = await fetchWithTimeout(
+    `https://api.github.com/repos/${owner}/${repo}`,
+    {
+      headers: { Authorization: `Bearer ${pat}`, Accept: 'application/vnd.github+json' },
+    },
+    API_TIMEOUT,
+  );
   if (!repoRes.ok) throw new Error('Failed to get repo');
   const repoData = await repoRes.json();
   const repositoryId = repoData.id;
@@ -97,13 +110,17 @@ const uploadViaReleaseAsset = async (
 ): Promise<string> => {
   const releaseTag = 'vir-screenshots';
   let releaseId: number;
-  const releaseRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases/tags/${releaseTag}`, {
-    headers: { Authorization: `Bearer ${pat}`, Accept: 'application/vnd.github+json' },
-  });
+  const releaseRes = await fetchWithTimeout(
+    `https://api.github.com/repos/${owner}/${repo}/releases/tags/${releaseTag}`,
+    {
+      headers: { Authorization: `Bearer ${pat}`, Accept: 'application/vnd.github+json' },
+    },
+    API_TIMEOUT,
+  );
   if (releaseRes.ok) {
     releaseId = (await releaseRes.json()).id;
   } else {
-    const createRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases`, {
+    const createRes = await fetchWithTimeout(`https://api.github.com/repos/${owner}/${repo}/releases`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${pat}`,
@@ -120,13 +137,14 @@ const uploadViaReleaseAsset = async (
   }
 
   const arrayBuffer = await blob.arrayBuffer();
-  const uploadRes = await fetch(
+  const uploadRes = await fetchWithTimeout(
     `https://uploads.github.com/repos/${owner}/${repo}/releases/${releaseId}/assets?name=${encodeURIComponent(filename)}`,
     {
       method: 'POST',
       headers: { Authorization: `Bearer ${pat}`, 'Content-Type': contentType },
       body: arrayBuffer,
     },
+    UPLOAD_TIMEOUT,
   );
   if (!uploadRes.ok) throw new Error(`Upload failed: ${uploadRes.status}`);
   return (await uploadRes.json()).browser_download_url;

@@ -23,6 +23,17 @@ import type {
 const POLICY_RULE_ID = 9990;
 const CONFIRM_RULE_ID = 9991;
 
+/** Fetch with AbortController timeout. Throws 'Request timed out' on timeout. */
+const fetchWithTimeout = (url: string, options: RequestInit = {}, timeoutMs: number): Promise<Response> => {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(id));
+};
+
+const API_TIMEOUT = 30_000;
+const UPLOAD_TIMEOUT = 300_000;
+const TOKEN_TIMEOUT = 15_000;
+
 /** Validates that a string matches the `owner/repo` format */
 const REPO_NAME_REGEX = /^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/;
 
@@ -197,11 +208,15 @@ const handleUploadVideoAttachment = async (
     formData.append('size', String(videoArrayBuffer.byteLength));
     formData.append('content_type', contentType);
 
-    const policyRes = await fetch('https://github.com/upload/policies/assets', {
-      method: 'POST',
-      headers: { Accept: 'application/json' },
-      body: formData,
-    });
+    const policyRes = await fetchWithTimeout(
+      'https://github.com/upload/policies/assets',
+      {
+        method: 'POST',
+        headers: { Accept: 'application/json' },
+        body: formData,
+      },
+      UPLOAD_TIMEOUT,
+    );
 
     await removeHeaderRule(POLICY_RULE_ID);
 
@@ -219,7 +234,7 @@ const handleUploadVideoAttachment = async (
     }
     s3Form.append('file', blob, fileName);
 
-    const s3Res = await fetch(policy.upload_url, { method: 'POST', body: s3Form });
+    const s3Res = await fetchWithTimeout(policy.upload_url, { method: 'POST', body: s3Form }, UPLOAD_TIMEOUT);
     if (!s3Res.ok && s3Res.status !== 204 && s3Res.status !== 201) {
       throw new Error(`S3 upload failed: ${s3Res.status}`);
     }
@@ -230,11 +245,15 @@ const handleUploadVideoAttachment = async (
     const confirmForm = new FormData();
     confirmForm.append('authenticity_token', policy.asset_upload_authenticity_token);
 
-    await fetch(`https://github.com${policy.asset_upload_url}`, {
-      method: 'PUT',
-      headers: { Accept: 'application/json' },
-      body: confirmForm,
-    });
+    await fetchWithTimeout(
+      `https://github.com${policy.asset_upload_url}`,
+      {
+        method: 'PUT',
+        headers: { Accept: 'application/json' },
+        body: confirmForm,
+      },
+      UPLOAD_TIMEOUT,
+    );
 
     await removeHeaderRule(CONFIRM_RULE_ID);
 
@@ -251,9 +270,13 @@ const handleUploadVideoAttachment = async (
 const githubFetchStatus = async (path: string): Promise<number> => {
   const { githubPat } = await chrome.storage.local.get('githubPat');
   if (!githubPat) throw new Error('GitHub token not configured.');
-  const res = await fetch(`https://api.github.com${path}`, {
-    headers: { Authorization: `Bearer ${githubPat}`, Accept: 'application/vnd.github+json' },
-  });
+  const res = await fetchWithTimeout(
+    `https://api.github.com${path}`,
+    {
+      headers: { Authorization: `Bearer ${githubPat}`, Accept: 'application/vnd.github+json' },
+    },
+    API_TIMEOUT,
+  );
   if (res.status === 401) {
     await chrome.storage.local.remove(['githubPat', 'githubPatUser']);
     chrome.runtime.sendMessage({ type: 'TOKEN_REVOKED' }).catch(() => {});
@@ -373,7 +396,10 @@ const getOctokit = async (): Promise<Octokit> => {
   if (!githubPat) {
     throw new Error('GitHub token not configured. Go to extension options to set it up.');
   }
-  return new Octokit({ auth: githubPat });
+  return new Octokit({
+    auth: githubPat,
+    request: { signal: AbortSignal.timeout(API_TIMEOUT) },
+  });
 };
 
 /** Check if an API error is a 401 and auto-disconnect the token */
@@ -409,9 +435,13 @@ const handleValidateToken = async (
       sendResponse({ success: false, error: 'Invalid token' });
       return;
     }
-    const response = await fetch('https://api.github.com/user', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await fetchWithTimeout(
+      'https://api.github.com/user',
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+      TOKEN_TIMEOUT,
+    );
     if (!response.ok) {
       sendResponse({ success: false, error: 'Invalid token — could not authenticate.' });
       return;
@@ -451,9 +481,13 @@ const handleCheckTokenStatus = async (sendResponse: (response: CheckTokenStatusR
   }
   // Verify the token still works and has the right scope
   try {
-    const response = await fetch('https://api.github.com/user', {
-      headers: { Authorization: `Bearer ${githubPat}` },
-    });
+    const response = await fetchWithTimeout(
+      'https://api.github.com/user',
+      {
+        headers: { Authorization: `Bearer ${githubPat}` },
+      },
+      TOKEN_TIMEOUT,
+    );
     if (!response.ok) {
       // Token revoked or expired — clean up
       await chrome.storage.local.remove(['githubPat', 'githubPatUser']);
