@@ -1374,6 +1374,7 @@ const OnboardingWizard = ({ open, chapter, onClose }: OnboardingWizardProps) => 
             }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <button
+                className="icon-btn"
                 onClick={onClose}
                 aria-label="Back to settings"
                 style={{

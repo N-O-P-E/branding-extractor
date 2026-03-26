@@ -1756,7 +1756,7 @@ const App = () => {
                 transform: 'translateX(-50%)',
                 display: 'flex',
                 gap: '4px',
-                padding: '8px 14px',
+                padding: '8px',
                 background: overlayTheme.surface,
                 border: `1px solid ${overlayTheme.border}`,
                 borderRadius: '14px',
@@ -1767,6 +1767,9 @@ const App = () => {
               }}
               onClick={e => e.stopPropagation()}
               onKeyDown={e => e.stopPropagation()}>
+              <style>{`
+                .tb-btn:hover:not([disabled]) { background: rgba(148,163,184,0.12) !important; }
+              `}</style>
               {/* Tool toggle: Select area / Draw / Text */}
               <div style={{ display: 'flex', gap: '2px', alignItems: 'center', padding: '0 2px' }}>
                 {/* Select area — hidden in recording mode */}
@@ -1778,9 +1781,10 @@ const App = () => {
                       chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: 'select' } });
                     }}
                     title="Select area (S)"
+                    className="tb-btn"
                     style={{
                       height: 34,
-                      borderRadius: '8px',
+                      borderRadius: '6px',
                       border: 'none',
                       background: activeTool === 'select' ? overlayTheme.accentLight : 'transparent',
                       cursor: 'pointer',
@@ -1802,7 +1806,7 @@ const App = () => {
                         strokeLinejoin="round"
                       />
                     </svg>
-                    <span style={{ fontSize: '11px', fontWeight: 500, opacity: 0.5 }}>S</span>
+                    <span style={{ fontSize: '12px', fontWeight: 600, opacity: 0.6 }}>S</span>
                   </button>
                 )}
                 {/* Pointer mode — recording only */}
@@ -1810,9 +1814,10 @@ const App = () => {
                   <button
                     onClick={() => setRecordingPointerMode(true)}
                     title="Pointer — interact with the page (V)"
+                    className="tb-btn"
                     style={{
                       height: 34,
-                      borderRadius: '8px',
+                      borderRadius: '6px',
                       border: 'none',
                       background: recordingPointerMode ? overlayTheme.accentLight : 'transparent',
                       cursor: 'pointer',
@@ -1843,9 +1848,10 @@ const App = () => {
                     chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: 'pencil' } });
                   }}
                   title="Draw (D)"
+                  className="tb-btn"
                   style={{
                     height: 34,
-                    borderRadius: '8px',
+                    borderRadius: '6px',
                     border: 'none',
                     background:
                       !recordingPointerMode && activeTool === 'pencil' && canvasSubTool === 'draw'
@@ -1875,9 +1881,9 @@ const App = () => {
                   </svg>
                   <span
                     style={{
-                      fontSize: '10px',
-                      fontWeight: 500,
-                      opacity: 0.5,
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      opacity: 0.6,
                       letterSpacing: '0.02em',
                     }}>
                     D
@@ -1891,9 +1897,10 @@ const App = () => {
                     chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: 'pencil' } });
                   }}
                   title="Comment (C)"
+                  className="tb-btn"
                   style={{
                     height: 34,
-                    borderRadius: '8px',
+                    borderRadius: '6px',
                     border: 'none',
                     background:
                       activeTool === 'pencil' && canvasSubTool === 'text' ? overlayTheme.accentLight : 'transparent',
@@ -1921,9 +1928,9 @@ const App = () => {
                   </svg>
                   <span
                     style={{
-                      fontSize: '10px',
-                      fontWeight: 500,
-                      opacity: 0.5,
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      opacity: 0.6,
                       letterSpacing: '0.02em',
                     }}>
                     C
@@ -1936,9 +1943,10 @@ const App = () => {
                     chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: 'pencil' } });
                   }}
                   title="Image (I)"
+                  className="tb-btn"
                   style={{
                     height: 34,
-                    borderRadius: '8px',
+                    borderRadius: '6px',
                     border: 'none',
                     background:
                       activeTool === 'pencil' && canvasSubTool === 'image' ? overlayTheme.accentLight : 'transparent',
@@ -1976,7 +1984,7 @@ const App = () => {
                     <path d="M15.75 18.5H21.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                     <path d="M18.5 15.75V21.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                   </svg>
-                  <span style={{ fontSize: '11px', fontWeight: 500, opacity: 0.5 }}>I</span>
+                  <span style={{ fontSize: '12px', fontWeight: 600, opacity: 0.6 }}>I</span>
                 </button>
               </div>
 
@@ -1990,6 +1998,7 @@ const App = () => {
                     key={sw.value}
                     onClick={() => setStrokeWidth(sw.value)}
                     title={`${sw.label} stroke`}
+                    className="tb-btn"
                     style={{
                       width: 28,
                       height: 28,
@@ -2020,15 +2029,15 @@ const App = () => {
               <div style={{ width: 1, height: 24, background: overlayTheme.border, margin: '0 6px' }} />
 
               {/* Color swatches */}
-              <div style={{ display: 'flex', gap: '3px', alignItems: 'center', padding: '0 4px' }}>
+              <div style={{ display: 'flex', gap: '5px', alignItems: 'center', padding: '0 4px' }}>
                 {STROKE_COLORS.map(color => (
                   <button
                     key={color}
                     onClick={() => setStrokeColor(color)}
                     title={color}
                     style={{
-                      width: 24,
-                      height: 24,
+                      width: 18,
+                      height: 18,
                       borderRadius: '50%',
                       border:
                         strokeColor === color
@@ -2059,11 +2068,12 @@ const App = () => {
                 onClick={handleCanvasUndo}
                 disabled={!hasCanvasContent}
                 title="Undo (⌘Z)"
+                className="tb-btn"
                 style={{
                   background: 'transparent',
                   color: !hasCanvasContent ? 'rgba(148,163,184,0.25)' : 'rgba(203,213,225,0.9)',
                   border: 'none',
-                  borderRadius: '8px',
+                  borderRadius: '6px',
                   width: 34,
                   height: 34,
                   fontSize: '15px',
@@ -2097,11 +2107,12 @@ const App = () => {
               <button
                 onClick={copyCanvasToClipboard}
                 title={`Copy to clipboard (${navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl+'}C)`}
+                className="tb-btn"
                 style={{
                   background: 'transparent',
                   color: 'rgba(203,213,225,0.9)',
                   border: 'none',
-                  borderRadius: '8px',
+                  borderRadius: '6px',
                   width: 34,
                   height: 34,
                   cursor: 'pointer',
@@ -2113,12 +2124,12 @@ const App = () => {
                 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
-                    d="M8 4H6C4.89543 4 4 4.89543 4 6V18C4 19.1046 4.89543 20 6 20H18C19.1046 20 20 19.1046 20 18V16"
+                    d="M15.25 4.75H17.25C18.3546 4.75 19.25 5.64543 19.25 6.75V19.25C19.25 20.3546 18.3546 21.25 17.25 21.25H6.75C5.64543 21.25 4.75 20.3546 4.75 19.25V6.75C4.75 5.64543 5.64543 4.75 6.75 4.75H8.75M15.25 4.75V6.25C15.25 6.80228 14.8023 7.25 14.25 7.25H9.75C9.19772 7.25 8.75 6.80228 8.75 6.25V4.75M15.25 4.75C15.25 3.64543 14.3546 2.75 13.25 2.75H10.75C9.64543 2.75 8.75 3.64543 8.75 4.75"
                     stroke="currentColor"
                     strokeWidth="1.5"
-                    strokeLinecap="round"
+                    strokeLinecap="square"
+                    strokeLinejoin="round"
                   />
-                  <rect x="10" y="2" width="12" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" />
                 </svg>
               </button>
             </div>
