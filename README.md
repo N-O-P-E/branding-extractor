@@ -85,7 +85,7 @@ Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/vis
 
 ### Manual Install
 
-1. Download [visual-issue-reporter.zip](https://github.com/N-O-P-E/visual-issue-reporter/releases/latest/download/visual-issue-reporter.zip)
+1. Download [visual-issue-reporter.zip](https://github.com/N-O-P-E/visual-issue-reporter/releases/download/v1.1.0/visual-issue-reporter.zip)
 2. Unzip the file
 3. Go to `chrome://extensions`, enable **Developer mode**
 4. Click **Load unpacked** and select the unzipped folder
