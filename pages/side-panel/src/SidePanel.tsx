@@ -5,6 +5,7 @@ import CreateIssueView from './views/CreateIssueView';
 import HomeView from './views/HomeView';
 import SetupView from './views/SetupView';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import type { VideoUploadStatus } from './views/HomeView';
 import type { BrowserMetadata, CaptureCompleteMessage, RecordingCompleteMessage } from '@extension/shared';
 
 type View = 'home' | 'setup' | 'create-issue';
@@ -20,6 +21,7 @@ export default function SidePanel() {
   const { theme, changeTheme, availableThemes, tryActivateCode } = useTheme();
   const online = useOnlineStatus();
   const [recordingData, setRecordingData] = useState<RecordingCompleteMessage['payload'] | null>(null);
+  const [videoUploadStatus, setVideoUploadStatus] = useState<VideoUploadStatus | null>(null);
   const isRecordingRef = useRef(false);
 
   const openWizard = (chapter: 1 | 2) => {
@@ -91,7 +93,16 @@ export default function SidePanel() {
 
   const handleRecordingComplete = useCallback((data: RecordingCompleteMessage['payload']) => {
     setRecordingData(data);
+    setVideoUploadStatus(null);
     setView('create-issue');
+  }, []);
+
+  const handleVideoUploadUpdate = useCallback((status: VideoUploadStatus) => {
+    setVideoUploadStatus(status);
+    // When upload succeeds, update recordingData with the videoUrl
+    if (status.status === 'success' && status.videoUrl) {
+      setRecordingData(prev => (prev ? { ...prev, videoUrl: status.videoUrl } : prev));
+    }
   }, []);
 
   if (wizardOpen) {
@@ -154,6 +165,7 @@ export default function SidePanel() {
             onRecordingStateChange={(active: boolean) => {
               isRecordingRef.current = active;
             }}
+            onVideoUploadUpdate={handleVideoUploadUpdate}
           />
         )}
         {view === 'create-issue' && (
@@ -161,6 +173,7 @@ export default function SidePanel() {
             captureData={captureData}
             browserMetadata={browserMetadata}
             recordingData={recordingData}
+            videoUploadStatus={videoUploadStatus}
             onOpenWizard={openWizard}
             onBack={() => {
               setView('home');

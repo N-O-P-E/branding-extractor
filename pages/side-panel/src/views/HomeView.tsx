@@ -4,6 +4,12 @@ import ToolButton from '../components/ToolButton';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { PageIssue, RecordingCompleteMessage } from '@extension/shared';
 
+interface VideoUploadStatus {
+  status: 'uploading' | 'success' | 'error';
+  videoUrl?: string;
+  error?: string;
+}
+
 interface HomeViewProps {
   onOpenSettings: (section?: string) => void;
   onOpenWizard?: (chapter: 1 | 2) => void;
@@ -11,6 +17,7 @@ interface HomeViewProps {
   themeLabel?: string;
   onRecordingComplete?: (data: RecordingCompleteMessage['payload']) => void;
   onRecordingStateChange?: (active: boolean) => void;
+  onVideoUploadUpdate?: (status: VideoUploadStatus) => void;
 }
 
 /** Check and request optional cookies permission for video upload.
@@ -160,6 +167,7 @@ export default function HomeView({
   themeLabel,
   onRecordingComplete,
   onRecordingStateChange,
+  onVideoUploadUpdate,
 }: HomeViewProps) {
   const [repos, setRepos] = useState<string[]>([]);
   const [selectedRepo, setSelectedRepo] = useState('');
@@ -179,7 +187,6 @@ export default function HomeView({
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [recordingError, setRecordingError] = useState('');
   const [micEnabled, setMicEnabled] = useState(false);
-  const [processingRecording, setProcessingRecording] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -397,6 +404,10 @@ export default function HomeView({
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       const pageUrl = tab?.url ?? '';
 
+      // Navigate to create-issue view immediately — upload happens in background
+      onRecordingComplete?.({ mimeType, durationMs, pageUrl });
+      onVideoUploadUpdate?.({ status: 'uploading' });
+
       try {
         const { githubPat } = await chrome.storage.local.get('githubPat');
         const { selectedRepo } = await chrome.storage.local.get('selectedRepo');
@@ -425,13 +436,13 @@ export default function HomeView({
           console.log('[VIR] Video uploaded via release assets:', videoUrl);
         }
 
-        onRecordingComplete?.({ mimeType, durationMs, pageUrl, videoUrl });
+        onVideoUploadUpdate?.({ status: 'success', videoUrl });
       } catch (err) {
         console.error('[VIR] Video upload failed:', err);
-        onRecordingComplete?.({ mimeType, durationMs, pageUrl });
+        onVideoUploadUpdate?.({ status: 'error', error: err instanceof Error ? err.message : 'Upload failed' });
       }
     },
-    [onRecordingComplete],
+    [onRecordingComplete, onVideoUploadUpdate],
   );
 
   const handleRecordClick = async () => {
@@ -512,12 +523,11 @@ export default function HomeView({
         setRecording(false);
         onRecordingStateChange?.(false);
         setRecordingSeconds(0);
-        setProcessingRecording(true);
         // Dismiss the drawing overlay on the page
         chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
           if (tab?.id) chrome.tabs.sendMessage(tab.id, { type: 'STOP_RECORDING_OVERLAY' }).catch(() => {});
         });
-        finishRecording(blob, mimeType, durationMs).finally(() => setProcessingRecording(false));
+        void finishRecording(blob, mimeType, durationMs);
       };
 
       recorder.onerror = () => {
@@ -781,38 +791,8 @@ export default function HomeView({
           )}
         </div>
 
-        {/* Processing recording loading state */}
-        {processingRecording && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 10,
-              padding: '16px 0',
-              color: colors.purpleAccent,
-              fontSize: 13,
-              fontWeight: 500,
-            }}>
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              style={{ animation: 'spin 1s linear infinite' }}>
-              <path
-                d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-            <span>Uploading recording...</span>
-          </div>
-        )}
-
         {/* Mic toggle -- shown when not recording */}
-        {!recording && !processingRecording && (
+        {!recording && (
           <button
             onClick={async () => {
               if (micEnabled) {
@@ -1068,3 +1048,5 @@ export default function HomeView({
     </div>
   );
 }
+
+export type { VideoUploadStatus };

@@ -1,6 +1,7 @@
 import AssigneeSelect from '../components/AssigneeSelect';
 import LabelSelect from '../components/LabelSelect';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import type { VideoUploadStatus } from './HomeView';
 import type { BrowserMetadata, AutoFixSettings, RecordingCompleteMessage } from '@extension/shared';
 
 interface CaptureData {
@@ -18,6 +19,7 @@ interface CreateIssueViewProps {
   captureData: CaptureData | null;
   browserMetadata: BrowserMetadata | null;
   recordingData?: RecordingCompleteMessage['payload'] | null;
+  videoUploadStatus?: VideoUploadStatus | null;
   onBack: () => void;
   onSuccess: () => void;
   onOpenWizard?: (chapter: 1 | 2) => void;
@@ -38,6 +40,7 @@ export default function CreateIssueView({
   captureData,
   browserMetadata,
   recordingData,
+  videoUploadStatus,
   onBack,
   onSuccess,
   onOpenWizard,
@@ -424,6 +427,62 @@ export default function CreateIssueView({
       </div>
 
       <div style={{ padding: '12px 20px 20px' }}>
+        {/* Video upload status */}
+        {videoUploadStatus && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '10px 14px',
+              marginBottom: 12,
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 500,
+              background:
+                videoUploadStatus.status === 'uploading'
+                  ? 'var(--bg-input)'
+                  : videoUploadStatus.status === 'success'
+                    ? 'rgba(34, 197, 94, 0.1)'
+                    : 'rgba(239, 68, 68, 0.1)',
+              color:
+                videoUploadStatus.status === 'uploading'
+                  ? 'var(--text-secondary)'
+                  : videoUploadStatus.status === 'success'
+                    ? 'var(--status-success)'
+                    : 'var(--status-error)',
+              border: `1px solid ${
+                videoUploadStatus.status === 'uploading'
+                  ? 'var(--border-default)'
+                  : videoUploadStatus.status === 'success'
+                    ? 'rgba(34, 197, 94, 0.2)'
+                    : 'rgba(239, 68, 68, 0.2)'
+              }`,
+            }}>
+            {videoUploadStatus.status === 'uploading' && (
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }}>
+                <path
+                  d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            )}
+            <span>
+              {videoUploadStatus.status === 'uploading' && 'Uploading recording...'}
+              {videoUploadStatus.status === 'success' && 'Recording uploaded'}
+              {videoUploadStatus.status === 'error' &&
+                `Recording upload failed${videoUploadStatus.error ? `: ${videoUploadStatus.error}` : ''}`}
+            </span>
+          </div>
+        )}
+
         {/* Description */}
         <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
           Description
