@@ -73,6 +73,7 @@ export default function SidePanel() {
         setCaptureData(null);
         setBrowserMetadata(null);
         setRecordingData(null);
+        setVideoUploadStatus(null);
       }
     };
     const onUpdated = (_tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
@@ -81,6 +82,7 @@ export default function SidePanel() {
         setCaptureData(null);
         setBrowserMetadata(null);
         setRecordingData(null);
+        setVideoUploadStatus(null);
       }
     };
     chrome.tabs.onActivated.addListener(onActivated);
@@ -186,6 +188,7 @@ export default function SidePanel() {
               setView('home');
               setCaptureData(null);
               setRecordingData(null);
+              setVideoUploadStatus(null);
               // Dismiss the overlay on the page
               chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
                 if (tab?.id) chrome.tabs.sendMessage(tab.id, { type: 'DISMISS_OVERLAY' }).catch(() => {});
