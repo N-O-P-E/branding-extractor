@@ -903,37 +903,21 @@ export default function HomeView({
             }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               {micEnabled ? (
-                <>
-                  <path
-                    d="M12 2.75C10.4812 2.75 9.25 3.98122 9.25 5.5V12C9.25 13.5188 10.4812 14.75 12 14.75C13.5188 14.75 14.75 13.5188 14.75 12V5.5C14.75 3.98122 13.5188 2.75 12 2.75Z"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  />
-                  <path
-                    d="M6.25 11C6.25 14.1756 8.82436 16.75 12 16.75C15.1756 16.75 17.75 14.1756 17.75 11"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                  <path d="M12 17.75V21.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </>
+                <path
+                  d="M12.0009 19C15.0764 19 17.7195 17.1489 18.8769 14.5M12.0009 19C8.92546 19 6.28233 17.1489 5.125 14.5M12.0009 19V21.25M12.0009 15.75C9.65372 15.75 7.75093 13.8472 7.75093 11.5V7C7.75093 4.65279 9.65372 2.75 12.0009 2.75C14.3481 2.75 16.2509 4.65279 16.2509 7V11.5C16.2509 13.8472 14.3481 15.75 12.0009 15.75Z"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               ) : (
-                <>
-                  <path
-                    d="M9.25 5.5C9.25 3.98122 10.4812 2.75 12 2.75C13.5188 2.75 14.75 3.98122 14.75 5.5V9"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M6.25 11C6.25 14.1756 8.82436 16.75 12 16.75C15.1756 16.75 17.75 14.1756 17.75 11"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                  <path d="M12 17.75V21.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  <path d="M3.75 3.75L20.25 20.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </>
+                <path
+                  d="M16.25 11.5V7C16.25 4.65279 14.3472 2.75 12 2.75C10.6334 2.75 9.41741 3.39504 8.63994 4.39727M3 3L7.75 7.75M7.75 7.75V11.5C7.75 13.8472 9.65279 15.75 12 15.75C13.0463 15.75 14.0043 15.3719 14.7449 14.7449M7.75 7.75L14.7449 14.7449M14.7449 14.7449L17.0474 17.0474M21 21L17.0474 17.0474M12 19C8.92453 19 6.2814 17.1489 5.12407 14.5M12 19V21.25M12 19C13.9439 19 15.715 18.2605 17.0474 17.0474"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               )}
             </svg>
             {micEnabled ? 'Microphone on' : 'Microphone off'}
