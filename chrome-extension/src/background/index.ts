@@ -19,6 +19,10 @@ import type {
   ValidateTokenResponse,
 } from '@extension/shared';
 
+// Rule IDs for declarativeNetRequest session rules (used in handleUploadVideoAttachment and onSuspend cleanup)
+const POLICY_RULE_ID = 9990;
+const CONFIRM_RULE_ID = 9991;
+
 /** Validates that a string matches the `owner/repo` format */
 const REPO_NAME_REGEX = /^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/;
 
@@ -172,10 +176,17 @@ const handleUploadVideoAttachment = async (
   message: UploadVideoAttachmentMessage,
   sendResponse: (response: { success: boolean; videoUrl?: string; error?: string }) => void,
 ) => {
-  const POLICY_RULE_ID = 9990;
-  const CONFIRM_RULE_ID = 9991;
   try {
     const { repositoryId, fileName, contentType, videoArrayBuffer, cookieStr } = message.payload;
+
+    // Verify optional permissions are granted before using declarativeNetRequest
+    const hasPerms = await chrome.permissions.contains({
+      permissions: ['cookies', 'declarativeNetRequest'],
+    });
+    if (!hasPerms) {
+      sendResponse({ success: false, error: 'Video upload permissions not granted' });
+      return;
+    }
 
     // Step 1: Request upload policy — inject Cookie via declarativeNetRequest
     await injectGitHubHeaders(POLICY_RULE_ID, '*://github.com/upload/policies/assets*', cookieStr);
