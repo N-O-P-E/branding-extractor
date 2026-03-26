@@ -34,6 +34,30 @@ const API_TIMEOUT = 30_000;
 const UPLOAD_TIMEOUT = 300_000;
 const TOKEN_TIMEOUT = 15_000;
 
+/** Classify errors into user-friendly categories */
+const classifyError = (err: unknown): { code: string; message: string } => {
+  if (err instanceof DOMException && err.name === 'AbortError') {
+    return { code: 'TIMEOUT', message: 'Request timed out — please try again.' };
+  }
+  if (err instanceof TypeError && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError'))) {
+    return { code: 'NETWORK', message: 'Network error — check your connection and try again.' };
+  }
+  const status = (err as { status?: number })?.status;
+  if (status === 401) {
+    return { code: 'AUTH', message: 'GitHub token expired — please enter a new token.' };
+  }
+  if (status === 403) {
+    return { code: 'RATE_LIMIT', message: 'GitHub rate limit reached — try again in a few minutes.' };
+  }
+  if (status === 404) {
+    return { code: 'NOT_FOUND', message: 'Resource not found — check your repository settings.' };
+  }
+  return {
+    code: 'UNKNOWN',
+    message: err instanceof Error ? err.message : 'Something went wrong.',
+  };
+};
+
 /** Validates that a string matches the `owner/repo` format */
 const REPO_NAME_REGEX = /^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/;
 
@@ -299,7 +323,8 @@ const handleCheckRepoWorkflow = async (
     );
     sendResponse({ success: true, exists: status === 200 });
   } catch (err) {
-    sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
+    const classified = classifyError(err);
+    sendResponse({ success: false, error: classified.message });
   }
 };
 
@@ -318,7 +343,8 @@ const handleCheckRepoSecret = async (
     );
     sendResponse({ success: true, exists: status === 200 });
   } catch (err) {
-    sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
+    const classified = classifyError(err);
+    sendResponse({ success: false, error: classified.message });
   }
 };
 
@@ -387,7 +413,8 @@ const handleStartReport = async (tool: 'select' | 'pencil', sendResponse: (respo
     sendResponse({ success: true });
   } catch (err) {
     await check401(err);
-    sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
+    const classified = classifyError(err);
+    sendResponse({ success: false, error: classified.message });
   }
 };
 
@@ -742,7 +769,8 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
     });
   } catch (err) {
     await check401(err);
-    sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
+    const classified = classifyError(err);
+    sendResponse({ success: false, error: classified.message });
   }
 };
 
@@ -810,7 +838,8 @@ const handleFetchLabels = async (
     });
   } catch (err) {
     await check401(err);
-    sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
+    const classified = classifyError(err);
+    sendResponse({ success: false, error: classified.message });
   }
 };
 
@@ -844,7 +873,8 @@ const handleFetchBranches = async (
     });
   } catch (err) {
     await check401(err);
-    sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
+    const classified = classifyError(err);
+    sendResponse({ success: false, error: classified.message });
   }
 };
 
@@ -866,7 +896,8 @@ const handleFetchRepos = async (sendResponse: (response: FetchReposResponse) => 
     sendResponse({ success: true, repos });
   } catch (err) {
     await check401(err);
-    sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
+    const classified = classifyError(err);
+    sendResponse({ success: false, error: classified.message });
   }
 };
 
@@ -892,7 +923,8 @@ const handleFetchAssignees = async (
     });
   } catch (err) {
     await check401(err);
-    sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
+    const classified = classifyError(err);
+    sendResponse({ success: false, error: classified.message });
   }
 };
 
@@ -1032,7 +1064,8 @@ const handleFetchPageIssues = async (
     sendResponse({ success: true, issues: matched });
   } catch (err) {
     await check401(err);
-    sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
+    const classified = classifyError(err);
+    sendResponse({ success: false, error: classified.message });
   }
 };
 
