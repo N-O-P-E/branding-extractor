@@ -467,9 +467,15 @@ export default function CreateIssueView({
                 fill="none"
                 style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }}>
                 <path
-                  d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
+                  d="M21.25 12C21.25 17.1086 17.1086 21.25 12 21.25C6.89137 21.25 2.75 17.1086 2.75 12C2.75 6.89137 6.89137 2.75 12 2.75C17.1086 2.75 21.25 6.89137 21.25 12Z"
                   stroke="currentColor"
-                  strokeWidth="2"
+                  strokeOpacity="0.3"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M21.25 12C21.25 17.1086 17.1086 21.25 12 21.25"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
                   strokeLinecap="round"
                 />
               </svg>
