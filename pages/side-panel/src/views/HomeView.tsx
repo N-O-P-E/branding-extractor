@@ -578,6 +578,7 @@ export default function HomeView({
           </p>
         </div>
         <button
+          className="icon-btn"
           onClick={onOpenSettings}
           title="Settings"
           style={{
@@ -801,16 +802,16 @@ export default function HomeView({
                   url: chrome.runtime.getURL('mic-permission.html'),
                   active: true,
                 });
-                // Timeout after 60s
+                // Timeout after 120s — give user plenty of time to accept
                 setTimeout(() => {
                   chrome.runtime.onMessage.removeListener(listener);
                   resolve(false);
-                }, 60000);
+                }, 120000);
               });
               if (result) {
                 setMicEnabled(true);
               } else {
-                setRecordingError('Microphone access denied. Check Windows Settings > Privacy > Microphone.');
+                setRecordingError('Microphone permission was not granted. Try again via the mic toggle.');
               }
             }}
             style={{

@@ -87,6 +87,7 @@ export default function RepoSelector({ selectedRepo, repos, onChange, onOpenSett
         </select>
         {selectedRepo && (
           <button
+            className="icon-btn"
             onClick={() => chrome.tabs.create({ url: `https://github.com/${selectedRepo}` })}
             title="Open on GitHub"
             style={{

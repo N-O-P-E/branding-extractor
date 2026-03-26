@@ -211,23 +211,25 @@ export default function SetupView({
   const [yamlCopied, setYamlCopied] = useState(false);
 
   useEffect(() => {
+    const targeted = !!openSection; // When a specific section is targeted, only open that one
+
     // Check token status via background — never read the raw PAT
     chrome.runtime.sendMessage({ type: 'CHECK_TOKEN_STATUS' }, (response: { connected: boolean; login?: string }) => {
       if (response?.connected) {
         setPatStatus('valid');
         if (response.login) setPatUser(response.login);
-        setTokenOpen(openSection === 'token' ? true : false);
+        setTokenOpen(openSection === 'token');
       } else {
-        setTokenOpen(true);
+        setTokenOpen(targeted ? openSection === 'token' : true);
       }
     });
     chrome.storage.local.get(['repoList']).then(result => {
       if (result.repoList) {
         const list = result.repoList as string[];
         setRepos(list);
-        setReposOpen(openSection === 'repos' ? true : list.length === 0);
+        setReposOpen(targeted ? openSection === 'repos' : list.length === 0);
       } else {
-        setReposOpen(true);
+        setReposOpen(targeted ? openSection === 'repos' : true);
       }
     });
     // Load auto-fix settings
@@ -242,9 +244,9 @@ export default function SetupView({
         if (settings.systemPrompt) setSystemPrompt(settings.systemPrompt);
         if (settings.model) setSelectedModel(settings.model);
         if (settings.autoFixByDefault) setAutoFixByDefault(true);
-        setAutoFixOpen(openSection === 'autofix' ? true : !settings.anthropicApiKey);
+        setAutoFixOpen(targeted ? openSection === 'autofix' : !settings.anthropicApiKey);
       } else {
-        setAutoFixOpen(true);
+        setAutoFixOpen(targeted ? openSection === 'autofix' : true);
       }
     });
     if (openSection === 'theme') setThemeOpen(true);
@@ -484,6 +486,7 @@ export default function SetupView({
       <div style={{ marginBottom: 32 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button
+            className="icon-btn"
             onClick={onDone}
             aria-label="Back"
             style={{

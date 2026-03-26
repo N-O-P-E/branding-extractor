@@ -280,6 +280,16 @@ a {
   border-color: var(--accent-20) !important;
 }
 
+/* Icon button hover states (settings gear, back arrow, link button, etc.) */
+.icon-btn {
+  transition: all 0.15s ease;
+}
+.icon-btn:hover {
+  background: var(--bg-hover) !important;
+  border-color: var(--border-default) !important;
+  color: var(--text-primary) !important;
+}
+
 /* Subtle text nudge on hover for settings rows */
 .settings-row > span:first-child {
   transition: transform 0.15s ease;
