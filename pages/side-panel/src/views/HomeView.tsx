@@ -120,19 +120,23 @@ const uploadViaReleaseAsset = async (
   if (releaseRes.ok) {
     releaseId = (await releaseRes.json()).id;
   } else {
-    const createRes = await fetchWithTimeout(`https://api.github.com/repos/${owner}/${repo}/releases`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${pat}`,
-        Accept: 'application/vnd.github+json',
-        'Content-Type': 'application/json',
+    const createRes = await fetchWithTimeout(
+      `https://api.github.com/repos/${owner}/${repo}/releases`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${pat}`,
+          Accept: 'application/vnd.github+json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tag_name: releaseTag,
+          name: 'Visual Issue Screenshots',
+          body: 'Screenshots uploaded by Visual Issue Reporter. Do not delete this release.',
+        }),
       },
-      body: JSON.stringify({
-        tag_name: releaseTag,
-        name: 'Visual Issue Screenshots',
-        body: 'Screenshots uploaded by Visual Issue Reporter. Do not delete this release.',
-      }),
-    });
+      UPLOAD_TIMEOUT,
+    );
     releaseId = (await createRes.json()).id;
   }
 

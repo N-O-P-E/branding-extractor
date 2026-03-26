@@ -298,7 +298,8 @@ const handleUploadVideoAttachment = async (
     // Clean up rules on error
     await removeHeaderRule(POLICY_RULE_ID).catch(() => {});
     await removeHeaderRule(CONFIRM_RULE_ID).catch(() => {});
-    sendResponse({ success: false, error: err instanceof Error ? err.message : 'Upload failed' });
+    const classified = classifyError(err);
+    sendResponse({ success: false, error: classified.message });
   }
 };
 
