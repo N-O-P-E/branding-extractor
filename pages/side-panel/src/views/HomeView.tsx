@@ -385,6 +385,7 @@ export default function HomeView({
   }, [selectedRepo]);
 
   const [toolError, setToolError] = useState('');
+  const [micHovered, setMicHovered] = useState(false);
 
   const handleToolClick = (tool: 'select' | 'pencil' | 'inspect') => {
     setActiveTool(tool);
@@ -884,6 +885,8 @@ export default function HomeView({
                 setRecordingError('Microphone permission was not granted. Try again via the mic toggle.');
               }
             }}
+            onMouseEnter={() => setMicHovered(true)}
+            onMouseLeave={() => setMicHovered(false)}
             style={{
               gridColumn: '1 / -1',
               display: 'flex',
@@ -891,14 +894,16 @@ export default function HomeView({
               justifyContent: 'center',
               gap: 8,
               padding: '12px 8px',
-              background: micEnabled ? 'rgba(34,197,94,0.1)' : 'transparent',
-              border: `1px solid ${micEnabled ? 'rgba(34,197,94,0.25)' : 'var(--tool-border)'}`,
+              background: micEnabled ? 'rgba(34,197,94,0.1)' : micHovered ? 'var(--tool-bg-hover)' : 'transparent',
+              border: `1px solid ${micEnabled ? 'rgba(34,197,94,0.25)' : micHovered ? 'var(--tool-border-hover)' : 'var(--tool-border)'}`,
               borderRadius: 10,
               cursor: 'pointer',
               fontFamily: 'var(--font-body)',
               fontSize: 13,
               fontWeight: 500,
               color: micEnabled ? colors.green : colors.textPrimary,
+              boxShadow: micHovered && !micEnabled ? '0 4px 12px var(--tool-shadow-hover)' : 'none',
+              transform: micHovered && !micEnabled ? 'translateY(-1px)' : 'none',
               transition: 'all 0.15s ease',
             }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
