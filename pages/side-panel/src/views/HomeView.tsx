@@ -13,6 +13,15 @@ interface HomeViewProps {
   onRecordingStateChange?: (active: boolean) => void;
 }
 
+/** Check and request optional permissions for video upload (cookies + declarativeNetRequest).
+ *  MUST be called synchronously from a user gesture handler — async work before this will lose the gesture context. */
+const requestVideoUploadPermissions = async (): Promise<boolean> => {
+  const perms = { permissions: ['cookies' as const, 'declarativeNetRequest' as const] };
+  const granted = await chrome.permissions.contains(perms);
+  if (granted) return true;
+  return chrome.permissions.request(perms);
+};
+
 const colors = {
   textPrimary: 'var(--text-primary)',
   textSecondary: 'var(--text-secondary)',
@@ -48,6 +57,12 @@ const uploadViaUserAttachments = async (
   if (!repoRes.ok) throw new Error('Failed to get repo');
   const repoData = await repoRes.json();
   const repositoryId = repoData.id;
+
+  // Check we have the optional cookies permission before accessing cookies API
+  const hasPerms = await chrome.permissions.contains({
+    permissions: ['cookies', 'declarativeNetRequest'],
+  });
+  if (!hasPerms) throw new Error('MISSING_PERMISSIONS');
 
   // Get GitHub session cookies — use url for reliable matching across .github.com subdomains
   const cookies = await chrome.cookies.getAll({ url: 'https://github.com' });
@@ -374,8 +389,11 @@ export default function HomeView({
         console.log('[VIR] Video blob size:', blob.size, 'bytes, type:', blob.type);
 
         // Try GitHub's user-attachments upload (renders inline in issues)
+        // Request optional permissions first — must happen early in the gesture chain
+        const hasVideoPerms = await requestVideoUploadPermissions();
         let videoUrl: string | undefined;
         try {
+          if (!hasVideoPerms) throw new Error('MISSING_PERMISSIONS');
           videoUrl = await uploadViaUserAttachments(owner, repo, filename, contentType, blob, githubPat);
           console.log('[VIR] Video uploaded via user-attachments:', videoUrl);
         } catch (uploadErr) {
