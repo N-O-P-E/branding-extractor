@@ -67,6 +67,29 @@ const parseRepoName = (repo: string): { owner: string; repo: string } | null => 
   return { owner, repo: name };
 };
 
+/** Overlay theme definitions for content-UI (keyed by theme ID) */
+const OVERLAY_THEMES: Record<
+  string,
+  { accent: string; accentLight: string; surface: string; textPrimary: string; textSecondary: string; border: string }
+> = {
+  'ask-phill': {
+    accent: '#D8CCB5',
+    accentLight: 'rgba(216,204,181,0.2)',
+    surface: '#1C1C1C',
+    textPrimary: '#FAF8F7',
+    textSecondary: 'rgba(250,248,247,0.5)',
+    border: 'rgba(255,255,255,0.1)',
+  },
+  strix: {
+    accent: '#FFDB32',
+    accentLight: 'rgba(255,219,50,0.15)',
+    surface: '#222222',
+    textPrimary: '#FFFFFF',
+    textSecondary: 'rgba(255,255,255,0.55)',
+    border: 'rgba(255,255,255,0.1)',
+  },
+};
+
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error);
 
 // Clean up any leftover declarativeNetRequest session rules when service worker suspends
@@ -148,7 +171,15 @@ chrome.runtime.onMessage.addListener(
       return true;
     }
     if (message.type === 'UPDATE_ICON_THEME') {
-      updateIconForTheme(message.payload?.theme as string);
+      const themeId = message.payload?.theme as string;
+      updateIconForTheme(themeId);
+      // Forward overlay theme to active tab's content-UI
+      const overlayTheme = themeId && themeId !== 'default' ? OVERLAY_THEMES[themeId] : undefined;
+      chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
+        if (tab?.id) {
+          chrome.tabs.sendMessage(tab.id, { type: 'UPDATE_OVERLAY_THEME', payload: overlayTheme }).catch(() => {});
+        }
+      });
       return false;
     }
     if (message.type === 'UPLOAD_VIDEO_ATTACHMENT') {
@@ -385,35 +416,7 @@ const handleStartReport = async (tool: 'select' | 'pencil', sendResponse: (respo
       themeId !== 'default' &&
       (unlockedThemes as Array<{ id: string }> | undefined)?.some(t => t.id === themeId);
 
-    const overlayThemes: Record<
-      string,
-      {
-        accent: string;
-        accentLight: string;
-        surface: string;
-        textPrimary: string;
-        textSecondary: string;
-        border: string;
-      }
-    > = {
-      'ask-phill': {
-        accent: '#D8CCB5',
-        accentLight: 'rgba(216,204,181,0.2)',
-        surface: '#1C1C1C',
-        textPrimary: '#FAF8F7',
-        textSecondary: 'rgba(250,248,247,0.5)',
-        border: 'rgba(255,255,255,0.1)',
-      },
-      strix: {
-        accent: '#FFDB32',
-        accentLight: 'rgba(255,219,50,0.15)',
-        surface: '#222222',
-        textPrimary: '#FFFFFF',
-        textSecondary: 'rgba(255,255,255,0.55)',
-        border: 'rgba(255,255,255,0.1)',
-      },
-    };
-    const overlayTheme = isThemed && themeId ? overlayThemes[themeId] : undefined;
+    const overlayTheme = isThemed && themeId ? OVERLAY_THEMES[themeId] : undefined;
 
     const payload: ShowScreenshotMessage = {
       type: 'SHOW_SCREENSHOT',

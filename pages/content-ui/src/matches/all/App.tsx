@@ -329,7 +329,13 @@ const App = () => {
   }, [restoreHostDialogs]);
 
   useEffect(() => {
-    const listener = (message: ShowScreenshotMessage | ActivateToolMessage) => {
+    const listener = (
+      message: ShowScreenshotMessage | ActivateToolMessage | { type: string; payload?: OverlayTheme },
+    ) => {
+      if (message.type === 'UPDATE_OVERLAY_THEME') {
+        setOverlayTheme(message.payload ? (message.payload as OverlayTheme) : DEFAULT_OVERLAY_THEME);
+        return;
+      }
       if (message.type === 'SHOW_SCREENSHOT') {
         const tool = message.payload.tool ?? 'select';
         if (message.payload.theme) setOverlayTheme(message.payload.theme);
@@ -2156,13 +2162,13 @@ const App = () => {
                 bottom: `calc(${toolbarBottom} + 56px)`,
                 left: '50%',
                 transform: 'translateX(-50%)',
-                background: '#1e293b',
-                border: '1px solid rgba(148,163,184,0.2)',
+                background: overlayTheme.surface,
+                border: `1px solid ${overlayTheme.border}`,
                 borderRadius: 10,
                 padding: '6px 14px',
                 fontSize: 12,
                 fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-                color: 'rgba(241,245,249,0.7)',
+                color: overlayTheme.textSecondary,
                 zIndex: 2147483647,
                 pointerEvents: 'auto',
                 boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
@@ -2177,13 +2183,13 @@ const App = () => {
                 Hold{' '}
                 <kbd
                   style={{
-                    background: 'rgba(139,92,246,0.2)',
-                    border: '1px solid rgba(139,92,246,0.3)',
+                    background: overlayTheme.accentLight,
+                    border: `1px solid ${overlayTheme.border}`,
                     borderRadius: 4,
                     padding: '1px 5px',
                     fontSize: 11,
                     fontFamily: 'inherit',
-                    color: '#c4b5fd',
+                    color: overlayTheme.accent,
                   }}>
                   Shift
                 </kbd>{' '}
@@ -2197,7 +2203,7 @@ const App = () => {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: 'rgba(148,163,184,0.5)',
+                  color: overlayTheme.textSecondary,
                   cursor: 'pointer',
                   padding: '0 0 0 2px',
                   fontSize: 14,
