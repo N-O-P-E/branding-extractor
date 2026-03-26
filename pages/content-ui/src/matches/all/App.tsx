@@ -1836,7 +1836,7 @@ const App = () => {
                       color: recordingPointerMode ? overlayTheme.textPrimary : overlayTheme.textSecondary,
                       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                     }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path
                         d="M3.45158 4.72779L9.06387 20.5551C9.36964 21.4174 10.577 21.4503 10.9293 20.6059L13.6196 14.157C13.721 13.9138 13.9143 13.7205 14.1575 13.6191L20.6064 10.9288C21.4508 10.5765 21.4179 9.36915 20.5556 9.06338L4.72828 3.45109C3.93501 3.1698 3.17029 3.93452 3.45158 4.72779Z"
                         stroke="currentColor"
