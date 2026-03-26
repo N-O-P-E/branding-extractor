@@ -4,7 +4,7 @@
 
 Visual Issue Reporter is a Chrome MV3 extension that lets anyone report visual issues directly to GitHub. It captures annotated screenshots, records screen videos with mic narration, and creates issues with full browser context.
 
-Built by [Studio N.O.P.E.](https://studionope.nl) — [@basfijneman](https://github.com/basfijneman) and [@tijsluitse](https://github.com/tijsluitse).
+Built by [Studio N.O.P.E.](https://studionope.nl) — [@tijsluitse](https://github.com/tijsluitse) and [@basfijneman](https://github.com/basfijneman).
 
 ## Architecture
 

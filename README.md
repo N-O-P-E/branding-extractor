@@ -14,7 +14,7 @@ Chrome extension that captures annotated screenshots, records screen videos with
 
 **Creative Solution Engineers using AI's infinite possibilities to help humans realise their dreams.**
 
-We're [@basfijneman](https://github.com/basfijneman) and [@tijsluitse](https://github.com/tijsluitse) — two guys who believe the best tools are the ones that get out of your way. We built Visual Issue Reporter because reporting bugs shouldn't require a 12-step process and a screenshot tool. It should be one click, some context, done.
+We're [@tijsluitse](https://github.com/tijsluitse) and [@basfijneman](https://github.com/basfijneman) — two guys who believe the best tools are the ones that get out of your way. We built Visual Issue Reporter because reporting bugs shouldn't require a 12-step process and a screenshot tool. It should be one click, some context, done.
 
 We made this open source because we think every team deserves better dev tools, not just the ones that can afford them. When you fix a bug faster, everyone wins — developers, designers, clients, and the people using the product. Open source means the community can shape this into exactly what they need.
 
