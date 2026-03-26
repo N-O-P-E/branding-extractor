@@ -491,11 +491,45 @@ export default function CreateIssueView({
                 />
               </svg>
             )}
-            <span>
+            <span style={{ flex: 1 }}>
               {videoUploadStatus.status === 'uploading' && 'Processing recording...'}
               {videoUploadStatus.status === 'success' && 'Recording ready'}
               {videoUploadStatus.status === 'error' && 'Recording failed — issue will be created without video'}
             </span>
+            {videoUploadStatus.status === 'success' && videoUploadStatus.videoUrl && (
+              <a
+                href={videoUploadStatus.videoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: 'inherit',
+                  opacity: 0.7,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: 12,
+                  textDecoration: 'none',
+                  flexShrink: 0,
+                  transition: 'opacity 0.15s',
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.opacity = '1';
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.opacity = '0.7';
+                }}>
+                Preview
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M10 5.25H6.75C5.64543 5.25 4.75 6.14543 4.75 7.25V17.25C4.75 18.3546 5.64543 19.25 6.75 19.25H16.75C17.8546 19.25 18.75 18.3546 18.75 17.25V14M14.75 4.75H19.25M19.25 4.75V9.25M19.25 4.75L11 13"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </a>
+            )}
           </div>
         )}
 
