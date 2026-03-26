@@ -157,6 +157,7 @@ export default function SidePanel() {
             onSuccess={() => {
               setView('home');
               setCaptureData(null);
+              setRecordingData(null);
               // Dismiss the overlay on the page
               chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
                 if (tab?.id) chrome.tabs.sendMessage(tab.id, { type: 'DISMISS_OVERLAY' }).catch(() => {});
