@@ -4,18 +4,57 @@
 
 # Visual Issue Reporter
 
-Chrome extension for reporting visual issues. Captures annotated screenshots and creates GitHub issues with full browser context. Includes Shopify theme support.
+> Report visual issues without switching context. Shorter dev cycles, everyone can contribute, not just developers.
 
-By [Studio N.O.P.E.](https://studionope.nl)
+Chrome extension that captures annotated screenshots, records screen videos with narration, and creates GitHub issues with full browser context. Built for teams that move fast.
+
+---
+
+### About Studio N.O.P.E.
+
+**Creative Solution Engineers using AI's infinite possibilities to help humans realise their dreams.**
+
+We're [@tijsluitse](https://github.com/tijsluitse) and [@basfijneman](https://github.com/basfijneman) — two guys who believe the best tools are the ones that get out of your way. We built Visual Issue Reporter because reporting bugs shouldn't require a 12-step process and a screenshot tool. It should be one click, some context, done.
+
+We made this open source because we think every team deserves better dev tools, not just the ones that can afford them. When you fix a bug faster, everyone wins — developers, designers, clients, and the people using the product. Open source means the community can shape this into exactly what they need.
+
+**Want to work with us?** We help teams build smarter workflows with AI-powered tooling, Shopify development, and creative engineering. Reach out at **info@studionope.nl** or visit [studionope.nl](https://studionope.nl).
+
+---
 
 ## Features
 
-- **Screenshot & annotate** — capture any region, draw, add text, place images
+- **Screenshot & annotate** — capture any region, draw freehand or straight lines (hold Shift), add text comments, place images
+- **Screen recording** — record your tab with optional microphone narration, draw on the page while recording
 - **Three tools** — Select (region), Canvas (annotate), Inspect (pick DOM elements)
-- **GitHub issues** — creates issues with screenshot, environment info, HTML snippet, and console errors
+- **GitHub issues** — creates issues with screenshot, video recording, environment info, HTML snippets, and console errors
 - **Shopify-aware** — detects store, theme, template, and environment (live/preview/editor/local)
 - **Side panel UI** — repo selector, label/assignee pickers, page issues list
-- **AI analysis** — tag `@claude` on any issue for an implementation plan
+- **Auto-fix with Claude** — add the `auto-fix` label to trigger Claude Code for AI-powered fixes
+- **Keyboard shortcuts** — D (draw), V (pointer), S (select), C (comment), Shift (straight lines), Ctrl+C (copy canvas)
+- **Branch selector** — pick which branch issues are filed against, with default branch detection
+- **Theming** — white-label visual themes, unlockable with activation codes
+- **Copy to clipboard** — Ctrl+C copies the annotated canvas as a PNG
+
+---
+
+## Theming
+
+Visual Issue Reporter supports custom branded themes. Themes change the entire look and feel of the extension — colors, accents, footer branding, and even the extension icon.
+
+### Activating a theme
+
+1. Open the side panel and go to **Settings**
+2. Scroll to **Theme** and enter an activation code
+3. The theme unlocks and applies immediately
+
+### Get your own branded theme — for free
+
+We build custom white-label themes for agencies and teams. Your brand colors, your fonts, your logo. To get one:
+
+1. Share Visual Issue Reporter — post on X, Reddit, or star the repo on GitHub
+2. Email **makemytheme@studionope.nl** with proof of sharing and your brand details
+3. We'll send your activation code within 48 hours
 
 ---
 
@@ -35,21 +74,41 @@ Install from the [Chrome Web Store](https://chromewebstore.google.com) (search "
 ### Setup
 
 1. Click the extension icon to open the side panel
-2. Add your **GitHub Personal Access Token** ([create one](https://github.com/settings/tokens/new) with `repo` scope)
-3. Search and add repositories to report issues to
+2. Follow the onboarding wizard
+3. Add your **GitHub Personal Access Token** ([create one](https://github.com/settings/tokens/new) with `repo` scope)
+4. Search and add repositories to report issues to
 
 ---
 
 ## Usage
 
+### Reporting a visual issue
+
 1. Navigate to the page with the issue
-2. Select a target repo in the side panel
-3. Pick a tool — **Select** to highlight a region, **Canvas** to draw/annotate, or **Inspect** to pick a DOM element
+2. Select a target repo and branch in the side panel
+3. Pick a tool — **Select** to highlight a region, **Canvas** to draw/annotate, **Inspect** to pick a DOM element, or **Record** to capture a screen recording
 4. Annotate the screenshot with drawing, text, or images
-5. Fill in a title and description, pick labels and assignee
+5. Fill in a description, pick labels and assignee
 6. Submit — the issue is created on GitHub with the annotated screenshot and full context
 
-Open the side panel to see all reported issues for the current page. Click **Show on page** to overlay them.
+### Screen recording
+
+1. Click **Record** in the side panel
+2. Select the tab to record in Chrome's picker
+3. Use **D** to draw on the page, **V** to switch back to pointer mode
+4. Click **Stop** when done — the video uploads automatically
+5. Submit the issue with the recording attached
+
+### Microphone narration
+
+Toggle **Microphone** before recording to narrate while you capture. Chrome will ask for mic permission on first use.
+
+### Auto-fix with Claude Code
+
+1. Go to Settings > Auto-fix with Claude Code
+2. Add your `ANTHROPIC_API_KEY` secret to the repo
+3. Install the workflow file
+4. Check **Auto-fix** when submitting an issue — Claude will analyze the codebase and propose a fix
 
 ---
 
@@ -90,7 +149,7 @@ pnpm e2e           # end-to-end tests
 chrome-extension/       manifest, background service worker
 pages/
   side-panel/           side panel UI (repo selector, issue form, settings)
-  content-ui/           page overlay (screenshot, annotation canvas, issues panel)
+  content-ui/           page overlay (screenshot, annotation canvas, recording overlay)
   content/              content script (DOM inspection, main-world injection)
   popup/                extension popup
 packages/
@@ -101,6 +160,12 @@ packages/
   hmr/                  hot module reload
   vite-config/          shared Vite setup
 ```
+
+---
+
+## Contributing
+
+Contributions are welcome! Please open an issue first to discuss what you'd like to change.
 
 ---
 

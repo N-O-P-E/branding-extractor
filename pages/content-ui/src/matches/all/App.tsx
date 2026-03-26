@@ -101,6 +101,23 @@ const DEFAULT_OVERLAY_THEME: OverlayTheme = {
   border: 'rgba(148, 163, 184, 0.2)',
 };
 
+/**
+ * Snap a point to the nearest axis-aligned or 45-degree diagonal line
+ * relative to an origin. Used for Shift-constrained straight lines.
+ */
+const snapToAxis = (origin: { x: number; y: number }, point: { x: number; y: number }) => {
+  const dx = point.x - origin.x;
+  const dy = point.y - origin.y;
+  const angle = Math.atan2(dy, dx);
+  // Round to nearest 45-degree increment (pi/4)
+  const snappedAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  return {
+    x: origin.x + Math.cos(snappedAngle) * distance,
+    y: origin.y + Math.sin(snappedAngle) * distance,
+  };
+};
+
 const renderPencilStrokes = (
   ctx: CanvasRenderingContext2D,
   strokesToDraw: Stroke[],
@@ -189,6 +206,9 @@ const App = () => {
   const [state, setState] = useState<OverlayState>('idle');
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<'select' | 'pencil' | 'inspect'>('select');
+  const [recordingMode, setRecordingMode] = useState(false);
+  const recordingModeRef = useRef(false);
+  const [recordingPointerMode, setRecordingPointerMode] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const isDragging = useRef(false);
   const justFinishedDrag = useRef(false);
@@ -196,11 +216,21 @@ const App = () => {
   const dragCurrentRef = useRef<{ x: number; y: number } | null>(null);
   const [, forceRender] = useState(0);
 
+  // Toast state for copy-to-clipboard feedback
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Shift-hint tooltip state — auto-dismisses after first show
+  const [shiftHintVisible, setShiftHintVisible] = useState(false);
+  const shiftHintShownRef = useRef(false);
+  const shiftHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Pencil tool state
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [currentStroke, setCurrentStroke] = useState<Stroke | null>(null);
   const pencilCanvasRef = useRef<HTMLCanvasElement>(null);
   const isPencilDrawing = useRef(false);
+  const strokeOriginRef = useRef<{ x: number; y: number } | null>(null);
   const [strokeColor, setStrokeColor] = useState('#8B5CF6');
   const strokeColorRef = useRef('#8B5CF6');
   const [strokeWidth, setStrokeWidth] = useState(4);
@@ -274,6 +304,7 @@ const App = () => {
     setStrokes([]);
     setCurrentStroke(null);
     isPencilDrawing.current = false;
+    strokeOriginRef.current = null;
     setComments([]);
     setEditingComment(null);
     setCanvasSubTool('draw');
@@ -362,6 +393,37 @@ const App = () => {
       if (message.type === 'DISMISS_OVERLAY') {
         dismiss();
       }
+      if (message.type === 'ACTIVATE_RECORDING_OVERLAY') {
+        // Recording mode: transparent overlay with pencil toolbar, no screenshot
+        setRecordingMode(true);
+        recordingModeRef.current = true;
+        setRecordingPointerMode(true); // Start in pointer mode so user can interact
+        setActiveTool('pencil');
+        setScreenshotUrl('recording'); // placeholder to make overlayActive truthy
+        setStrokes([]);
+        setCurrentStroke(null);
+        isPencilDrawing.current = false;
+        setComments([]);
+        setEditingComment(null);
+        setCanvasSubTool('draw');
+        setSelections([]);
+        actionHistory.current = [];
+        setState('selecting');
+      }
+      if (message.type === 'STOP_RECORDING_OVERLAY') {
+        // Clean up overlay silently — don't call dismiss() which sends TOOL_SWITCHED
+        // and would cause the side panel to navigate away from create-issue view
+        setRecordingMode(false);
+        recordingModeRef.current = false;
+        setState('idle');
+        setScreenshotUrl(null);
+        setStrokes([]);
+        setCurrentStroke(null);
+        setSelections([]);
+        setComments([]);
+        setEditingComment(null);
+        isPencilDrawing.current = false;
+      }
     };
     chrome.runtime.onMessage.addListener(listener);
     return () => chrome.runtime.onMessage.removeListener(listener);
@@ -390,7 +452,19 @@ const App = () => {
 
     // Scale strokes by dpr so they map from CSS coords to backing pixels
     const combined = active ? [...allStrokes, active] : allStrokes;
-    renderPencilStrokes(ctx, combined, dpr, dpr);
+
+    // In recording mode, offset strokes by scroll position so they stay at document position
+    if (recordingModeRef.current) {
+      const scrollX = window.scrollX;
+      const scrollY = window.scrollY;
+      const scrollAdjusted = combined.map(s => ({
+        ...s,
+        points: s.points.map(p => ({ x: p.x - scrollX, y: p.y - scrollY })),
+      }));
+      renderPencilStrokes(ctx, scrollAdjusted, dpr, dpr);
+    } else {
+      renderPencilStrokes(ctx, combined, dpr, dpr);
+    }
   }, []);
 
   // Redraw when strokes change (e.g. after undo)
@@ -400,7 +474,93 @@ const App = () => {
     }
   }, [strokes, currentStroke, activeTool, state, redrawPencilCanvas]);
 
+  // In recording mode, redraw on scroll so strokes stay at document position
+  useEffect(() => {
+    if (!recordingMode || state !== 'selecting') return;
+    const onScroll = () => redrawPencilCanvas(strokes, currentStroke);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [recordingMode, state, strokes, currentStroke, redrawPencilCanvas]);
+
   const hasAnyContent = strokes.length > 0 || comments.length > 0 || selections.length > 0 || placedImages.length > 0;
+
+  // Show a brief toast message
+  const showToast = useCallback((message: string) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToastMessage(message);
+    toastTimerRef.current = setTimeout(() => setToastMessage(null), 2000);
+  }, []);
+
+  // Show shift-hint when draw sub-tool activates (once per overlay session)
+  useEffect(() => {
+    if (activeTool === 'pencil' && canvasSubTool === 'draw' && state === 'selecting' && !shiftHintShownRef.current) {
+      shiftHintShownRef.current = true;
+      setShiftHintVisible(true);
+      shiftHintTimerRef.current = setTimeout(() => setShiftHintVisible(false), 4000);
+    }
+    return () => {
+      if (shiftHintTimerRef.current) clearTimeout(shiftHintTimerRef.current);
+    };
+  }, [activeTool, canvasSubTool, state]);
+
+  // Reset shift-hint flag when overlay is dismissed
+  useEffect(() => {
+    if (state === 'idle') {
+      shiftHintShownRef.current = false;
+      setShiftHintVisible(false);
+    }
+  }, [state]);
+
+  // Copy annotated canvas to clipboard
+  const copyCanvasToClipboard = useCallback(() => {
+    if (!screenshotUrl) return;
+    const srcImg = new Image();
+    srcImg.onload = async () => {
+      const offscreen = document.createElement('canvas');
+      offscreen.width = srcImg.naturalWidth;
+      offscreen.height = srcImg.naturalHeight;
+      const ctx = offscreen.getContext('2d');
+      if (!ctx) return;
+
+      ctx.drawImage(srcImg, 0, 0);
+
+      const displayedImg = imgRef.current;
+      const displayRect = displayedImg?.getBoundingClientRect();
+      const scaleX = displayRect ? srcImg.naturalWidth / displayRect.width : window.devicePixelRatio;
+      const scaleY = displayRect ? srcImg.naturalHeight / displayRect.height : window.devicePixelRatio;
+
+      // Draw selections
+      for (const region of selections) {
+        const rx = region.x * srcImg.naturalWidth;
+        const ry = region.y * srcImg.naturalHeight;
+        const rw = region.width * srcImg.naturalWidth;
+        const rh = region.height * srcImg.naturalHeight;
+        ctx.strokeStyle = region.color;
+        ctx.lineWidth = 3 * Math.max(scaleX, scaleY);
+        ctx.setLineDash([8 * scaleX, 4 * scaleX]);
+        ctx.strokeRect(rx, ry, rw, rh);
+        ctx.fillStyle = `${region.color}20`;
+        ctx.fillRect(rx, ry, rw, rh);
+      }
+      ctx.setLineDash([]);
+
+      // Draw placed images, then strokes and comments
+      await renderPlacedImages(ctx, placedImages, scaleX, scaleY);
+      renderPencilStrokes(ctx, strokes, scaleX, scaleY);
+      renderComments(ctx, comments, scaleX, scaleY);
+
+      offscreen.toBlob(async blob => {
+        if (!blob) return;
+        try {
+          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+          showToast('Copied to clipboard!');
+        } catch {
+          showToast('Copy failed');
+        }
+      }, 'image/png');
+    };
+    srcImg.src = screenshotUrl;
+  }, [screenshotUrl, strokes, comments, selections, placedImages, showToast]);
 
   const handleDone = useCallback(
     (shouldDismiss = true) => {
@@ -574,8 +734,8 @@ const App = () => {
         dismiss();
         return;
       }
-      // Allow browser shortcuts (Cmd+T, Cmd+R, Cmd+W, etc.)
-      if ((e.metaKey || e.ctrlKey) && e.key !== 'z') return;
+      // Allow browser shortcuts (Cmd+T, Cmd+R, Cmd+W, etc.) but intercept Cmd+Z and Cmd+C
+      if ((e.metaKey || e.ctrlKey) && e.key !== 'z' && e.key !== 'c') return;
       // Allow F-keys
       if (e.key.startsWith('F') && e.key.length <= 3) return;
       // Block everything else from reaching host page handlers
@@ -631,10 +791,23 @@ const App = () => {
         active?.isContentEditable ||
         !!editingCommentRef.current;
 
-      // D/S/C/I tool switching (when not typing)
+      // Copy annotated canvas to clipboard (Ctrl+C / Cmd+C) — skip when typing so text copy still works
+      if (!isTyping && (e.metaKey || e.ctrlKey) && e.key === 'c') {
+        e.preventDefault();
+        copyCanvasToClipboard();
+        return;
+      }
+
+      // D/S/C/I/V tool switching (when not typing)
       if (!isTyping) {
+        if (e.key === 'v' || e.key === 'V') {
+          e.preventDefault();
+          setRecordingPointerMode(true);
+          return;
+        }
         if (e.key === 'd' || e.key === 'D') {
           e.preventDefault();
+          setRecordingPointerMode(false);
           setActiveTool('pencil');
           setCanvasSubTool('draw');
           setEditingComment(null);
@@ -669,7 +842,31 @@ const App = () => {
     // Use capture phase on the backdrop element
     el.addEventListener('keydown', handleKeyDown, true);
     return () => el.removeEventListener('keydown', handleKeyDown, true);
-  }, [state, dismiss, handleCanvasUndo, handleDone]);
+  }, [state, dismiss, handleCanvasUndo, handleDone, copyCanvasToClipboard]);
+
+  // Recording mode: global keyboard shortcuts (V for pointer, D for draw)
+  // Uses window + capture phase so it works even when the overlay has pointer-events:none
+  useEffect(() => {
+    if (!recordingMode || state !== 'selecting') return;
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return;
+      if (e.key === 'v' || e.key === 'V') {
+        e.preventDefault();
+        e.stopPropagation();
+        setRecordingPointerMode(true);
+      }
+      if (e.key === 'd' || e.key === 'D') {
+        e.preventDefault();
+        e.stopPropagation();
+        setRecordingPointerMode(false);
+        setActiveTool('pencil');
+        setCanvasSubTool('draw');
+      }
+    };
+    window.addEventListener('keydown', handler, true);
+    return () => window.removeEventListener('keydown', handler, true);
+  }, [recordingMode, state]);
 
   // Pencil tool mouse handlers
   useEffect(() => {
@@ -678,12 +875,27 @@ const App = () => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isPencilDrawing.current || !imgRef.current) return;
       const rect = imgRef.current.getBoundingClientRect();
-      const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-      const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
+      let x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+      let y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
+      // In recording mode, store document-relative coords so strokes persist across scroll
+      if (recordingModeRef.current) {
+        x += window.scrollX;
+        y += window.scrollY;
+      }
 
       setCurrentStroke(prev => {
         if (!prev) return prev;
-        const updated = { ...prev, points: [...prev.points, { x, y }] };
+
+        let updated: Stroke;
+        if (e.shiftKey && strokeOriginRef.current) {
+          // Shift held: constrain to straight line from origin
+          const snapped = snapToAxis(strokeOriginRef.current, { x, y });
+          updated = { ...prev, points: [strokeOriginRef.current, snapped] };
+        } else {
+          // Freehand mode
+          updated = { ...prev, points: [...prev.points, { x, y }] };
+        }
+
         // Redraw immediately for real-time feedback
         redrawPencilCanvas(strokes, updated);
         return updated;
@@ -693,6 +905,7 @@ const App = () => {
     const handleMouseUp = () => {
       if (!isPencilDrawing.current) return;
       isPencilDrawing.current = false;
+      strokeOriginRef.current = null;
 
       setCurrentStroke(prev => {
         if (prev && prev.points.length >= 2) {
@@ -994,11 +1207,16 @@ const App = () => {
   }, [inspectActive, screenshotUrl]);
 
   const handleMouseDown = useCallback(
-    (e: React.MouseEvent<HTMLImageElement>) => {
+    (e: React.MouseEvent<HTMLImageElement | HTMLDivElement>) => {
       if (state !== 'selecting') return;
       e.preventDefault();
       const rect = e.currentTarget.getBoundingClientRect();
       const pos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      // In recording mode, store document-relative coords
+      if (recordingModeRef.current) {
+        pos.x += window.scrollX;
+        pos.y += window.scrollY;
+      }
 
       if (activeTool === 'pencil') {
         if (canvasSubTool === 'image') {
@@ -1020,6 +1238,7 @@ const App = () => {
           return;
         }
         isPencilDrawing.current = true;
+        strokeOriginRef.current = pos;
         setCurrentStroke({ points: [pos], color: strokeColor, width: strokeWidth });
         return;
       }
@@ -1170,8 +1389,19 @@ const App = () => {
         <div
           ref={backdropRef}
           tabIndex={-1}
-          style={{ ...styles.backdrop, outline: 'none' }}
-          onClick={handleBackdropClick}
+          style={{
+            ...styles.backdrop,
+            outline: 'none',
+            ...(recordingMode
+              ? {
+                  backgroundColor: 'transparent',
+                  backdropFilter: 'none',
+                  WebkitBackdropFilter: 'none',
+                  pointerEvents: 'none',
+                }
+              : {}),
+          }}
+          onClick={recordingMode ? undefined : handleBackdropClick}
           onKeyDown={e => {
             if (e.key === 'Escape' && e.metaKey) {
               dismiss();
@@ -1180,25 +1410,27 @@ const App = () => {
           }}
           onKeyUp={e => e.stopPropagation()}
           onKeyPress={e => e.stopPropagation()}>
-          <button
-            style={{
-              ...styles.closeButton,
-              background: overlayTheme.surface,
-              color: overlayTheme.textPrimary,
-              border: `1px solid ${overlayTheme.border}`,
-            }}
-            onClick={dismiss}
-            aria-label="Close overlay">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M6.25 6.25L17.75 17.75M17.75 6.25L6.25 17.75"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-            <span style={{ fontSize: 11, opacity: 0.5 }}>Esc</span>
-          </button>
+          {!recordingMode && (
+            <button
+              style={{
+                ...styles.closeButton,
+                background: overlayTheme.surface,
+                color: overlayTheme.textPrimary,
+                border: `1px solid ${overlayTheme.border}`,
+              }}
+              onClick={dismiss}
+              aria-label="Close overlay">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M6.25 6.25L17.75 17.75M17.75 6.25L6.25 17.75"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <span style={{ fontSize: 11, opacity: 0.5 }}>Esc</span>
+            </button>
+          )}
 
           {/* Captured element info bar */}
           {capturedElements.length > 0 && (
@@ -1236,8 +1468,18 @@ const App = () => {
           )}
 
           <div
-            style={styles.screenshotContainer}
-            onClick={e => e.stopPropagation()}
+            style={
+              recordingMode
+                ? {
+                    position: 'fixed',
+                    inset: 0,
+                    pointerEvents: recordingPointerMode ? 'none' : 'auto',
+                  }
+                : styles.screenshotContainer
+            }
+            onClick={e => {
+              if (!recordingMode) e.stopPropagation();
+            }}
             role="presentation"
             onDragOver={e => {
               e.preventDefault();
@@ -1254,27 +1496,40 @@ const App = () => {
                 placeImageFromFile(file, x, y);
               }
             }}>
-            <img
-              ref={imgRef}
-              src={screenshotUrl}
-              alt="Page screenshot"
-              style={{
-                ...styles.screenshot,
-                cursor:
-                  activeTool === 'select'
-                    ? CURSOR_SELECT
-                    : isPencilMode && canvasSubTool === 'draw'
-                      ? CURSOR_DRAW
-                      : isPencilMode && canvasSubTool === 'text'
-                        ? CURSOR_COMMENT
-                        : isPencilMode && canvasSubTool === 'image'
-                          ? CURSOR_IMAGE
-                          : 'crosshair',
-              }}
-              draggable={false}
-              onMouseDown={handleMouseDown}
-              onLoad={() => forceRender(n => n + 1)}
-            />
+            {recordingMode ? (
+              <div
+                ref={imgRef as React.RefObject<HTMLDivElement>}
+                style={{
+                  width: '100vw',
+                  height: '100vh',
+                  cursor:
+                    canvasSubTool === 'draw' ? CURSOR_DRAW : canvasSubTool === 'text' ? CURSOR_COMMENT : 'crosshair',
+                }}
+                onMouseDown={handleMouseDown}
+              />
+            ) : (
+              <img
+                ref={imgRef}
+                src={screenshotUrl!}
+                alt="Page screenshot"
+                style={{
+                  ...styles.screenshot,
+                  cursor:
+                    activeTool === 'select'
+                      ? CURSOR_SELECT
+                      : isPencilMode && canvasSubTool === 'draw'
+                        ? CURSOR_DRAW
+                        : isPencilMode && canvasSubTool === 'text'
+                          ? CURSOR_COMMENT
+                          : isPencilMode && canvasSubTool === 'image'
+                            ? CURSOR_IMAGE
+                            : 'crosshair',
+                }}
+                draggable={false}
+                onMouseDown={handleMouseDown}
+                onLoad={() => forceRender(n => n + 1)}
+              />
+            )}
 
             {/* Drawing overlay canvas (visible in all modes to show strokes) */}
             {state === 'selecting' && (
@@ -1496,6 +1751,7 @@ const App = () => {
               style={{
                 position: 'fixed',
                 bottom: toolbarBottom,
+                pointerEvents: 'auto',
                 left: '50%',
                 transform: 'translateX(-50%)',
                 display: 'flex',
@@ -1513,42 +1769,74 @@ const App = () => {
               onKeyDown={e => e.stopPropagation()}>
               {/* Tool toggle: Select area / Draw / Text */}
               <div style={{ display: 'flex', gap: '2px', alignItems: 'center', padding: '0 2px' }}>
-                {/* Select area */}
+                {/* Select area — hidden in recording mode */}
+                {!recordingMode && (
+                  <button
+                    onClick={() => {
+                      setActiveTool('select');
+                      setEditingComment(null);
+                      chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: 'select' } });
+                    }}
+                    title="Select area (S)"
+                    style={{
+                      height: 34,
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: activeTool === 'select' ? overlayTheme.accentLight : 'transparent',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 4,
+                      transition: 'all 0.15s ease-out',
+                      padding: '0 6px',
+                      color: activeTool === 'select' ? overlayTheme.textPrimary : overlayTheme.textSecondary,
+                      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                    }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M5.7 3.75V3.75C4.62304 3.75 3.75 4.62305 3.75 5.7V5.75M18.25 3.75V3.75C19.3546 3.75 20.25 4.64543 20.25 5.75V5.75M3.75 18.25V18.3C3.75 19.377 4.62304 20.25 5.7 20.25V20.25M18.25 20.25V20.25C19.3546 20.25 20.25 19.3546 20.25 18.25V18.25M10.25 3.75H13.75M20.25 10.25V13.75M13.75 20.25H10.25M3.75 13.75V10.25"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    <span style={{ fontSize: '11px', fontWeight: 500, opacity: 0.5 }}>S</span>
+                  </button>
+                )}
+                {/* Pointer mode — recording only */}
+                {recordingMode && (
+                  <button
+                    onClick={() => setRecordingPointerMode(true)}
+                    title="Pointer — interact with the page (V)"
+                    style={{
+                      height: 34,
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: recordingPointerMode ? overlayTheme.accentLight : 'transparent',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 4,
+                      transition: 'all 0.15s ease-out',
+                      padding: '0 6px',
+                      color: recordingPointerMode ? overlayTheme.textPrimary : overlayTheme.textSecondary,
+                      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                    }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M5.65376 12.3673H5.46026L5.31717 12.4976L0.500002 16.8829L0.500002 1.19841L11.7841 12.3673H5.65376Z"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      />
+                    </svg>
+                  </button>
+                )}
                 <button
                   onClick={() => {
-                    setActiveTool('select');
-                    setEditingComment(null);
-                    chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: 'select' } });
-                  }}
-                  title="Select area (S)"
-                  style={{
-                    height: 34,
-                    borderRadius: '8px',
-                    border: 'none',
-                    background: activeTool === 'select' ? overlayTheme.accentLight : 'transparent',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 4,
-                    transition: 'all 0.15s ease-out',
-                    padding: '0 6px',
-                    color: activeTool === 'select' ? overlayTheme.textPrimary : overlayTheme.textSecondary,
-                    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-                  }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path
-                      d="M5.7 3.75V3.75C4.62304 3.75 3.75 4.62305 3.75 5.7V5.75M18.25 3.75V3.75C19.3546 3.75 20.25 4.64543 20.25 5.75V5.75M3.75 18.25V18.3C3.75 19.377 4.62304 20.25 5.7 20.25V20.25M18.25 20.25V20.25C19.3546 20.25 20.25 19.3546 20.25 18.25V18.25M10.25 3.75H13.75M20.25 10.25V13.75M13.75 20.25H10.25M3.75 13.75V10.25"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  <span style={{ fontSize: '11px', fontWeight: 500, opacity: 0.5 }}>S</span>
-                </button>
-                <button
-                  onClick={() => {
+                    setRecordingPointerMode(false);
                     setActiveTool('pencil');
                     setCanvasSubTool('draw');
                     setEditingComment(null);
@@ -1560,7 +1848,9 @@ const App = () => {
                     borderRadius: '8px',
                     border: 'none',
                     background:
-                      activeTool === 'pencil' && canvasSubTool === 'draw' ? overlayTheme.accentLight : 'transparent',
+                      !recordingPointerMode && activeTool === 'pencil' && canvasSubTool === 'draw'
+                        ? overlayTheme.accentLight
+                        : 'transparent',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -1569,7 +1859,7 @@ const App = () => {
                     transition: 'all 0.15s ease-out',
                     padding: '0 6px',
                     color:
-                      activeTool === 'pencil' && canvasSubTool === 'draw'
+                      !recordingPointerMode && activeTool === 'pencil' && canvasSubTool === 'draw'
                         ? overlayTheme.textPrimary
                         : overlayTheme.textSecondary,
                     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
@@ -1595,6 +1885,7 @@ const App = () => {
                 </button>
                 <button
                   onClick={() => {
+                    setRecordingPointerMode(false);
                     setActiveTool('pencil');
                     setCanvasSubTool('text');
                     chrome.runtime.sendMessage({ type: 'TOOL_SWITCHED', payload: { tool: 'pencil' } });
@@ -1801,6 +2092,35 @@ const App = () => {
                   />
                 </svg>
               </button>
+
+              {/* Copy to clipboard */}
+              <button
+                onClick={copyCanvasToClipboard}
+                title={`Copy to clipboard (${navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl+'}C)`}
+                style={{
+                  background: 'transparent',
+                  color: 'rgba(203,213,225,0.9)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  width: 34,
+                  height: 34,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease-out',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: 0,
+                }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M8 4H6C4.89543 4 4 4.89543 4 6V18C4 19.1046 4.89543 20 6 20H18C19.1046 20 20 19.1046 20 18V16"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                  <rect x="10" y="2" width="12" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                </svg>
+              </button>
             </div>
           )}
 
@@ -1814,6 +2134,100 @@ const App = () => {
                 : canvasSubTool === 'image'
                   ? 'Click to upload, drag & drop, or ⌘V to paste an image'
                   : 'Draw on the screenshot to annotate'}
+            </div>
+          )}
+
+          {/* Shift-hint tooltip for draw sub-tool */}
+          {isPencilMode && canvasSubTool === 'draw' && shiftHintVisible && (
+            <div
+              style={{
+                position: 'fixed',
+                bottom: `calc(${toolbarBottom} + 56px)`,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: '#1e293b',
+                border: '1px solid rgba(148,163,184,0.2)',
+                borderRadius: 10,
+                padding: '6px 14px',
+                fontSize: 12,
+                fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                color: 'rgba(241,245,249,0.7)',
+                zIndex: 2147483647,
+                pointerEvents: 'auto',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                opacity: shiftHintVisible ? 1 : 0,
+                transition: 'opacity 0.3s ease-out',
+              }}>
+              <span>
+                Hold{' '}
+                <kbd
+                  style={{
+                    background: 'rgba(139,92,246,0.2)',
+                    border: '1px solid rgba(139,92,246,0.3)',
+                    borderRadius: 4,
+                    padding: '1px 5px',
+                    fontSize: 11,
+                    fontFamily: 'inherit',
+                    color: '#c4b5fd',
+                  }}>
+                  Shift
+                </kbd>{' '}
+                to draw straight lines
+              </span>
+              <button
+                onClick={e => {
+                  e.stopPropagation();
+                  setShiftHintVisible(false);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'rgba(148,163,184,0.5)',
+                  cursor: 'pointer',
+                  padding: '0 0 0 2px',
+                  fontSize: 14,
+                  lineHeight: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M6.25 6.25L17.75 17.75M17.75 6.25L6.25 17.75"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
+
+          {/* Toast notification */}
+          {toastMessage && (
+            <div
+              style={{
+                position: 'fixed',
+                top: 24,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: '#1e293b',
+                border: '1px solid rgba(139,92,246,0.3)',
+                borderRadius: 10,
+                padding: '8px 16px',
+                fontSize: 13,
+                fontWeight: 500,
+                fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                color: '#c4b5fd',
+                zIndex: 2147483647,
+                pointerEvents: 'none',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+                whiteSpace: 'nowrap',
+              }}>
+              {toastMessage}
             </div>
           )}
         </div>

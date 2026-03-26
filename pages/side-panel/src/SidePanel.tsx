@@ -3,8 +3,8 @@ import { useTheme } from './useTheme';
 import CreateIssueView from './views/CreateIssueView';
 import HomeView from './views/HomeView';
 import SetupView from './views/SetupView';
-import { useState, useEffect } from 'react';
-import type { BrowserMetadata, CaptureCompleteMessage } from '@extension/shared';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import type { BrowserMetadata, CaptureCompleteMessage, RecordingCompleteMessage } from '@extension/shared';
 
 type View = 'home' | 'setup' | 'create-issue';
 
@@ -17,6 +17,8 @@ export default function SidePanel() {
   const [wizardChapter, setWizardChapter] = useState<1 | 2>(1);
   const [refreshKey, setRefreshKey] = useState(0);
   const { theme, changeTheme, availableThemes, tryActivateCode } = useTheme();
+  const [recordingData, setRecordingData] = useState<RecordingCompleteMessage['payload'] | null>(null);
+  const isRecordingRef = useRef(false);
 
   const openWizard = (chapter: 1 | 2) => {
     setWizardChapter(chapter);
@@ -36,8 +38,8 @@ export default function SidePanel() {
         setCaptureData(message.payload);
         // Don't switch view — create-issue view is already showing
       }
-      // When overlay opens (tool activated), show the create-issue form
-      if (message.type === 'OVERLAY_OPENED') {
+      // When overlay opens (tool activated), show the create-issue form — but not during recording
+      if (message.type === 'OVERLAY_OPENED' && !isRecordingRef.current) {
         setBrowserMetadata(null);
         setView('create-issue');
       }
@@ -66,6 +68,7 @@ export default function SidePanel() {
         setView('home');
         setCaptureData(null);
         setBrowserMetadata(null);
+        setRecordingData(null);
       }
     };
     const onUpdated = (_tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
@@ -73,6 +76,7 @@ export default function SidePanel() {
         setView('home');
         setCaptureData(null);
         setBrowserMetadata(null);
+        setRecordingData(null);
       }
     };
     chrome.tabs.onActivated.addListener(onActivated);
@@ -82,6 +86,11 @@ export default function SidePanel() {
       chrome.tabs.onUpdated.removeListener(onUpdated);
     };
   }, [view]);
+
+  const handleRecordingComplete = useCallback((data: RecordingCompleteMessage['payload']) => {
+    setRecordingData(data);
+    setView('create-issue');
+  }, []);
 
   if (wizardOpen) {
     return (
@@ -126,12 +135,17 @@ export default function SidePanel() {
                 if (tab?.id) chrome.tabs.sendMessage(tab.id, { type: 'DISMISS_OVERLAY' }).catch(() => {});
               });
             }}
+            onRecordingComplete={handleRecordingComplete}
+            onRecordingStateChange={(active: boolean) => {
+              isRecordingRef.current = active;
+            }}
           />
         )}
         {view === 'create-issue' && (
           <CreateIssueView
             captureData={captureData}
             browserMetadata={browserMetadata}
+            recordingData={recordingData}
             onOpenWizard={openWizard}
             onBack={() => {
               setView('home');

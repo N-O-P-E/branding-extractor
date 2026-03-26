@@ -1,7 +1,7 @@
 import AssigneeSelect from '../components/AssigneeSelect';
 import LabelSelect from '../components/LabelSelect';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { BrowserMetadata, AutoFixSettings } from '@extension/shared';
+import type { BrowserMetadata, AutoFixSettings, RecordingCompleteMessage } from '@extension/shared';
 
 interface CaptureData {
   screenshotDataUrl: string;
@@ -17,6 +17,7 @@ interface CaptureData {
 interface CreateIssueViewProps {
   captureData: CaptureData | null;
   browserMetadata: BrowserMetadata | null;
+  recordingData?: RecordingCompleteMessage['payload'] | null;
   onBack: () => void;
   onSuccess: () => void;
   onOpenWizard?: (chapter: 1 | 2) => void;
@@ -36,6 +37,7 @@ const colors = {
 export default function CreateIssueView({
   captureData,
   browserMetadata,
+  recordingData,
   onBack,
   onSuccess,
   onOpenWizard,
@@ -123,7 +125,21 @@ export default function CreateIssueView({
     try {
       // If no capture data yet, request it from the content-UI overlay
       let data = captureDataRef.current;
-      if (!data) {
+      if (!data && recordingData) {
+        // Recording-only flow: take a quick screenshot as thumbnail for the issue
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        const pageUrl = recordingData.pageUrl || tab?.url || '';
+        const screenshotDataUrl = tab?.windowId
+          ? await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 80 })
+          : '';
+        data = {
+          screenshotDataUrl,
+          annotatedScreenshotDataUrl: screenshotDataUrl,
+          pageUrl,
+          viewportWidth: window.screen.width,
+          viewportHeight: window.screen.height,
+        };
+      } else if (!data) {
         // Request capture — background forwards to content-UI, which sends CAPTURE_COMPLETE
         try {
           await chrome.runtime.sendMessage({ type: 'REQUEST_CAPTURE' });
@@ -170,6 +186,12 @@ export default function CreateIssueView({
           assignee: selectedAssignee || undefined,
           branch: selectedBranch || undefined,
           autoFix: autoFixChecked && autoFixAvailable,
+          ...(recordingData?.videoUrl
+            ? {
+                videoUrl: recordingData.videoUrl,
+                videoDurationMs: recordingData.durationMs,
+              }
+            : {}),
         },
       })) as { success: boolean; issueUrl?: string; error?: string; autoFixResult?: string; autoFixError?: string };
 
@@ -199,6 +221,7 @@ export default function CreateIssueView({
     selectedBranch,
     autoFixChecked,
     autoFixAvailable,
+    recordingData,
   ]);
 
   useEffect(() => {

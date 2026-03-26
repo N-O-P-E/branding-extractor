@@ -100,9 +100,155 @@ chrome.runtime.onMessage.addListener(
       updateIconForTheme(message.payload?.theme as string);
       return false;
     }
+    if (message.type === 'UPLOAD_VIDEO_ATTACHMENT') {
+      handleUploadVideoAttachment(message as unknown as UploadVideoAttachmentMessage, sendResponse);
+      return true;
+    }
     return false;
   },
 );
+
+// --- Video attachment upload via GitHub user-content (renders inline in issues) ---
+
+interface UploadVideoAttachmentMessage {
+  type: 'UPLOAD_VIDEO_ATTACHMENT';
+  payload: {
+    repositoryId: number;
+    fileName: string;
+    contentType: string;
+    videoArrayBuffer: ArrayBuffer;
+    cookieStr: string;
+  };
+}
+
+/** Inject forbidden headers via declarativeNetRequest session rules (fetch silently strips Cookie, Origin, Referer) */
+const injectGitHubHeaders = async (ruleId: number, urlFilter: string, cookieStr: string) => {
+  await chrome.declarativeNetRequest.updateSessionRules({
+    removeRuleIds: [ruleId],
+    addRules: [
+      {
+        id: ruleId,
+        priority: 1,
+        action: {
+          type: chrome.declarativeNetRequest.RuleActionType.MODIFY_HEADERS,
+          requestHeaders: [
+            { header: 'Cookie', operation: chrome.declarativeNetRequest.HeaderOperation.SET, value: cookieStr },
+            {
+              header: 'Origin',
+              operation: chrome.declarativeNetRequest.HeaderOperation.SET,
+              value: 'https://github.com',
+            },
+            {
+              header: 'Referer',
+              operation: chrome.declarativeNetRequest.HeaderOperation.SET,
+              value: 'https://github.com/',
+            },
+            {
+              header: 'GitHub-Verified-Fetch',
+              operation: chrome.declarativeNetRequest.HeaderOperation.SET,
+              value: 'true',
+            },
+            {
+              header: 'X-Requested-With',
+              operation: chrome.declarativeNetRequest.HeaderOperation.SET,
+              value: 'XMLHttpRequest',
+            },
+          ],
+        },
+        condition: {
+          urlFilter,
+          resourceTypes: [chrome.declarativeNetRequest.ResourceType.XMLHTTPREQUEST],
+        },
+      },
+    ],
+  });
+};
+
+const removeHeaderRule = async (ruleId: number) => {
+  await chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: [ruleId] });
+};
+
+const handleUploadVideoAttachment = async (
+  message: UploadVideoAttachmentMessage,
+  sendResponse: (response: { success: boolean; videoUrl?: string; error?: string }) => void,
+) => {
+  const POLICY_RULE_ID = 9990;
+  const CONFIRM_RULE_ID = 9991;
+  try {
+    const { repositoryId, fileName, contentType, videoArrayBuffer, cookieStr } = message.payload;
+
+    // Step 1: Request upload policy — inject Cookie via declarativeNetRequest
+    await injectGitHubHeaders(POLICY_RULE_ID, '*://github.com/upload/policies/assets*', cookieStr);
+
+    const formData = new FormData();
+    formData.append('repository_id', String(repositoryId));
+    formData.append('name', fileName);
+    formData.append('size', String(videoArrayBuffer.byteLength));
+    formData.append('content_type', contentType);
+
+    const policyRes = await fetch('https://github.com/upload/policies/assets', {
+      method: 'POST',
+      headers: { Accept: 'application/json' },
+      body: formData,
+    });
+
+    await removeHeaderRule(POLICY_RULE_ID);
+
+    if (!policyRes.ok) {
+      const text = await policyRes.text();
+      throw new Error(`Policy request failed: ${policyRes.status} ${text}`);
+    }
+    const policy = await policyRes.json();
+
+    // Step 2: Upload file to S3 (no cookies needed — uses S3 pre-signed policy)
+    const blob = new Blob([videoArrayBuffer], { type: contentType });
+    const s3Form = new FormData();
+    for (const [key, value] of Object.entries(policy.form as Record<string, string>)) {
+      s3Form.append(key, value);
+    }
+    s3Form.append('file', blob, fileName);
+
+    const s3Res = await fetch(policy.upload_url, { method: 'POST', body: s3Form });
+    if (!s3Res.ok && s3Res.status !== 204 && s3Res.status !== 201) {
+      throw new Error(`S3 upload failed: ${s3Res.status}`);
+    }
+
+    // Step 3: Confirm upload — inject Cookie again for github.com
+    await injectGitHubHeaders(CONFIRM_RULE_ID, '*://github.com/upload/assets*', cookieStr);
+
+    const confirmForm = new FormData();
+    confirmForm.append('authenticity_token', policy.asset_upload_authenticity_token);
+
+    await fetch(`https://github.com${policy.asset_upload_url}`, {
+      method: 'PUT',
+      headers: { Accept: 'application/json' },
+      body: confirmForm,
+    });
+
+    await removeHeaderRule(CONFIRM_RULE_ID);
+
+    sendResponse({ success: true, videoUrl: policy.asset.href });
+  } catch (err) {
+    // Clean up rules on error
+    await removeHeaderRule(POLICY_RULE_ID).catch(() => {});
+    await removeHeaderRule(CONFIRM_RULE_ID).catch(() => {});
+    sendResponse({ success: false, error: err instanceof Error ? err.message : 'Upload failed' });
+  }
+};
+
+/** Use raw fetch for existence checks to avoid Octokit throwing on 404 (which pollutes the service worker error log) */
+const githubFetchStatus = async (path: string): Promise<number> => {
+  const { githubPat } = await chrome.storage.local.get('githubPat');
+  if (!githubPat) throw new Error('GitHub token not configured.');
+  const res = await fetch(`https://api.github.com${path}`, {
+    headers: { Authorization: `Bearer ${githubPat}`, Accept: 'application/vnd.github+json' },
+  });
+  if (res.status === 401) {
+    await chrome.storage.local.remove(['githubPat', 'githubPatUser']);
+    chrome.runtime.sendMessage({ type: 'TOKEN_REVOKED' }).catch(() => {});
+  }
+  return res.status;
+};
 
 const handleCheckRepoWorkflow = async (
   message: { type: string; payload: { repo: string } },
@@ -114,17 +260,10 @@ const handleCheckRepoWorkflow = async (
       sendResponse({ success: false, error: 'Invalid repo' });
       return;
     }
-    const octokit = await getOctokit();
-    try {
-      await octokit.repos.getContent({
-        owner: parsed.owner,
-        repo: parsed.repo,
-        path: '.github/workflows/visual-issue-claude-fix.yml',
-      });
-      sendResponse({ success: true, exists: true });
-    } catch {
-      sendResponse({ success: true, exists: false });
-    }
+    const status = await githubFetchStatus(
+      `/repos/${parsed.owner}/${parsed.repo}/contents/.github/workflows/visual-issue-claude-fix.yml`,
+    );
+    sendResponse({ success: true, exists: status === 200 });
   } catch (err) {
     sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
   }
@@ -140,23 +279,10 @@ const handleCheckRepoSecret = async (
       sendResponse({ success: false, error: 'Invalid repo' });
       return;
     }
-    const octokit = await getOctokit();
-    try {
-      await octokit.request('GET /repos/{owner}/{repo}/actions/secrets/{secret_name}', {
-        owner: parsed.owner,
-        repo: parsed.repo,
-        secret_name: message.payload.secretName,
-      });
-      sendResponse({ success: true, exists: true });
-    } catch (err) {
-      const status = (err as { status?: number })?.status;
-      if (status === 404) {
-        sendResponse({ success: true, exists: false });
-      } else {
-        await check401(err);
-        sendResponse({ success: false, error: 'Could not check secret' });
-      }
-    }
+    const status = await githubFetchStatus(
+      `/repos/${parsed.owner}/${parsed.repo}/actions/secrets/${message.payload.secretName}`,
+    );
+    sendResponse({ success: true, exists: status === 200 });
   } catch (err) {
     sendResponse({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
   }
@@ -377,7 +503,9 @@ const getOrCreateScreenshotRelease = async (octokit: Octokit, owner: string, rep
 };
 
 const dataUrlToArrayBuffer = (dataUrl: string): ArrayBuffer => {
-  const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+  const marker = ';base64,';
+  const idx = dataUrl.indexOf(marker);
+  const base64 = idx !== -1 ? dataUrl.substring(idx + marker.length) : dataUrl;
   const binaryString = atob(base64);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
@@ -404,6 +532,8 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
       branch,
       browserMetadata,
       autoFix,
+      videoUrl,
+      videoDurationMs,
     } = message.payload;
 
     const releaseId = await getOrCreateScreenshotRelease(octokit, owner, repo);
@@ -450,6 +580,17 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
 
     let body = '';
 
+    if (videoUrl) {
+      const durationSec = videoDurationMs ? Math.round(videoDurationMs / 1000) : 0;
+      body += `## Recording${durationSec ? ` (${durationSec}s)` : ''}\n`;
+      if (videoUrl.includes('user-attachments/assets')) {
+        // GitHub auto-embeds user-attachment URLs as inline video players
+        body += `\n${videoUrl}\n\n`;
+      } else {
+        // Release asset URL — provide download link
+        body += `[▶ Watch recording${durationSec ? ` (${durationSec}s)` : ''}](${videoUrl})\n\n`;
+      }
+    }
     body += `## Screenshot\n![Screenshot](${screenshotUrl})\n\n`;
     body += `## Description\n${description}\n\n`;
     body += `## Details\n`;
@@ -907,3 +1048,5 @@ chrome.storage.local.get('extensionTheme', result => {
   const theme = (result.extensionTheme as string) ?? 'default';
   updateIconForTheme(theme);
 });
+
+// Recording is now handled directly in the side panel via getDisplayMedia — no offscreen document needed.
