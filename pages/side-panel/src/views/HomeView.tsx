@@ -192,6 +192,12 @@ export default function HomeView({
   const chunksRef = useRef<Blob[]>([]);
   const recordingStartRef = useRef(0);
   const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Refs for mid-recording mic toggle
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const destRef = useRef<MediaStreamAudioDestinationNode | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const micSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const displayStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     onMount?.();
@@ -464,36 +470,37 @@ export default function HomeView({
         selfBrowserSurface: 'exclude',
       } as DisplayMediaStreamOptions);
 
-      // If mic is enabled, get mic stream and mix it with tab audio
-      let stream: MediaStream;
-      let micStream: MediaStream | null = null;
-      let audioCtx: AudioContext | null = null;
+      // Always set up AudioContext so mic can be added mid-recording
+      displayStreamRef.current = displayStream;
+      const audioCtx = new AudioContext();
+      audioCtxRef.current = audioCtx;
+      const dest = audioCtx.createMediaStreamDestination();
+      destRef.current = dest;
 
+      // Connect tab audio (if any)
+      const tabAudioTracks = displayStream.getAudioTracks();
+      if (tabAudioTracks.length > 0) {
+        const tabSource = audioCtx.createMediaStreamSource(new MediaStream(tabAudioTracks));
+        tabSource.connect(dest);
+      }
+
+      // If mic is already enabled, connect it now
+      let micStream: MediaStream | null = null;
       if (micEnabled) {
         try {
           micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          audioCtx = new AudioContext();
-          const dest = audioCtx.createMediaStreamDestination();
-
-          // Mix tab audio (if any) + mic audio
-          const tabAudioTracks = displayStream.getAudioTracks();
-          if (tabAudioTracks.length > 0) {
-            const tabSource = audioCtx.createMediaStreamSource(new MediaStream(tabAudioTracks));
-            tabSource.connect(dest);
-          }
+          micStreamRef.current = micStream;
           const micSource = audioCtx.createMediaStreamSource(micStream);
           micSource.connect(dest);
-
-          // Create combined stream: display video + mixed audio
-          stream = new MediaStream([...displayStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
+          micSourceRef.current = micSource;
         } catch (micErr) {
           console.warn('[VIR] Mic access failed, recording without mic:', micErr);
-          stream = displayStream;
           setMicEnabled(false);
         }
-      } else {
-        stream = displayStream;
       }
+
+      // Create combined stream: display video + mixed audio from AudioContext
+      const stream = new MediaStream([...displayStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
 
       let mimeType = 'video/webm;codecs=vp8,opus';
       if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) {
@@ -517,9 +524,15 @@ export default function HomeView({
         const blob = new Blob(chunksRef.current, { type: mimeType });
         chunksRef.current = [];
         // Stop all tracks from all streams
-        displayStream.getTracks().forEach(t => t.stop());
-        micStream?.getTracks().forEach(t => t.stop());
-        void audioCtx?.close();
+        displayStreamRef.current?.getTracks().forEach(t => t.stop());
+        micStreamRef.current?.getTracks().forEach(t => t.stop());
+        void audioCtxRef.current?.close();
+        // Clear refs
+        displayStreamRef.current = null;
+        micStreamRef.current = null;
+        micSourceRef.current = null;
+        audioCtxRef.current = null;
+        destRef.current = null;
         setRecording(false);
         onRecordingStateChange?.(false);
         setRecordingSeconds(0);
@@ -531,9 +544,14 @@ export default function HomeView({
       };
 
       recorder.onerror = () => {
-        displayStream.getTracks().forEach(t => t.stop());
-        micStream?.getTracks().forEach(t => t.stop());
-        void audioCtx?.close();
+        displayStreamRef.current?.getTracks().forEach(t => t.stop());
+        micStreamRef.current?.getTracks().forEach(t => t.stop());
+        void audioCtxRef.current?.close();
+        displayStreamRef.current = null;
+        micStreamRef.current = null;
+        micSourceRef.current = null;
+        audioCtxRef.current = null;
+        destRef.current = null;
         setRecording(false);
         onRecordingStateChange?.(false);
         setRecordingError('Recording failed');
@@ -791,104 +809,131 @@ export default function HomeView({
           )}
         </div>
 
-        {/* Mic toggle -- shown when not recording */}
-        {!recording && (
-          <button
-            onClick={async () => {
-              if (micEnabled) {
-                setMicEnabled(false);
-                return;
+        {/* Mic toggle -- shown always */}
+        <button
+          onClick={async () => {
+            if (micEnabled) {
+              setMicEnabled(false);
+              // If recording, disconnect mic from the audio mix
+              if (recording && micSourceRef.current && micStreamRef.current) {
+                micSourceRef.current.disconnect();
+                micStreamRef.current.getTracks().forEach(t => t.stop());
+                micSourceRef.current = null;
+                micStreamRef.current = null;
               }
-              setRecordingError('');
-              // Check if mic permission is already granted
-              try {
-                const testStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                testStream.getTracks().forEach(t => t.stop());
-                setMicEnabled(true);
-                return;
-              } catch {
-                /* Side panel can't show prompts -- open a tab instead */
-              }
-              // Open a regular tab that can show Chrome's standard mic permission prompt
-              const result = await new Promise<boolean>(resolve => {
-                const listener = (msg: { type: string; granted?: boolean }) => {
-                  if (msg.type === 'MIC_PERMISSION_RESULT') {
-                    chrome.runtime.onMessage.removeListener(listener);
-                    resolve(!!msg.granted);
-                  }
-                };
-                chrome.runtime.onMessage.addListener(listener);
-                chrome.tabs.create({
-                  url: chrome.runtime.getURL('mic-permission.html'),
-                  active: true,
-                });
-                // Timeout after 120s — give user plenty of time to accept
-                setTimeout(() => {
-                  chrome.runtime.onMessage.removeListener(listener);
-                  resolve(false);
-                }, 120000);
-              });
-              if (result) {
-                setMicEnabled(true);
+              return;
+            }
+            setRecordingError('');
+            // Check if mic permission is already granted
+            let micGranted = false;
+            try {
+              const testStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+              if (recording && audioCtxRef.current && destRef.current) {
+                // Mid-recording: connect this mic stream to the audio mix
+                micStreamRef.current = testStream;
+                const micSource = audioCtxRef.current.createMediaStreamSource(testStream);
+                micSource.connect(destRef.current);
+                micSourceRef.current = micSource;
               } else {
-                setRecordingError('Microphone permission was not granted. Try again via the mic toggle.');
+                testStream.getTracks().forEach(t => t.stop());
               }
-            }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              marginTop: 10,
-              padding: '8px 12px',
-              background: micEnabled ? 'rgba(139,92,246,0.1)' : 'rgba(148,163,184,0.05)',
-              border: `1px solid ${micEnabled ? 'rgba(139,92,246,0.3)' : 'rgba(148,163,184,0.1)'}`,
-              borderRadius: 8,
-              cursor: 'pointer',
-              fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
-              fontSize: 12,
-              fontWeight: 500,
-              color: micEnabled ? colors.purpleAccent : colors.textSecondary,
-              transition: 'all 0.15s',
-              width: '100%',
-            }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              {micEnabled ? (
-                <>
-                  <path
-                    d="M12 2.75C10.4812 2.75 9.25 3.98122 9.25 5.5V12C9.25 13.5188 10.4812 14.75 12 14.75C13.5188 14.75 14.75 13.5188 14.75 12V5.5C14.75 3.98122 13.5188 2.75 12 2.75Z"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  />
-                  <path
-                    d="M6.25 11C6.25 14.1756 8.82436 16.75 12 16.75C15.1756 16.75 17.75 14.1756 17.75 11"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                  <path d="M12 17.75V21.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </>
-              ) : (
-                <>
-                  <path
-                    d="M9.25 5.5C9.25 3.98122 10.4812 2.75 12 2.75C13.5188 2.75 14.75 3.98122 14.75 5.5V9"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M6.25 11C6.25 14.1756 8.82436 16.75 12 16.75C15.1756 16.75 17.75 14.1756 17.75 11"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                  <path d="M12 17.75V21.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  <path d="M3.75 3.75L20.25 20.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </>
-              )}
-            </svg>
-            {micEnabled ? 'Microphone on' : 'Microphone off'}
-          </button>
-        )}
+              setMicEnabled(true);
+              micGranted = true;
+            } catch {
+              /* Side panel can't show prompts -- open a tab instead */
+            }
+            if (micGranted) return;
+            // Open a regular tab that can show Chrome's standard mic permission prompt
+            const result = await new Promise<boolean>(resolve => {
+              const listener = (msg: { type: string; granted?: boolean }) => {
+                if (msg.type === 'MIC_PERMISSION_RESULT') {
+                  chrome.runtime.onMessage.removeListener(listener);
+                  resolve(!!msg.granted);
+                }
+              };
+              chrome.runtime.onMessage.addListener(listener);
+              chrome.tabs.create({
+                url: chrome.runtime.getURL('mic-permission.html'),
+                active: true,
+              });
+              // Timeout after 120s — give user plenty of time to accept
+              setTimeout(() => {
+                chrome.runtime.onMessage.removeListener(listener);
+                resolve(false);
+              }, 120000);
+            });
+            if (result) {
+              setMicEnabled(true);
+              // If recording, connect mic now
+              if (recording && audioCtxRef.current && destRef.current) {
+                try {
+                  const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                  micStreamRef.current = micStream;
+                  const micSource = audioCtxRef.current.createMediaStreamSource(micStream);
+                  micSource.connect(destRef.current);
+                  micSourceRef.current = micSource;
+                } catch (micErr) {
+                  console.warn('[VIR] Mic connect failed after permission grant:', micErr);
+                }
+              }
+            } else {
+              setRecordingError('Microphone permission was not granted. Try again via the mic toggle.');
+            }
+          }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            marginTop: 10,
+            padding: '8px 12px',
+            background: micEnabled ? 'rgba(139,92,246,0.1)' : 'rgba(148,163,184,0.05)',
+            border: `1px solid ${micEnabled ? 'rgba(139,92,246,0.3)' : 'rgba(148,163,184,0.1)'}`,
+            borderRadius: 8,
+            cursor: 'pointer',
+            fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
+            fontSize: 12,
+            fontWeight: 500,
+            color: micEnabled ? colors.purpleAccent : colors.textSecondary,
+            transition: 'all 0.15s',
+            width: '100%',
+          }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            {micEnabled ? (
+              <>
+                <path
+                  d="M12 2.75C10.4812 2.75 9.25 3.98122 9.25 5.5V12C9.25 13.5188 10.4812 14.75 12 14.75C13.5188 14.75 14.75 13.5188 14.75 12V5.5C14.75 3.98122 13.5188 2.75 12 2.75Z"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M6.25 11C6.25 14.1756 8.82436 16.75 12 16.75C15.1756 16.75 17.75 14.1756 17.75 11"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+                <path d="M12 17.75V21.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </>
+            ) : (
+              <>
+                <path
+                  d="M9.25 5.5C9.25 3.98122 10.4812 2.75 12 2.75C13.5188 2.75 14.75 3.98122 14.75 5.5V9"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M6.25 11C6.25 14.1756 8.82436 16.75 12 16.75C15.1756 16.75 17.75 14.1756 17.75 11"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+                <path d="M12 17.75V21.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <path d="M3.75 3.75L20.25 20.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </>
+            )}
+          </svg>
+          {micEnabled ? 'Microphone on' : 'Microphone off'}
+        </button>
 
         {toolError && <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--status-error)' }}>{toolError}</p>}
         {recordingError && (
