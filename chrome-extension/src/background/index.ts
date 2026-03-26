@@ -69,6 +69,18 @@ const parseRepoName = (repo: string): { owner: string; repo: string } | null => 
 
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error);
 
+// Clean up any leftover declarativeNetRequest session rules when service worker suspends
+chrome.runtime.onSuspend.addListener(async () => {
+  try {
+    await chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: [POLICY_RULE_ID, CONFIRM_RULE_ID] });
+  } catch {
+    // Permission may not be granted — ignore
+  }
+});
+
+// Set uninstall feedback URL
+chrome.runtime.setUninstallURL('https://visual-issue-reporter.studionope.nl/uninstall-feedback');
+
 chrome.runtime.onMessage.addListener(
   (message: ExtensionMessage, sender, sendResponse: (response: MessageResponse | FetchPageIssuesResponse) => void) => {
     // Only accept messages from our own extension
