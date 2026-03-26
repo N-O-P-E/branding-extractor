@@ -48,9 +48,13 @@ Visual Issue Reporter supports custom branded themes. Themes change the entire l
 2. Scroll to **Theme** and enter an activation code
 3. The theme unlocks and applies immediately
 
-### Getting a custom theme
+### Get your own branded theme — for free
 
-We build white-label themes for agencies and teams. Your brand colors, your logo, your client's experience. Reach out at **info@studionope.nl** to get a custom theme built for your organization.
+We build custom white-label themes for agencies and teams. Your brand colors, your fonts, your logo. To get one:
+
+1. Share Visual Issue Reporter — post on X, Reddit, or star the repo on GitHub
+2. Email **makemytheme@studionope.nl** with proof of sharing and your brand details
+3. We'll send your activation code within 48 hours
 
 ---
 
