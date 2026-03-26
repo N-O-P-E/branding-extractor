@@ -55,6 +55,8 @@ export default function SidePanel() {
       if (message.type === 'TOOL_SWITCHED' && (message as { payload?: { tool: string } }).payload?.tool === '') {
         setView('home');
         setCaptureData(null);
+        setRecordingData(null);
+        setVideoUploadStatus(null);
       }
       // Token revoked — force back to setup
       if (message.type === 'TOKEN_REVOKED') {
@@ -179,6 +181,9 @@ export default function SidePanel() {
             onOpenWizard={openWizard}
             onBack={() => {
               setView('home');
+              setCaptureData(null);
+              setRecordingData(null);
+              setVideoUploadStatus(null);
               // Dismiss the overlay on the page
               chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
                 if (tab?.id) chrome.tabs.sendMessage(tab.id, { type: 'DISMISS_OVERLAY' }).catch(() => {});
