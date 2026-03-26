@@ -13,10 +13,10 @@ interface HomeViewProps {
   onRecordingStateChange?: (active: boolean) => void;
 }
 
-/** Check and request optional permissions for video upload (cookies + declarativeNetRequest).
+/** Check and request optional cookies permission for video upload.
  *  MUST be called synchronously from a user gesture handler — async work before this will lose the gesture context. */
 const requestVideoUploadPermissions = async (): Promise<boolean> => {
-  const perms = { permissions: ['cookies' as const, 'declarativeNetRequest' as const] };
+  const perms = { permissions: ['cookies' as const] };
   const granted = await chrome.permissions.contains(perms);
   if (granted) return true;
   return chrome.permissions.request(perms);
@@ -73,7 +73,7 @@ const uploadViaUserAttachments = async (
 
   // Check we have the optional cookies permission before accessing cookies API
   const hasPerms = await chrome.permissions.contains({
-    permissions: ['cookies', 'declarativeNetRequest'],
+    permissions: ['cookies'],
   });
   if (!hasPerms) throw new Error('MISSING_PERMISSIONS');
 

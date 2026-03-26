@@ -228,7 +228,7 @@ const handleUploadVideoAttachment = async (
 
     // Verify optional permissions are granted before using declarativeNetRequest
     const hasPerms = await chrome.permissions.contains({
-      permissions: ['cookies', 'declarativeNetRequest'],
+      permissions: ['cookies'],
     });
     if (!hasPerms) {
       sendResponse({ success: false, error: 'Video upload permissions not granted' });
