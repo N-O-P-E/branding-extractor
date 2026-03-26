@@ -890,18 +890,18 @@ export default function HomeView({
               alignItems: 'center',
               justifyContent: 'center',
               gap: 8,
-              padding: '12px 0',
-              background: micEnabled ? 'rgba(34,197,94,0.1)' : 'var(--tool-bg)',
+              padding: '12px 8px',
+              background: micEnabled ? 'rgba(34,197,94,0.1)' : 'transparent',
               border: `1px solid ${micEnabled ? 'rgba(34,197,94,0.25)' : 'var(--tool-border)'}`,
               borderRadius: 10,
               cursor: 'pointer',
-              fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
+              fontFamily: 'var(--font-body)',
               fontSize: 13,
               fontWeight: 500,
-              color: micEnabled ? colors.green : colors.textSecondary,
-              transition: 'all 0.15s',
+              color: micEnabled ? colors.green : colors.textPrimary,
+              transition: 'all 0.15s ease',
             }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               {micEnabled ? (
                 <path
                   d="M12.0009 19C15.0764 19 17.7195 17.1489 18.8769 14.5M12.0009 19C8.92546 19 6.28233 17.1489 5.125 14.5M12.0009 19V21.25M12.0009 15.75C9.65372 15.75 7.75093 13.8472 7.75093 11.5V7C7.75093 4.65279 9.65372 2.75 12.0009 2.75C14.3481 2.75 16.2509 4.65279 16.2509 7V11.5C16.2509 13.8472 14.3481 15.75 12.0009 15.75Z"
