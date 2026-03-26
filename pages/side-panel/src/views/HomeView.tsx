@@ -813,10 +813,7 @@ export default function HomeView({
               <span style={{ fontVariantNumeric: 'tabular-nums', opacity: 0.7 }}>{formatTime(recordingSeconds)}</span>
             </button>
           )}
-        </div>
-
-        {/* Mic toggle -- hidden when a tool overlay is active (not recording) */}
-        {(!activeTool || recording) && (
+          {/* Mic toggle — inside the grid, full-width spanning both columns */}
           <button
             onClick={async () => {
               if (micEnabled) {
@@ -888,23 +885,23 @@ export default function HomeView({
               }
             }}
             style={{
+              gridColumn: '1 / -1',
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: 8,
-              marginTop: 10,
-              padding: '8px 12px',
-              background: micEnabled ? 'var(--accent-10)' : 'rgba(148,163,184,0.05)',
-              border: `1px solid ${micEnabled ? 'var(--accent-20)' : 'var(--border-subtle)'}`,
-              borderRadius: 8,
+              padding: '12px 0',
+              background: micEnabled ? 'rgba(34,197,94,0.1)' : 'var(--tool-bg)',
+              border: `1px solid ${micEnabled ? 'rgba(34,197,94,0.25)' : 'var(--tool-border)'}`,
+              borderRadius: 10,
               cursor: 'pointer',
               fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, sans-serif',
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: 500,
-              color: micEnabled ? colors.purpleAccent : colors.textSecondary,
+              color: micEnabled ? colors.green : colors.textSecondary,
               transition: 'all 0.15s',
-              width: '100%',
             }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               {micEnabled ? (
                 <>
                   <path
@@ -941,7 +938,7 @@ export default function HomeView({
             </svg>
             {micEnabled ? 'Microphone on' : 'Microphone off'}
           </button>
-        )}
+        </div>
 
         {toolError && <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--status-error)' }}>{toolError}</p>}
         {recordingError && (
