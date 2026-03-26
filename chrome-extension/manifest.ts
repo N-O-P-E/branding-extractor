@@ -10,7 +10,8 @@ const manifest = {
   version: packageJson.version,
   description: '__MSG_extensionDescription__',
   host_permissions: ['<all_urls>'],
-  permissions: ['activeTab', 'storage', 'sidePanel', 'cookies', 'declarativeNetRequest'],
+  permissions: ['activeTab', 'storage', 'sidePanel'],
+  optional_permissions: ['cookies', 'declarativeNetRequest'],
   content_security_policy: {
     extension_pages: "script-src 'self'; object-src 'self'",
   },
