@@ -52,14 +52,6 @@ Visual Issue Reporter supports custom branded themes. Themes change the entire l
 
 We build white-label themes for agencies and teams. Your brand colors, your logo, your client's experience. Reach out at **info@studionope.nl** to get a custom theme built for your organization.
 
-### Available themes
-
-| Theme | Activation code |
-|-------|----------------|
-| Studio N.O.P.E. (default) | — |
-| Ask Phill | `askphillanything` |
-| Strix | `pushboundaries` |
-
 ---
 
 ## Installation
