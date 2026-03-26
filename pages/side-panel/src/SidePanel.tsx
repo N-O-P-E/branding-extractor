@@ -1,4 +1,5 @@
 import OnboardingWizard from './components/OnboardingWizard';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { useTheme } from './useTheme';
 import CreateIssueView from './views/CreateIssueView';
 import HomeView from './views/HomeView';
@@ -17,6 +18,7 @@ export default function SidePanel() {
   const [wizardChapter, setWizardChapter] = useState<1 | 2>(1);
   const [refreshKey, setRefreshKey] = useState(0);
   const { theme, changeTheme, availableThemes, tryActivateCode } = useTheme();
+  const online = useOnlineStatus();
   const [recordingData, setRecordingData] = useState<RecordingCompleteMessage['payload'] | null>(null);
   const isRecordingRef = useRef(false);
 
@@ -107,6 +109,19 @@ export default function SidePanel() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', paddingBottom: 48 }}>
+      {!online && (
+        <div
+          style={{
+            padding: '8px 16px',
+            background: 'var(--status-warning)',
+            color: '#000',
+            fontSize: 13,
+            fontWeight: 500,
+            textAlign: 'center',
+          }}>
+          You are offline. Connect to report issues.
+        </div>
+      )}
       <div style={{ flex: 1 }}>
         {view === 'setup' && (
           <SetupView
