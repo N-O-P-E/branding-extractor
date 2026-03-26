@@ -1925,7 +1925,7 @@ const App = () => {
                         : overlayTheme.textSecondary,
                     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                   }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path
                       d="M15.25 9H8.75M15.25 13H8.75M9.29422 18.4836L11.3593 20.2147C11.7292 20.5248 12.2679 20.5263 12.6397 20.2183L14.738 18.4799C14.9173 18.3313 15.143 18.25 15.3759 18.25H18.25C19.3546 18.25 20.25 17.3546 20.25 16.25V5.75C20.25 4.64543 19.3546 3.75 18.25 3.75H5.75C4.64543 3.75 3.75 4.64543 3.75 5.75V16.25C3.75 17.3546 4.64543 18.25 5.75 18.25H8.65182C8.88675 18.25 9.11418 18.3327 9.29422 18.4836Z"
                       stroke="currentColor"
@@ -2079,7 +2079,7 @@ const App = () => {
                 className="tb-btn"
                 style={{
                   background: 'transparent',
-                  color: !hasCanvasContent ? 'rgba(148,163,184,0.25)' : 'rgba(203,213,225,0.9)',
+                  color: !hasCanvasContent ? overlayTheme.border : overlayTheme.textSecondary,
                   border: 'none',
                   borderRadius: '6px',
                   width: 34,
@@ -2118,7 +2118,7 @@ const App = () => {
                 className="tb-btn"
                 style={{
                   background: 'transparent',
-                  color: 'rgba(203,213,225,0.9)',
+                  color: overlayTheme.textSecondary,
                   border: 'none',
                   borderRadius: '6px',
                   width: 34,
