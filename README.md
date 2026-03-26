@@ -90,7 +90,7 @@ Install from the [Chrome Web Store](https://chromewebstore.google.com) (search "
 
 1. Navigate to the page with the issue
 2. Select a target repo and branch in the side panel
-3. Pick a tool — **Select** to highlight a region, **Canvas** to draw/annotate, or **Inspect** to pick a DOM element
+3. Pick a tool — **Select** to highlight a region, **Canvas** to draw/annotate, **Inspect** to pick a DOM element, or **Record** to capture a screen recording
 4. Annotate the screenshot with drawing, text, or images
 5. Fill in a description, pick labels and assignee
 6. Submit — the issue is created on GitHub with the annotated screenshot and full context
