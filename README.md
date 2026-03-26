@@ -32,8 +32,33 @@ We made this open source because we think every team deserves better dev tools, 
 - **Side panel UI** — repo selector, label/assignee pickers, page issues list
 - **Auto-fix with Claude** — add the `auto-fix` label to trigger Claude Code for AI-powered fixes
 - **Keyboard shortcuts** — D (draw), V (pointer), S (select), C (comment), Shift (straight lines), Ctrl+C (copy canvas)
-- **Theming** — multiple visual themes with secret unlock codes
+- **Branch selector** — pick which branch issues are filed against, with default branch detection
+- **Theming** — white-label visual themes, unlockable with activation codes
 - **Copy to clipboard** — Ctrl+C copies the annotated canvas as a PNG
+
+---
+
+## Theming
+
+Visual Issue Reporter supports custom branded themes. Themes change the entire look and feel of the extension — colors, accents, footer branding, and even the extension icon.
+
+### Activating a theme
+
+1. Open the side panel and go to **Settings**
+2. Scroll to **Theme** and enter an activation code
+3. The theme unlocks and applies immediately
+
+### Getting a custom theme
+
+We build white-label themes for agencies and teams. Your brand colors, your logo, your client's experience. Reach out at **info@studionope.nl** to get a custom theme built for your organization.
+
+### Available themes
+
+| Theme | Activation code |
+|-------|----------------|
+| Studio N.O.P.E. (default) | — |
+| Ask Phill | `askphillanything` |
+| Strix | `pushboundaries` |
 
 ---
 
@@ -64,7 +89,7 @@ Install from the [Chrome Web Store](https://chromewebstore.google.com) (search "
 ### Reporting a visual issue
 
 1. Navigate to the page with the issue
-2. Select a target repo in the side panel
+2. Select a target repo and branch in the side panel
 3. Pick a tool — **Select** to highlight a region, **Canvas** to draw/annotate, or **Inspect** to pick a DOM element
 4. Annotate the screenshot with drawing, text, or images
 5. Fill in a description, pick labels and assignee
