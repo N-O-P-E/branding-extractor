@@ -125,7 +125,21 @@ export default function CreateIssueView({
     try {
       // If no capture data yet, request it from the content-UI overlay
       let data = captureDataRef.current;
-      if (!data) {
+      if (!data && recordingData) {
+        // Recording-only flow: take a quick screenshot as thumbnail for the issue
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        const pageUrl = recordingData.pageUrl || tab?.url || '';
+        const screenshotDataUrl = tab?.windowId
+          ? await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 80 })
+          : '';
+        data = {
+          screenshotDataUrl,
+          annotatedScreenshotDataUrl: screenshotDataUrl,
+          pageUrl,
+          viewportWidth: window.screen.width,
+          viewportHeight: window.screen.height,
+        };
+      } else if (!data) {
         // Request capture — background forwards to content-UI, which sends CAPTURE_COMPLETE
         try {
           await chrome.runtime.sendMessage({ type: 'REQUEST_CAPTURE' });

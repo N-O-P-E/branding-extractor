@@ -119,7 +119,6 @@ const uploadViaReleaseAsset = async (
 
 export default function HomeView({
   onOpenSettings,
-  onOpenWizard,
   onMount,
   themeLabel,
   onRecordingComplete,
@@ -686,7 +685,7 @@ export default function HomeView({
       {/* Report section */}
       <div style={{ padding: '16px 20px 0' }}>
         <h2 style={sectionHeadingStyle}>Report</h2>
-        <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
           <ToolButton
             icon="select"
             label="Select"
@@ -871,7 +870,9 @@ export default function HomeView({
         )}
 
         {toolError && <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--status-error)' }}>{toolError}</p>}
-        {recordingError && <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--status-error)' }}>{recordingError}</p>}
+        {recordingError && (
+          <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--status-error)' }}>{recordingError}</p>
+        )}
       </div>
 
       {/* Divider */}
