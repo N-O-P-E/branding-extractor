@@ -98,7 +98,7 @@ const DEFAULT_MODEL = MODELS[0].id;
 const buildWorkflowYaml = (systemPrompt: string, model: string): string => {
   // Escape double quotes for the --append-system-prompt arg
   const escaped = systemPrompt.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
-  return `# visual-issue-reporter: v8
+  return `# visual-issue-reporter: v9
 name: Claude Code
 
 on:
@@ -143,6 +143,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: \${{ secrets.ANTHROPIC_API_KEY }}
+          label_trigger: auto-fix
           claude_args: |
             --model \${{ vars.CLAUDE_MODEL || '${model}' }}
             --append-system-prompt "${escaped}"
@@ -154,6 +155,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: \${{ secrets.ANTHROPIC_API_KEY }}
+          label_trigger: auto-fix
           claude_args: |
             --model \${{ vars.CLAUDE_FALLBACK_MODEL || 'claude-haiku-4-5' }}
             --append-system-prompt "${escaped}"
