@@ -732,7 +732,7 @@ const handleCreateIssue = async (message: CreateIssueMessage, sendResponse: (res
       body += `\n## HTML Snippet\n\`\`\`html\n${htmlSnippet}\n\`\`\`\n`;
     }
     body += `\n## Analysis\n`;
-    body += `> Tag \`@claude\` in a comment to analyze this issue against the codebase.\n`;
+    body += `> Tag \`@\u200Bclaude\` in a comment to analyze this issue against the codebase.\n`;
     body += `\n---\n*Reported via [Visual Issue Reporter](https://github.com/N-O-P-E/visual-issue-reporter)*\n`;
 
     const title = `[Visual] ${description.slice(0, 80)}${description.length > 80 ? '...' : ''}`;

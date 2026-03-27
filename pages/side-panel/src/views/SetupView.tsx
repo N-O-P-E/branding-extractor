@@ -97,7 +97,7 @@ jobs:
           anthropic_api_key: \${{ secrets.ANTHROPIC_API_KEY }}
           label_trigger: "auto-fix"
           claude_args: |
-            --model ${model}
+            --model \${{ vars.CLAUDE_MODEL || '${model}' }}
             --append-system-prompt "${escaped}"
             --allowedTools "Edit,MultiEdit,Glob,Grep,LS,Read,Write,Bash(git add:*),Bash(git checkout:*),Bash(git commit:*),Bash(git diff:*),Bash(git log:*),Bash(git status:*),Bash(git branch:*),Bash(git switch:*),Bash(git push:*),Bash(git restore:*),Bash(npm run:*),Bash(npm install:*),Bash(pnpm run:*),Bash(pnpm install:*),Bash(npx:*)"`;
 };
@@ -209,6 +209,7 @@ export default function SetupView({
   const [activatedThemeName, setActivatedThemeName] = useState('');
   const [keyCopied, setKeyCopied] = useState(false);
   const [yamlCopied, setYamlCopied] = useState(false);
+  const [lastCopiedSnapshot, setLastCopiedSnapshot] = useState<{ model: string; systemPrompt: string } | null>(null);
 
   useEffect(() => {
     const targeted = !!openSection; // When a specific section is targeted, only open that one
@@ -250,6 +251,11 @@ export default function SetupView({
       }
     });
     if (openSection === 'theme') setThemeOpen(true);
+    chrome.storage.local.get(['yamlCopiedSnapshot']).then(result => {
+      if (result.yamlCopiedSnapshot) {
+        setLastCopiedSnapshot(result.yamlCopiedSnapshot as { model: string; systemPrompt: string });
+      }
+    });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Check which repos have the ANTHROPIC_API_KEY secret and workflow
@@ -366,6 +372,10 @@ export default function SetupView({
   const filteredRepos = availableRepos.filter(
     r => !repos.includes(r.full_name) && r.full_name.toLowerCase().includes(repoSearch.toLowerCase()),
   );
+
+  const isYamlStale =
+    lastCopiedSnapshot !== null &&
+    (lastCopiedSnapshot.model !== selectedModel || lastCopiedSnapshot.systemPrompt !== systemPrompt);
 
   const addRepo = useCallback(
     (repoName: string) => {
@@ -1295,6 +1305,21 @@ export default function SetupView({
                   </button>
                 ))}
               </div>
+              <p style={{ margin: '6px 0 0', fontSize: 11, color: colors.textMuted, lineHeight: 1.5 }}>
+                The workflow uses{' '}
+                <code
+                  style={{
+                    fontFamily: 'monospace',
+                    fontSize: 10,
+                    background: colors.inputBg,
+                    border: `1px solid ${colors.border}`,
+                    borderRadius: 3,
+                    padding: '1px 4px',
+                  }}>
+                  vars.CLAUDE_MODEL
+                </code>{' '}
+                — override any time in your repo&apos;s Settings → Variables without re-committing.
+              </p>
             </div>
           )}
 
@@ -1420,6 +1445,9 @@ export default function SetupView({
                   onClick={() => {
                     const yaml = buildWorkflowYaml(systemPrompt, selectedModel);
                     navigator.clipboard.writeText(yaml);
+                    const snapshot = { model: selectedModel, systemPrompt };
+                    setLastCopiedSnapshot(snapshot);
+                    chrome.storage.local.set({ yamlCopiedSnapshot: snapshot });
                     setYamlCopied(true);
                     setTimeout(() => setYamlCopied(false), 2000);
                   }}
@@ -1429,13 +1457,17 @@ export default function SetupView({
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 5,
-                    background: yamlCopied ? 'var(--success-20)' : colors.inputBg,
-                    border: `1px solid ${yamlCopied ? 'var(--status-success)' : colors.border}`,
+                    background: yamlCopied
+                      ? 'var(--success-20)'
+                      : isYamlStale
+                        ? 'rgba(245,158,11,0.08)'
+                        : colors.inputBg,
+                    border: `1px solid ${yamlCopied ? 'var(--status-success)' : isYamlStale ? 'var(--status-warning)' : colors.border}`,
                     borderRadius: 8,
                     padding: '8px 10px',
                     fontSize: 11,
-                    fontWeight: 500,
-                    color: yamlCopied ? colors.green : colors.textPrimary,
+                    fontWeight: isYamlStale ? 600 : 500,
+                    color: yamlCopied ? colors.green : isYamlStale ? 'var(--status-warning)' : colors.textPrimary,
                     cursor: 'pointer',
                     transition: 'all 0.15s',
                   }}>
@@ -1445,6 +1477,16 @@ export default function SetupView({
                         d="M5 13l4 4L19 7"
                         stroke="currentColor"
                         strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  ) : isYamlStale ? (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       />
@@ -1459,9 +1501,45 @@ export default function SetupView({
                       />
                     </svg>
                   )}
-                  {yamlCopied ? 'Copied!' : 'Copy workflow YAML'}
+                  {yamlCopied ? 'Copied!' : isYamlStale ? 'Re-copy workflow YAML' : 'Copy workflow YAML'}
                 </button>
               </div>
+
+              {/* Stale YAML warning */}
+              {isYamlStale && (
+                <div
+                  style={{
+                    marginTop: 8,
+                    padding: '8px 12px',
+                    background: 'rgba(245,158,11,0.08)',
+                    border: '1px solid rgba(245,158,11,0.3)',
+                    borderRadius: 7,
+                    fontSize: 11,
+                    color: 'var(--status-warning)',
+                    lineHeight: 1.5,
+                    display: 'flex',
+                    gap: 8,
+                    alignItems: 'flex-start',
+                  }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
+                    <path
+                      d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <span>
+                    {lastCopiedSnapshot?.model !== selectedModel && lastCopiedSnapshot?.systemPrompt !== systemPrompt
+                      ? 'Model and system prompt changed'
+                      : lastCopiedSnapshot?.model !== selectedModel
+                        ? 'Model changed'
+                        : 'System prompt changed'}
+                    {' — re-copy and commit the workflow file.'}
+                  </span>
+                </div>
+              )}
 
               {/* Repo checklist */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
