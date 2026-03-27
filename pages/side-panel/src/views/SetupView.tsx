@@ -92,12 +92,24 @@ jobs:
 
       - name: Run Claude Code
         id: claude
+        continue-on-error: true
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: \${{ secrets.ANTHROPIC_API_KEY }}
           label_trigger: "auto-fix"
           claude_args: |
             --model \${{ vars.CLAUDE_MODEL || '${model}' }}
+            --append-system-prompt "${escaped}"
+            --allowedTools "Edit,MultiEdit,Glob,Grep,LS,Read,Write,Bash(git add:*),Bash(git checkout:*),Bash(git commit:*),Bash(git diff:*),Bash(git log:*),Bash(git status:*),Bash(git branch:*),Bash(git switch:*),Bash(git push:*),Bash(git restore:*),Bash(npm run:*),Bash(npm install:*),Bash(pnpm run:*),Bash(pnpm install:*),Bash(npx:*)"
+
+      - name: Run Claude Code (fallback)
+        if: steps.claude.outcome == 'failure'
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: \${{ secrets.ANTHROPIC_API_KEY }}
+          label_trigger: "auto-fix"
+          claude_args: |
+            --model \${{ vars.CLAUDE_FALLBACK_MODEL || 'claude-haiku-4-5' }}
             --append-system-prompt "${escaped}"
             --allowedTools "Edit,MultiEdit,Glob,Grep,LS,Read,Write,Bash(git add:*),Bash(git checkout:*),Bash(git commit:*),Bash(git diff:*),Bash(git log:*),Bash(git status:*),Bash(git branch:*),Bash(git switch:*),Bash(git push:*),Bash(git restore:*),Bash(npm run:*),Bash(npm install:*),Bash(pnpm run:*),Bash(pnpm install:*),Bash(npx:*)"`;
 };
@@ -1306,7 +1318,7 @@ export default function SetupView({
                 ))}
               </div>
               <p style={{ margin: '6px 0 0', fontSize: 11, color: colors.textMuted, lineHeight: 1.5 }}>
-                The workflow uses{' '}
+                Override any time via repo Settings → Variables:{' '}
                 <code
                   style={{
                     fontFamily: 'monospace',
@@ -1316,9 +1328,21 @@ export default function SetupView({
                     borderRadius: 3,
                     padding: '1px 4px',
                   }}>
-                  vars.CLAUDE_MODEL
+                  CLAUDE_MODEL
                 </code>{' '}
-                — override any time in your repo&apos;s Settings → Variables without re-committing.
+                (primary) ·{' '}
+                <code
+                  style={{
+                    fontFamily: 'monospace',
+                    fontSize: 10,
+                    background: colors.inputBg,
+                    border: `1px solid ${colors.border}`,
+                    borderRadius: 3,
+                    padding: '1px 4px',
+                  }}>
+                  CLAUDE_FALLBACK_MODEL
+                </code>{' '}
+                (used when primary is overloaded, defaults to Haiku 4.5).
               </p>
             </div>
           )}
