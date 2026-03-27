@@ -438,7 +438,11 @@ export default function SetupView({
     r => !repos.includes(r.full_name) && r.full_name.toLowerCase().includes(repoSearch.toLowerCase()),
   );
 
+  const allReposCurrent =
+    repos.length > 0 && repos.every(r => repoWorkflowStatus[r] === true && repoWorkflowCurrentStatus[r] === true);
+
   const isYamlStale =
+    !allReposCurrent &&
     lastCopiedSnapshot !== null &&
     (lastCopiedSnapshot.model !== selectedModel || lastCopiedSnapshot.systemPrompt !== systemPrompt);
 
