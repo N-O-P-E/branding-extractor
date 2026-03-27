@@ -31,10 +31,10 @@ Each issue contains a screenshot (with annotations), a description, page/store d
 The screenshot may have dashed rectangular selections in various colors (purple, red, amber, green, blue, pink, white, black) highlighting problem areas, freehand drawings circling issues, text comments as yellow note boxes, and pasted reference images.
 
 Steps:
-1. Read the description and study the annotated screenshot
-2. Cross-reference with the HTML snippet, console errors, and environment data
+1. Download and study the screenshot: extract the image URL from the issue body (the ![...](...) markdown), then run: Bash(curl -sL -H "Authorization: token $GITHUB_TOKEN" "<url>" -o /tmp/issue-screenshot.jpg) and use the Read tool to view /tmp/issue-screenshot.jpg
+2. Read the description and cross-reference with the HTML snippet, console errors, and environment data
 3. Identify the relevant source files in the repository
-4. For Shopify themes: use template, theme name, and editor URL to locate the right section/block
+4. For Shopify themes: use the section ID from the editor URL, theme name, and template to locate the right section/block
 5. Create a minimal, targeted fix
 6. Open a PR with a clear title referencing the issue
 
@@ -52,7 +52,7 @@ const DEFAULT_MODEL = MODELS[0].id;
 const buildWorkflowYaml = (systemPrompt: string, model: string): string => {
   // Escape double quotes for the --append-system-prompt arg
   const escaped = systemPrompt.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
-  return `# visual-issue-reporter: v3
+  return `# visual-issue-reporter: v4
 name: Claude Code
 
 on:
@@ -100,7 +100,7 @@ jobs:
           claude_args: |
             --model \${{ vars.CLAUDE_MODEL || '${model}' }}
             --append-system-prompt "${escaped}"
-            --allowedTools "Edit,MultiEdit,Glob,Grep,LS,Read,Write,Bash(git add:*),Bash(git checkout:*),Bash(git commit:*),Bash(git diff:*),Bash(git log:*),Bash(git status:*),Bash(git branch:*),Bash(git switch:*),Bash(git push:*),Bash(git restore:*),Bash(npm run:*),Bash(npm install:*),Bash(pnpm run:*),Bash(pnpm install:*),Bash(npx:*)"
+            --allowedTools "Edit,MultiEdit,Glob,Grep,LS,Read,Write,Bash(git add:*),Bash(git checkout:*),Bash(git commit:*),Bash(git diff:*),Bash(git log:*),Bash(git status:*),Bash(git branch:*),Bash(git switch:*),Bash(git push:*),Bash(git restore:*),Bash(npm run:*),Bash(npm install:*),Bash(pnpm run:*),Bash(pnpm install:*),Bash(npx:*),Bash(curl:*)"
 
       - name: Run Claude Code (fallback)
         if: steps.claude.outcome == 'failure'
@@ -110,7 +110,7 @@ jobs:
           claude_args: |
             --model \${{ vars.CLAUDE_FALLBACK_MODEL || 'claude-haiku-4-5' }}
             --append-system-prompt "${escaped}"
-            --allowedTools "Edit,MultiEdit,Glob,Grep,LS,Read,Write,Bash(git add:*),Bash(git checkout:*),Bash(git commit:*),Bash(git diff:*),Bash(git log:*),Bash(git status:*),Bash(git branch:*),Bash(git switch:*),Bash(git push:*),Bash(git restore:*),Bash(npm run:*),Bash(npm install:*),Bash(pnpm run:*),Bash(pnpm install:*),Bash(npx:*)"`;
+            --allowedTools "Edit,MultiEdit,Glob,Grep,LS,Read,Write,Bash(git add:*),Bash(git checkout:*),Bash(git commit:*),Bash(git diff:*),Bash(git log:*),Bash(git status:*),Bash(git branch:*),Bash(git switch:*),Bash(git push:*),Bash(git restore:*),Bash(npm run:*),Bash(npm install:*),Bash(pnpm run:*),Bash(pnpm install:*),Bash(npx:*),Bash(curl:*)"`;
 };
 
 interface GitHubRepo {
