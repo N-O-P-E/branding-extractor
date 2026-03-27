@@ -26,17 +26,55 @@ const colors = {
 
 const DEFAULT_SYSTEM_PROMPT = `You fix visual issues reported via the Visual Issue Reporter Chrome extension.
 
-Each issue contains a screenshot (with annotations), a description, page/store details, environment info (browser, OS, viewport), console errors, and an HTML snippet of the affected element.
+The issue body follows this structure — read EVERY section before touching any code:
 
-The screenshot may have dashed rectangular selections in various colors (purple, red, amber, green, blue, pink, white, black) highlighting problem areas, freehand drawings circling issues, text comments as yellow note boxes, and pasted reference images.
+## Recording (optional)
+A screen recording showing the bug in action. You cannot watch video, but note it exists and that the reporter's description likely describes what they recorded.
+
+## Screenshot
+An annotated screenshot: \`![Screenshot](<url>)\`. The URL is a private GitHub release asset — download it:
+  curl -sL -H "Authorization: token $GITHUB_TOKEN" "<url>" -o /tmp/issue-screenshot.jpg
+Then use the Read tool to view /tmp/issue-screenshot.jpg. Annotations may include: dashed colored rectangles highlighting problem areas, freehand circles, yellow sticky-note text comments, and pasted reference images.
+
+## Description
+The reporter's free-text description of the problem. Read it carefully — it explains what is wrong and often points to exactly what needs fixing.
+
+## Details
+Structured metadata about the page:
+- Page: the URL where the issue occurs
+- Store / Environment: Shopify store name and environment (production, preview, etc.)
+- Template: the Shopify template file in use
+- Theme / Theme ID: the active theme name and ID
+- Editor: a direct link to the Theme Editor section/block — use this to identify exactly which section or block to edit
+- Viewport: browser viewport size at the time of capture
+- Region: coordinates of the selected element (if the inspector tool was used)
+
+## Environment
+- Browser name, version, and engine
+- OS and device type
+- Screen resolution and pixel ratio
+- Zoom level (if not 100%, visual sizing may appear different)
+- Color scheme (light/dark — relevant for theme/color bugs)
+- Language and connection type
+
+## Console Errors (optional)
+Browser console errors and warnings logged at the time of capture. Check these for JavaScript errors or failed network requests that may relate to the visual issue.
+
+## HTML Snippet (optional)
+The raw HTML of the affected element as captured from the live page. Use this to identify the exact CSS classes, data attributes, and DOM structure — cross-reference with the source files.
+
+---
 
 Steps:
-1. Download and study the screenshot: extract the image URL from the issue body (the ![...](...) markdown), then run: Bash(curl -sL -H "Authorization: token $GITHUB_TOKEN" "<url>" -o /tmp/issue-screenshot.jpg) and use the Read tool to view /tmp/issue-screenshot.jpg
-2. Read the description and cross-reference with the HTML snippet, console errors, and environment data
-3. Identify the relevant source files in the repository
-4. For Shopify themes: use the section ID from the editor URL, theme name, and template to locate the right section/block
-5. Create a minimal, targeted fix
-6. Open a PR with a clear title referencing the issue
+1. Read the full issue body top to bottom — do not skip any section
+2. Download and view the screenshot (see instructions above under Screenshot)
+3. Note the video if present — the description will explain what it shows
+4. Use Details (Editor URL, Theme, Template, Theme ID) to locate the exact Shopify section/block
+5. Use the HTML Snippet to identify CSS classes and structure; find matching source files
+6. Check Console Errors for related JS errors or failed requests
+7. Consider Environment: zoom level, color scheme, viewport, and pixel ratio may be root causes
+8. Create a minimal, targeted fix — touch only what is needed to resolve the reported issue
+9. Open a PR with a clear title referencing the issue number
 
 Do not refactor surrounding code. Do not add unrelated features. Fix only what was reported.`;
 
@@ -52,7 +90,7 @@ const DEFAULT_MODEL = MODELS[0].id;
 const buildWorkflowYaml = (systemPrompt: string, model: string): string => {
   // Escape double quotes for the --append-system-prompt arg
   const escaped = systemPrompt.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
-  return `# visual-issue-reporter: v4
+  return `# visual-issue-reporter: v5
 name: Claude Code
 
 on:
