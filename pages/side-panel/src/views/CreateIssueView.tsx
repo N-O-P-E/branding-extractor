@@ -602,11 +602,13 @@ export default function CreateIssueView({
                 backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M5.75 9.5L12 15.75L18.25 9.5' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'right 8px center',
+                backgroundSize: '10px 10px',
                 paddingRight: 26,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
                 boxSizing: 'border-box',
+                lineHeight: '1.4',
               }}>
               {repos.map(r => (
                 <option key={r} value={r}>
@@ -647,11 +649,13 @@ export default function CreateIssueView({
                       : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M5.75 9.5L12 15.75L18.25 9.5' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
                     backgroundRepeat: 'no-repeat',
                     backgroundPosition: 'right 8px center',
+                    backgroundSize: '10px 10px',
                     paddingRight: branchesLoading ? 10 : 26,
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
                     boxSizing: 'border-box',
+                    lineHeight: '1.4',
                     transition: 'color 0.15s',
                   }}>
                   {branches.map(b => (

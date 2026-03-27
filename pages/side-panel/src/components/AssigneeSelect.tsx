@@ -145,6 +145,7 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
           display: 'flex',
           alignItems: 'center',
           gap: 4,
+          lineHeight: '1.4',
           transition: 'all 0.15s',
         }}>
         <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
