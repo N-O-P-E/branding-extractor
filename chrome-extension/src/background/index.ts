@@ -352,7 +352,7 @@ const githubFetchStatus = async (path: string): Promise<number> => {
   return res.status;
 };
 
-const WORKFLOW_VERSION_MARKER = '# visual-issue-reporter: v5';
+const WORKFLOW_VERSION_MARKER = '# visual-issue-reporter: v6';
 
 const handleCheckRepoWorkflow = async (
   message: { type: string; payload: { repo: string } },

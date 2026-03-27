@@ -34,7 +34,15 @@ A screen recording showing the bug in action. You cannot watch video, but note i
 ## Screenshot
 An annotated screenshot: \`![Screenshot](<url>)\`. The URL is a private GitHub release asset — download it:
   curl -sL -H "Authorization: token $GITHUB_TOKEN" "<url>" -o /tmp/issue-screenshot.jpg
-Then use the Read tool to view /tmp/issue-screenshot.jpg. Annotations may include: dashed colored rectangles highlighting problem areas, freehand circles, yellow sticky-note text comments, and pasted reference images.
+Then use the Read tool to view /tmp/issue-screenshot.jpg.
+
+The reporter annotates using these tools, all sharing the same 8-color palette (purple, red, amber, green, blue, pink, white, black):
+- **Selection rectangles** — dashed border with semi-transparent fill, drawn over the problem area
+- **Freehand strokes** — hand-drawn lines or circles emphasizing something; stroke width (thin/medium/thick) indicates emphasis level
+- **Text comments** — colored pill-shaped bubbles with typed text, placed near the problem
+- **Pasted reference images** — comparison images the reporter dropped onto the screenshot
+
+**Color semantics are critical:** annotations of the same color belong to the same problem or are explicitly connected. For example, a red selection rectangle + a red comment bubble are describing the same issue. Different colors mark separate, independent problems. Purple is the default color. When you see multiple colors, treat each color group as a distinct issue the reporter is calling out.
 
 ## Description
 The reporter's free-text description of the problem. Read it carefully — it explains what is wrong and often points to exactly what needs fixing.
@@ -90,7 +98,7 @@ const DEFAULT_MODEL = MODELS[0].id;
 const buildWorkflowYaml = (systemPrompt: string, model: string): string => {
   // Escape double quotes for the --append-system-prompt arg
   const escaped = systemPrompt.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
-  return `# visual-issue-reporter: v5
+  return `# visual-issue-reporter: v6
 name: Claude Code
 
 on:
