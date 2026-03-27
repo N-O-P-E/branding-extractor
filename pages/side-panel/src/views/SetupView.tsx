@@ -98,7 +98,7 @@ const DEFAULT_MODEL = MODELS[0].id;
 const buildWorkflowYaml = (systemPrompt: string, model: string): string => {
   // Escape double quotes for the --append-system-prompt arg
   const escaped = systemPrompt.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
-  return `# visual-issue-reporter: v7
+  return `# visual-issue-reporter: v8
 name: Claude Code
 
 on:
@@ -149,6 +149,7 @@ jobs:
             --allowedTools "Edit,MultiEdit,Glob,Grep,LS,Read,Write,Bash(git add:*),Bash(git checkout:*),Bash(git commit:*),Bash(git diff:*),Bash(git log:*),Bash(git status:*),Bash(git branch:*),Bash(git switch:*),Bash(git push:*),Bash(git restore:*),Bash(npm run:*),Bash(npm install:*),Bash(pnpm run:*),Bash(pnpm install:*),Bash(npx:*),Bash(curl:*)"
 
       - name: Run Claude Code (fallback)
+        id: claude_fallback
         if: steps.claude.outcome == 'failure'
         uses: anthropics/claude-code-action@v1
         with:
@@ -156,7 +157,21 @@ jobs:
           claude_args: |
             --model \${{ vars.CLAUDE_FALLBACK_MODEL || 'claude-haiku-4-5' }}
             --append-system-prompt "${escaped}"
-            --allowedTools "Edit,MultiEdit,Glob,Grep,LS,Read,Write,Bash(git add:*),Bash(git checkout:*),Bash(git commit:*),Bash(git diff:*),Bash(git log:*),Bash(git status:*),Bash(git branch:*),Bash(git switch:*),Bash(git push:*),Bash(git restore:*),Bash(npm run:*),Bash(npm install:*),Bash(pnpm run:*),Bash(pnpm install:*),Bash(npx:*),Bash(curl:*)"`;
+            --allowedTools "Edit,MultiEdit,Glob,Grep,LS,Read,Write,Bash(git add:*),Bash(git checkout:*),Bash(git commit:*),Bash(git diff:*),Bash(git log:*),Bash(git status:*),Bash(git branch:*),Bash(git switch:*),Bash(git push:*),Bash(git restore:*),Bash(npm run:*),Bash(npm install:*),Bash(pnpm run:*),Bash(pnpm install:*),Bash(npx:*),Bash(curl:*)"
+
+      - name: Theme Check on changed Liquid files
+        if: steps.claude.outcome == 'success' || steps.claude_fallback.outcome == 'success'
+        continue-on-error: true
+        run: |
+          git fetch origin main --depth=1 2>/dev/null || true
+          CHANGED=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep '\\.liquid$' | tr '\\n' ' ')
+          if [ -z "$CHANGED" ]; then
+            echo "No Liquid files changed, skipping theme check"
+            exit 0
+          fi
+          echo "Running theme check on: $CHANGED"
+          gem install theme-check --quiet 2>&1 | tail -2
+          theme-check $CHANGED`;
 };
 
 interface GitHubRepo {
