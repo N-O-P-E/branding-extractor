@@ -59,14 +59,21 @@ export default function CreateIssueView({
   const [autoFixAvailable, setAutoFixAvailable] = useState(false);
   const [autoFixChecked, setAutoFixChecked] = useState(false);
   const [repoHasSecret, setRepoHasSecret] = useState<boolean | null>(null);
+  const [repoHasWorkflow, setRepoHasWorkflow] = useState<boolean | null>(null);
   const [selectedBranch, setSelectedBranch] = useState('');
+
+  // Repo + branch selector state
+  const [repos, setRepos] = useState<string[]>([]);
+  const [branches, setBranches] = useState<Array<{ name: string; default: boolean }>>([]);
+  const [branchesLoading, setBranchesLoading] = useState(false);
 
   const [liveBrowserMetadata, setLiveBrowserMetadata] = useState<BrowserMetadata | null>(browserMetadata);
 
   useEffect(() => {
-    chrome.storage.local.get(['selectedRepo', 'selectedBranch']).then(result => {
+    chrome.storage.local.get(['selectedRepo', 'selectedBranch', 'repoList']).then(result => {
       if (result.selectedRepo) setSelectedRepo(result.selectedRepo as string);
       if (result.selectedBranch) setSelectedBranch(result.selectedBranch as string);
+      if (result.repoList) setRepos(result.repoList as string[]);
     });
     // Check if auto-fix is available and load default preference
     chrome.storage.local.get('autoFixSettings').then(result => {
@@ -79,10 +86,36 @@ export default function CreateIssueView({
     });
   }, []);
 
-  // Check if selected repo has the ANTHROPIC_API_KEY secret
+  // Fetch branches when repo changes
+  useEffect(() => {
+    if (!selectedRepo) return;
+    setBranchesLoading(true);
+    chrome.runtime.sendMessage(
+      { type: 'FETCH_BRANCHES', payload: { repo: selectedRepo } },
+      (response: { success: boolean; branches?: Array<{ name: string; default: boolean }> }) => {
+        setBranchesLoading(false);
+        if (response?.success && response.branches) {
+          setBranches(response.branches);
+          chrome.storage.local.get('selectedBranch').then(result => {
+            const saved = result.selectedBranch as string | undefined;
+            if (saved && response.branches!.some(b => b.name === saved)) {
+              setSelectedBranch(saved);
+            } else {
+              const defaultBranch = response.branches!.find(b => b.default)?.name ?? '';
+              setSelectedBranch(defaultBranch);
+              chrome.storage.local.set({ selectedBranch: defaultBranch });
+            }
+          });
+        }
+      },
+    );
+  }, [selectedRepo]);
+
+  // Check if selected repo has the ANTHROPIC_API_KEY secret and workflow file
   useEffect(() => {
     if (!autoFixAvailable || !selectedRepo) return;
     setRepoHasSecret(null);
+    setRepoHasWorkflow(null);
     chrome.runtime.sendMessage(
       { type: 'CHECK_REPO_SECRET', payload: { repo: selectedRepo, secretName: 'ANTHROPIC_API_KEY' } },
       (response: { success: boolean; exists?: boolean }) => {
@@ -96,6 +129,12 @@ export default function CreateIssueView({
             else if (!exists) setAutoFixChecked(false);
           });
         }
+      },
+    );
+    chrome.runtime.sendMessage(
+      { type: 'CHECK_REPO_WORKFLOW', payload: { repo: selectedRepo } },
+      (response: { success: boolean; exists?: boolean }) => {
+        if (response?.success) setRepoHasWorkflow(!!response.exists);
       },
     );
   }, [autoFixAvailable, selectedRepo]);
@@ -533,6 +572,105 @@ export default function CreateIssueView({
           </div>
         )}
 
+        {/* Repo + Branch selectors */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+          {/* Repo selector */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>
+              Repository
+            </span>
+            <select
+              value={selectedRepo}
+              onChange={e => {
+                const repo = e.target.value;
+                setSelectedRepo(repo);
+                setSelectedBranch('');
+                setBranches([]);
+                chrome.storage.local.set({ selectedRepo: repo, selectedBranch: '' });
+              }}
+              style={{
+                width: '100%',
+                background: 'var(--bg-input)',
+                border: `1px solid var(--border-default)`,
+                borderRadius: 7,
+                padding: '6px 8px',
+                color: 'var(--text-primary)',
+                fontSize: 12,
+                outline: 'none',
+                cursor: 'pointer',
+                appearance: 'none' as const,
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M5.75 9.5L12 15.75L18.25 9.5' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 8px center',
+                paddingRight: 24,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}>
+              {repos.map(r => (
+                <option key={r} value={r}>
+                  {r.split('/')[1] ?? r}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Branch selector — only show when there are multiple branches */}
+          {selectedRepo && (branchesLoading || branches.length > 1) && (
+            <div style={{ flex: '0 0 auto', minWidth: 90, maxWidth: 130 }}>
+              <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>
+                Branch
+              </span>
+              {branchesLoading ? (
+                <div
+                  style={{
+                    background: 'var(--bg-input)',
+                    border: `1px solid var(--border-default)`,
+                    borderRadius: 7,
+                    padding: '6px 8px',
+                    fontSize: 12,
+                    color: 'var(--text-muted)',
+                  }}>
+                  …
+                </div>
+              ) : (
+                <select
+                  value={selectedBranch}
+                  onChange={e => {
+                    const b = e.target.value;
+                    setSelectedBranch(b);
+                    chrome.storage.local.set({ selectedBranch: b });
+                  }}
+                  style={{
+                    width: '100%',
+                    background: 'var(--bg-input)',
+                    border: `1px solid var(--border-default)`,
+                    borderRadius: 7,
+                    padding: '6px 8px',
+                    color: 'var(--text-primary)',
+                    fontSize: 12,
+                    outline: 'none',
+                    cursor: 'pointer',
+                    appearance: 'none' as const,
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M5.75 9.5L12 15.75L18.25 9.5' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 8px center',
+                    paddingRight: 24,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}>
+                  {branches.map(b => (
+                    <option key={b.name} value={b.name}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Description */}
         <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
           Description
@@ -761,20 +899,18 @@ export default function CreateIssueView({
           )}
         </button>
 
-        {/* Auto-fix toggle — inline below submit */}
-        {autoFixAvailable && (
+        {/* Auto-fix toggle — only show when repo has both secret AND workflow set up */}
+        {autoFixAvailable && repoHasSecret === true && repoHasWorkflow === true && (
           <label
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               marginTop: 12,
-              cursor: repoHasSecret === false ? 'default' : 'pointer',
+              cursor: 'pointer',
               padding: '0 2px',
-              opacity: repoHasSecret === false ? 0.45 : 1,
               transition: 'opacity 0.15s',
-            }}
-            title={repoHasSecret === false ? 'Add ANTHROPIC_API_KEY secret to this repo in Settings first' : undefined}>
+            }}>
             <span
               style={{
                 fontSize: 13,
@@ -782,11 +918,6 @@ export default function CreateIssueView({
                 transition: 'color 0.15s',
               }}>
               Auto-fix with Claude Code
-              {repoHasSecret === false && (
-                <span style={{ display: 'block', fontSize: 10, color: colors.textMuted, marginTop: 1 }}>
-                  Secret missing on this repo
-                </span>
-              )}
             </span>
             {/* Toggle switch */}
             <div
@@ -816,10 +947,7 @@ export default function CreateIssueView({
             <input
               type="checkbox"
               checked={autoFixChecked}
-              disabled={repoHasSecret === false}
-              onChange={e => {
-                if (repoHasSecret !== false) setAutoFixChecked(e.target.checked);
-              }}
+              onChange={e => setAutoFixChecked(e.target.checked)}
               aria-label="Auto-fix with Claude Code"
               style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
             />
