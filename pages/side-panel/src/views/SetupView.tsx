@@ -98,7 +98,7 @@ const DEFAULT_MODEL = MODELS[0].id;
 const buildWorkflowYaml = (systemPrompt: string, model: string): string => {
   // Escape double quotes for the --append-system-prompt arg
   const escaped = systemPrompt.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
-  return `# visual-issue-reporter: v6
+  return `# visual-issue-reporter: v7
 name: Claude Code
 
 on:
@@ -112,7 +112,7 @@ on:
     types: [submitted]
 
 concurrency:
-  group: claude-\${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}-\${{ (github.event.comment.user.type == 'Bot' || github.event.sender.type == 'Bot') && 'bot' || 'human' }}
+  group: claude-\${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}-\${{ (github.event.comment.user.type == 'Bot' || github.event.sender.type == 'Bot') && 'bot' || 'human' }}\${{ github.event.label.name && format('-{0}', github.event.label.name) || '' }}
   cancel-in-progress: true
 
 jobs:
