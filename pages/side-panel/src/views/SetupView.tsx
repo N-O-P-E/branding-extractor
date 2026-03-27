@@ -1198,7 +1198,8 @@ export default function SetupView({
                 repoWorkflowStatus[r] === true &&
                 repoWorkflowCurrentStatus[r] !== false,
             ).length;
-            if (readyCount === repos.length) return 'Ready';
+            if (readyCount === repos.length)
+              return repos.length === 1 ? 'Ready' : `${readyCount}/${repos.length} repos ready`;
             if (readyCount > 0) return `${readyCount}/${repos.length} repos ready`;
             return 'Setup incomplete';
           })()}
