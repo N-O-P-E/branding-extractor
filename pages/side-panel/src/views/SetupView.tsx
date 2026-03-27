@@ -52,7 +52,7 @@ const DEFAULT_MODEL = MODELS[0].id;
 const buildWorkflowYaml = (systemPrompt: string, model: string): string => {
   // Escape double quotes for the --append-system-prompt arg
   const escaped = systemPrompt.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
-  return `# visual-issue-reporter: v2
+  return `# visual-issue-reporter: v3
 name: Claude Code
 
 on:
@@ -66,7 +66,7 @@ on:
     types: [submitted]
 
 concurrency:
-  group: claude-\${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+  group: claude-\${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}-\${{ (github.event.comment.user.type == 'Bot' || github.event.sender.type == 'Bot') && 'bot' || 'human' }}
   cancel-in-progress: true
 
 jobs:
@@ -75,7 +75,7 @@ jobs:
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude') && github.event.comment.user.type != 'Bot') ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude') && github.event.comment.user.type != 'Bot') ||
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'auto-fix') ||
+      (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'auto-fix' && github.event.sender.type != 'Bot') ||
       (github.event_name == 'issues' && (github.event.action == 'opened' || github.event.action == 'assigned') && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
     permissions:
@@ -97,7 +97,6 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: \${{ secrets.ANTHROPIC_API_KEY }}
-          label_trigger: "auto-fix"
           claude_args: |
             --model \${{ vars.CLAUDE_MODEL || '${model}' }}
             --append-system-prompt "${escaped}"
@@ -108,7 +107,6 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: \${{ secrets.ANTHROPIC_API_KEY }}
-          label_trigger: "auto-fix"
           claude_args: |
             --model \${{ vars.CLAUDE_FALLBACK_MODEL || 'claude-haiku-4-5' }}
             --append-system-prompt "${escaped}"
