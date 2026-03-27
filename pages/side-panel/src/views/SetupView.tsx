@@ -98,7 +98,7 @@ const DEFAULT_MODEL = MODELS[0].id;
 const buildWorkflowYaml = (systemPrompt: string, model: string): string => {
   // Escape double quotes for the --append-system-prompt arg
   const escaped = systemPrompt.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
-  return `# visual-issue-reporter: v9
+  return `# visual-issue-reporter: v10
 name: Claude Code
 
 on:
@@ -136,6 +136,16 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 1
+
+      - name: Clean up stale Claude branches for this issue
+        if: github.event.issue.number != ''
+        run: |
+          git fetch origin --prune 2>/dev/null || true
+          ISSUE_NUM="\${{ github.event.issue.number }}"
+          git ls-remote --heads origin "claude/issue-\${ISSUE_NUM}-*" | awk '{print $2}' | sed 's|refs/heads/||' | while read -r branch; do
+            echo "Deleting stale branch: $branch"
+            git push origin --delete "$branch" 2>/dev/null || true
+          done
 
       - name: Run Claude Code
         id: claude
