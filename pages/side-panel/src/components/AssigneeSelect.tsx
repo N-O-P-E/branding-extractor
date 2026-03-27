@@ -94,7 +94,7 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
             background: colors.inputBg,
             border: `1px solid ${colors.border}`,
             borderRadius: 8,
-            padding: '8px 12px',
+            padding: '8px 10px',
             color: colors.textPrimary,
             fontSize: 13,
             outline: 'none',
@@ -113,7 +113,7 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
         style={{
           fontSize: 12,
           color: 'var(--text-secondary)',
-          marginBottom: 6,
+          marginBottom: 4,
           display: 'block',
         }}>
         Assignee
@@ -131,10 +131,11 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
         }}
         style={{
           width: '100%',
+          minWidth: 0,
           background: colors.inputBg,
           border: `1px solid ${colors.border}`,
           borderRadius: 8,
-          padding: '8px 12px',
+          padding: '8px 10px',
           color: selected ? colors.textPrimary : colors.textMuted,
           fontSize: 13,
           textAlign: 'left',
@@ -143,10 +144,10 @@ export default function AssigneeSelect({ repo, selected, onChange }: AssigneeSel
           boxSizing: 'border-box',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          gap: 4,
           transition: 'all 0.15s',
         }}>
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {selected || 'Select assignee'}
         </span>
         <svg

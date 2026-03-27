@@ -78,7 +78,7 @@ export default function LabelSelect({ repo, selected, onChange }: LabelSelectPro
       <div style={{ flex: 1 }}>
         <label
           htmlFor="label-fallback-input"
-          style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
+          style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>
           Labels
         </label>
         <input
@@ -93,7 +93,7 @@ export default function LabelSelect({ repo, selected, onChange }: LabelSelectPro
             background: colors.inputBg,
             border: `1px solid ${colors.border}`,
             borderRadius: 8,
-            padding: '8px 12px',
+            padding: '8px 10px',
             color: colors.textPrimary,
             fontSize: 13,
             outline: 'none',
@@ -154,10 +154,11 @@ export default function LabelSelect({ repo, selected, onChange }: LabelSelectPro
         onClick={() => setOpen(!open)}
         style={{
           width: '100%',
+          minWidth: 0,
           background: colors.inputBg,
           border: `1px solid ${colors.border}`,
           borderRadius: 8,
-          padding: '8px 12px',
+          padding: '8px 10px',
           color: selected.length > 0 ? colors.textPrimary : colors.textMuted,
           fontSize: 13,
           textAlign: 'left',
@@ -166,10 +167,10 @@ export default function LabelSelect({ repo, selected, onChange }: LabelSelectPro
           boxSizing: 'border-box',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          gap: 4,
           transition: 'all 0.15s',
         }}>
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {selected.length === 0 ? 'Select labels' : selected.length === 1 ? selected[0] : `${selected.length} labels`}
         </span>
         <svg

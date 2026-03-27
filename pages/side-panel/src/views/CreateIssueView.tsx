@@ -576,7 +576,7 @@ export default function CreateIssueView({
         <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
           {/* Repo selector */}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>
               Repository
             </span>
             <select
@@ -592,20 +592,21 @@ export default function CreateIssueView({
                 width: '100%',
                 background: 'var(--bg-input)',
                 border: `1px solid var(--border-default)`,
-                borderRadius: 7,
-                padding: '6px 8px',
+                borderRadius: 8,
+                padding: '8px 10px',
                 color: 'var(--text-primary)',
-                fontSize: 12,
+                fontSize: 13,
                 outline: 'none',
                 cursor: 'pointer',
                 appearance: 'none' as const,
                 backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M5.75 9.5L12 15.75L18.25 9.5' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'right 8px center',
-                paddingRight: 24,
+                paddingRight: 26,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
+                boxSizing: 'border-box',
               }}>
               {repos.map(r => (
                 <option key={r} value={r}>
@@ -615,27 +616,16 @@ export default function CreateIssueView({
             </select>
           </div>
 
-          {/* Branch selector — only show when there are multiple branches */}
+          {/* Branch selector — always reserve space while loading, hide when only 1 branch */}
           {selectedRepo && (branchesLoading || branches.length > 1) && (
             <div style={{ flex: '0 0 auto', minWidth: 90, maxWidth: 130 }}>
-              <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>
                 Branch
               </span>
-              {branchesLoading ? (
-                <div
-                  style={{
-                    background: 'var(--bg-input)',
-                    border: `1px solid var(--border-default)`,
-                    borderRadius: 7,
-                    padding: '6px 8px',
-                    fontSize: 12,
-                    color: 'var(--text-muted)',
-                  }}>
-                  …
-                </div>
-              ) : (
+              <div style={{ position: 'relative' }}>
                 <select
                   value={selectedBranch}
+                  disabled={branchesLoading}
                   onChange={e => {
                     const b = e.target.value;
                     setSelectedBranch(b);
@@ -643,30 +633,58 @@ export default function CreateIssueView({
                   }}
                   style={{
                     width: '100%',
-                    background: 'var(--bg-input)',
+                    background: branchesLoading ? 'transparent' : 'var(--bg-input)',
                     border: `1px solid var(--border-default)`,
-                    borderRadius: 7,
-                    padding: '6px 8px',
-                    color: 'var(--text-primary)',
-                    fontSize: 12,
+                    borderRadius: 8,
+                    padding: '8px 10px',
+                    color: branchesLoading ? 'transparent' : 'var(--text-primary)',
+                    fontSize: 13,
                     outline: 'none',
-                    cursor: 'pointer',
+                    cursor: branchesLoading ? 'default' : 'pointer',
                     appearance: 'none' as const,
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M5.75 9.5L12 15.75L18.25 9.5' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+                    backgroundImage: branchesLoading
+                      ? 'none'
+                      : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M5.75 9.5L12 15.75L18.25 9.5' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
                     backgroundRepeat: 'no-repeat',
                     backgroundPosition: 'right 8px center',
-                    paddingRight: 24,
+                    paddingRight: branchesLoading ? 10 : 26,
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
+                    boxSizing: 'border-box',
+                    transition: 'color 0.15s',
                   }}>
                   {branches.map(b => (
                     <option key={b.name} value={b.name}>
                       {b.name}
                     </option>
                   ))}
+                  {branchesLoading && <option value="">—</option>}
                 </select>
-              )}
+                {/* Skeleton overlay while loading */}
+                {branchesLoading && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      borderRadius: 7,
+                      background: 'var(--bg-input)',
+                      overflow: 'hidden',
+                      pointerEvents: 'none',
+                    }}>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background:
+                          'linear-gradient(90deg, transparent 0%, var(--border-subtle) 50%, transparent 100%)',
+                        backgroundSize: '200% 100%',
+                        animation: 'shimmer 1.2s ease-in-out infinite',
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
