@@ -1508,12 +1508,12 @@ export default function SetupView({
                   ) : isYamlStale ? (
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
                       <path
-                        d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                        d="M12 7.75V11.25M9.29422 18.4836L11.3593 20.2147C11.7292 20.5248 12.2679 20.5263 12.6397 20.2183L14.738 18.4799C14.9173 18.3313 15.143 18.25 15.3759 18.25H18.25C19.3546 18.25 20.25 17.3546 20.25 16.25V5.75C20.25 4.64543 19.3546 3.75 18.25 3.75H5.75C4.64543 3.75 3.75 4.64543 3.75 5.75V16.25C3.75 17.3546 4.64543 18.25 5.75 18.25H8.65182C8.88675 18.25 9.11418 18.3327 9.29422 18.4836Z"
                         stroke="currentColor"
                         strokeWidth="1.5"
                         strokeLinecap="round"
-                        strokeLinejoin="round"
                       />
+                      <path d="M12 13.75H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
                   ) : (
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
@@ -1525,7 +1525,7 @@ export default function SetupView({
                       />
                     </svg>
                   )}
-                  {yamlCopied ? 'Copied!' : isYamlStale ? 'Re-copy workflow YAML' : 'Copy workflow YAML'}
+                  {yamlCopied ? 'Copied!' : isYamlStale ? 'Re-copy YAML' : 'Copy YAML'}
                 </button>
               </div>
 
@@ -1545,14 +1545,14 @@ export default function SetupView({
                     gap: 8,
                     alignItems: 'flex-start',
                   }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
                     <path
-                      d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                      d="M12 7.75V11.25M9.29422 18.4836L11.3593 20.2147C11.7292 20.5248 12.2679 20.5263 12.6397 20.2183L14.738 18.4799C14.9173 18.3313 15.143 18.25 15.3759 18.25H18.25C19.3546 18.25 20.25 17.3546 20.25 16.25V5.75C20.25 4.64543 19.3546 3.75 18.25 3.75H5.75C4.64543 3.75 3.75 4.64543 3.75 5.75V16.25C3.75 17.3546 4.64543 18.25 5.75 18.25H8.65182C8.88675 18.25 9.11418 18.3327 9.29422 18.4836Z"
                       stroke="currentColor"
                       strokeWidth="1.5"
                       strokeLinecap="round"
-                      strokeLinejoin="round"
                     />
+                    <path d="M12 13.75H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                   </svg>
                   <span>
                     {lastCopiedSnapshot?.model !== selectedModel && lastCopiedSnapshot?.systemPrompt !== systemPrompt
@@ -1560,13 +1560,13 @@ export default function SetupView({
                       : lastCopiedSnapshot?.model !== selectedModel
                         ? 'Model changed'
                         : 'System prompt changed'}
-                    {' — re-copy and commit the workflow file.'}
+                    {' — re-copy and commit the file.'}
                   </span>
                 </div>
               )}
 
               {/* Repo checklist */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
                 {repos.map(repo => {
                   const hasSecret = repoSecretStatus[repo];
                   const hasWorkflow = repoWorkflowStatus[repo];
