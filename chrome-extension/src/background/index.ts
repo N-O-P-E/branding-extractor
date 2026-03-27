@@ -979,10 +979,16 @@ const handleFetchPageIssues = async (
       if (issue.pull_request) return false;
       if (!issue.title.startsWith('[Visual]')) return false;
       const body = issue.body ?? '';
-      const storeMatch = body.match(/\*\*Store:\*\*\s*(\S+)/);
-      const pageMatch = body.match(/\*\*Page:\*\*\s*(\S+)/);
-      if (!storeMatch || !pageMatch) return false;
-      return storeMatch[1] === hostname && pageMatch[1] === pathname;
+      // **Page:** is written as a markdown link: [url](url)
+      // Extract the URL from the markdown link brackets
+      const pageMatch = body.match(/\*\*Page:\*\*\s*\[([^\]]+)\]/);
+      if (!pageMatch) return false;
+      try {
+        const issueUrl = new URL(pageMatch[1]);
+        return issueUrl.hostname === hostname && issueUrl.pathname === pathname;
+      } catch {
+        return false;
+      }
     });
 
     // Parse issue metadata (raw URLs from body, not yet resolved)
