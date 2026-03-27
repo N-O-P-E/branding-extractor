@@ -52,7 +52,8 @@ const DEFAULT_MODEL = MODELS[0].id;
 const buildWorkflowYaml = (systemPrompt: string, model: string): string => {
   // Escape double quotes for the --append-system-prompt arg
   const escaped = systemPrompt.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
-  return `name: Claude Code
+  return `# visual-issue-reporter: v2
+name: Claude Code
 
 on:
   issue_comment:
@@ -196,6 +197,7 @@ export default function SetupView({
   const [saved, setSaved] = useState(false);
   const [repoSecretStatus, setRepoSecretStatus] = useState<Record<string, boolean | null>>({});
   const [repoWorkflowStatus, setRepoWorkflowStatus] = useState<Record<string, boolean | null>>({});
+  const [repoWorkflowCurrentStatus, setRepoWorkflowCurrentStatus] = useState<Record<string, boolean | null>>({});
 
   // Searchable repo picker state
   const [availableRepos, setAvailableRepos] = useState<GitHubRepo[]>([]);
@@ -282,8 +284,11 @@ export default function SetupView({
       );
       chrome.runtime.sendMessage(
         { type: 'CHECK_REPO_WORKFLOW', payload: { repo } },
-        (response: { success: boolean; exists?: boolean }) => {
-          if (response?.success) setRepoWorkflowStatus(prev => ({ ...prev, [repo]: !!response.exists }));
+        (response: { success: boolean; exists?: boolean; current?: boolean }) => {
+          if (response?.success) {
+            setRepoWorkflowStatus(prev => ({ ...prev, [repo]: !!response.exists }));
+            if (response.exists) setRepoWorkflowCurrentStatus(prev => ({ ...prev, [repo]: !!response.current }));
+          }
         },
       );
     }
@@ -292,6 +297,7 @@ export default function SetupView({
   const recheckRepos = () => {
     setRepoSecretStatus({});
     setRepoWorkflowStatus({});
+    setRepoWorkflowCurrentStatus({});
     for (const repo of repos) {
       chrome.runtime.sendMessage(
         { type: 'CHECK_REPO_SECRET', payload: { repo, secretName: 'ANTHROPIC_API_KEY' } },
@@ -301,8 +307,11 @@ export default function SetupView({
       );
       chrome.runtime.sendMessage(
         { type: 'CHECK_REPO_WORKFLOW', payload: { repo } },
-        (response: { success: boolean; exists?: boolean }) => {
-          if (response?.success) setRepoWorkflowStatus(prev => ({ ...prev, [repo]: !!response.exists }));
+        (response: { success: boolean; exists?: boolean; current?: boolean }) => {
+          if (response?.success) {
+            setRepoWorkflowStatus(prev => ({ ...prev, [repo]: !!response.exists }));
+            if (response.exists) setRepoWorkflowCurrentStatus(prev => ({ ...prev, [repo]: !!response.current }));
+          }
         },
       );
     }
@@ -1139,7 +1148,12 @@ export default function SetupView({
           status={(() => {
             if (anthropicKeyStatus !== 'valid') return 'Not configured';
             if (repos.length === 0) return 'No repos';
-            const readyCount = repos.filter(r => repoSecretStatus[r] === true && repoWorkflowStatus[r] === true).length;
+            const readyCount = repos.filter(
+              r =>
+                repoSecretStatus[r] === true &&
+                repoWorkflowStatus[r] === true &&
+                repoWorkflowCurrentStatus[r] !== false,
+            ).length;
             if (readyCount === repos.length) return 'Ready';
             if (readyCount > 0) return `${readyCount}/${repos.length} repos ready`;
             return 'Setup incomplete';
@@ -1147,7 +1161,12 @@ export default function SetupView({
           statusColor={(() => {
             if (anthropicKeyStatus !== 'valid') return colors.textMuted;
             if (repos.length === 0) return colors.textMuted;
-            const readyCount = repos.filter(r => repoSecretStatus[r] === true && repoWorkflowStatus[r] === true).length;
+            const readyCount = repos.filter(
+              r =>
+                repoSecretStatus[r] === true &&
+                repoWorkflowStatus[r] === true &&
+                repoWorkflowCurrentStatus[r] !== false,
+            ).length;
             if (readyCount === repos.length) return colors.green;
             if (readyCount > 0) return 'var(--status-warning)';
             return 'var(--status-warning)';
@@ -1570,14 +1589,29 @@ export default function SetupView({
                 {repos.map(repo => {
                   const hasSecret = repoSecretStatus[repo];
                   const hasWorkflow = repoWorkflowStatus[repo];
-                  const allReady = hasSecret === true && hasWorkflow === true;
+                  const isCurrentWorkflow = repoWorkflowCurrentStatus[repo];
+                  const isOutdated = hasWorkflow === true && isCurrentWorkflow === false;
+                  const allReady = hasSecret === true && hasWorkflow === true && isCurrentWorkflow !== false;
+                  const isChecking = hasSecret === null && hasWorkflow === null;
+                  const dotColor = isChecking
+                    ? colors.textMuted
+                    : isOutdated
+                      ? 'var(--status-warning)'
+                      : allReady
+                        ? colors.green
+                        : colors.error;
+                  const borderColor = isOutdated
+                    ? 'rgba(245,158,11,0.3)'
+                    : allReady
+                      ? 'var(--success-20)'
+                      : colors.border;
                   return (
                     <div
                       key={repo}
                       style={{
                         padding: '8px 10px',
                         background: colors.inputBg,
-                        border: `1px solid ${allReady ? 'var(--success-20)' : colors.border}`,
+                        border: `1px solid ${borderColor}`,
                         borderRadius: 6,
                         fontSize: 12,
                         transition: 'all 0.15s',
@@ -1588,7 +1622,7 @@ export default function SetupView({
                           alignItems: 'center',
                           gap: 6,
                           color: colors.textPrimary,
-                          marginBottom: allReady ? 0 : 6,
+                          marginBottom: allReady && !isOutdated ? 0 : 6,
                         }}>
                         <span
                           style={{
@@ -1596,7 +1630,7 @@ export default function SetupView({
                             height: 6,
                             borderRadius: '50%',
                             flexShrink: 0,
-                            background: allReady ? colors.green : hasSecret === null ? colors.textMuted : colors.error,
+                            background: dotColor,
                           }}
                         />
                         <span
@@ -1609,12 +1643,17 @@ export default function SetupView({
                           }}>
                           {repo}
                         </span>
-                        {allReady && <span style={{ color: colors.green, fontSize: 11, flexShrink: 0 }}>Ready</span>}
-                        {hasSecret === null && hasWorkflow === null && (
+                        {allReady && !isOutdated && (
+                          <span style={{ color: colors.green, fontSize: 11, flexShrink: 0 }}>Ready</span>
+                        )}
+                        {isOutdated && (
+                          <span style={{ color: 'var(--status-warning)', fontSize: 11, flexShrink: 0 }}>Outdated</span>
+                        )}
+                        {isChecking && (
                           <span style={{ color: colors.textMuted, fontSize: 11, flexShrink: 0 }}>Checking…</span>
                         )}
                       </div>
-                      {!allReady && (hasSecret !== null || hasWorkflow !== null) && (
+                      {(!allReady || isOutdated) && !isChecking && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, paddingLeft: 12 }}>
                           {/* Secret row */}
                           <div
@@ -1650,8 +1689,16 @@ export default function SetupView({
                               justifyContent: 'space-between',
                               fontSize: 11,
                             }}>
-                            <span style={{ color: hasWorkflow === true ? colors.green : colors.textSecondary }}>
-                              {hasWorkflow === true ? '✓' : '○'} Workflow file
+                            <span
+                              style={{
+                                color: isOutdated
+                                  ? 'var(--status-warning)'
+                                  : hasWorkflow === true
+                                    ? colors.green
+                                    : colors.textSecondary,
+                              }}>
+                              {isOutdated ? '!' : hasWorkflow === true ? '✓' : '○'} Workflow file
+                              {isOutdated ? ' (outdated)' : ''}
                             </span>
                             {hasWorkflow === false && (
                               <a
@@ -1666,6 +1713,9 @@ export default function SetupView({
                                 }}>
                                 Add →
                               </a>
+                            )}
+                            {isOutdated && (
+                              <span style={{ fontSize: 10, color: colors.textMuted }}>Re-copy YAML above</span>
                             )}
                           </div>
                         </div>

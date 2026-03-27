@@ -352,9 +352,11 @@ const githubFetchStatus = async (path: string): Promise<number> => {
   return res.status;
 };
 
+const WORKFLOW_VERSION_MARKER = '# visual-issue-reporter: v2';
+
 const handleCheckRepoWorkflow = async (
   message: { type: string; payload: { repo: string } },
-  sendResponse: (response: MessageResponse & { exists?: boolean }) => void,
+  sendResponse: (response: MessageResponse & { exists?: boolean; current?: boolean }) => void,
 ) => {
   try {
     const parsed = parseRepoName(message.payload.repo);
@@ -362,10 +364,28 @@ const handleCheckRepoWorkflow = async (
       sendResponse({ success: false, error: 'Invalid repo' });
       return;
     }
-    const status = await githubFetchStatus(
-      `/repos/${parsed.owner}/${parsed.repo}/contents/.github/workflows/visual-issue-claude-fix.yml`,
+    const { githubPat } = await chrome.storage.local.get('githubPat');
+    if (!githubPat) throw new Error('GitHub token not configured.');
+    const res = await fetchWithTimeout(
+      `https://api.github.com/repos/${parsed.owner}/${parsed.repo}/contents/.github/workflows/visual-issue-claude-fix.yml`,
+      { headers: { Authorization: `Bearer ${githubPat}`, Accept: 'application/vnd.github+json' } },
+      API_TIMEOUT,
     );
-    sendResponse({ success: true, exists: status === 200 });
+    if (res.status === 401) {
+      await chrome.storage.local.remove(['githubPat', 'githubPatUser']);
+      chrome.runtime.sendMessage({ type: 'TOKEN_REVOKED' }).catch(() => {});
+    }
+    if (res.status === 404) {
+      sendResponse({ success: true, exists: false });
+      return;
+    }
+    if (res.status !== 200) {
+      sendResponse({ success: true, exists: false });
+      return;
+    }
+    const data = (await res.json()) as { content?: string };
+    const content = data.content ? atob(data.content.replace(/\n/g, '')) : '';
+    sendResponse({ success: true, exists: true, current: content.includes(WORKFLOW_VERSION_MARKER) });
   } catch (err) {
     const classified = classifyError(err);
     sendResponse({ success: false, error: classified.message });
