@@ -590,7 +590,7 @@ export default function CreateIssueView({
               }}
               style={{
                 width: '100%',
-                background: 'var(--bg-input)',
+                backgroundColor: 'var(--bg-input)',
                 border: `1px solid var(--border-default)`,
                 borderRadius: 8,
                 padding: '8px 10px',
@@ -635,7 +635,7 @@ export default function CreateIssueView({
                   }}
                   style={{
                     width: '100%',
-                    background: branchesLoading ? 'transparent' : 'var(--bg-input)',
+                    backgroundColor: branchesLoading ? 'transparent' : 'var(--bg-input)',
                     border: `1px solid var(--border-default)`,
                     borderRadius: 8,
                     padding: '8px 10px',
