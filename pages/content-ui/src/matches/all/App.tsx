@@ -517,6 +517,17 @@ const App = () => {
     }
   }, [state]);
 
+  // Lock body scroll when screenshot overlay is active (not recording — recording needs scroll)
+  useEffect(() => {
+    if (state === 'selecting' && !recordingMode) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [state, recordingMode]);
+
   // Copy annotated canvas to clipboard
   const copyCanvasToClipboard = useCallback(() => {
     if (!screenshotUrl) return;
