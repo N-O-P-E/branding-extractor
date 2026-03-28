@@ -1,3 +1,4 @@
+import { buildSelector, hasDirectStyle } from './parent-diff.js';
 import type { ExtractedComponent } from './types.js';
 
 /**
@@ -25,22 +26,21 @@ const COMPONENT_STYLE_PROPERTIES = [
 
 /**
  * Read the relevant styles for a component from the element.
- * Only properties that are explicitly set in the inline style are included —
- * this avoids polluting results with browser-default or inherited values.
- * When getComputedStyle returns the canonical representation (e.g. expanded
- * padding longhands), we use that so the values are always normalised.
+ * Only properties that are directly applied to the element (not inherited) are
+ * included — this avoids polluting results with browser-default or inherited
+ * values. When getComputedStyle returns the canonical representation (e.g.
+ * expanded padding longhands), we use that so the values are always normalised.
  */
 const extractElementStyles = (el: HTMLElement): Record<string, string> => {
-  const inlineStyles = el.style;
   const computedStyles = getComputedStyle(el);
   const styles: Record<string, string> = {};
 
   for (const prop of COMPONENT_STYLE_PROPERTIES) {
-    const inlineValue = inlineStyles.getPropertyValue(prop);
-    if (!inlineValue) continue;
+    if (!hasDirectStyle(el, prop)) continue;
 
     // Prefer the computed value (already normalised by the browser / jsdom)
     // but fall back to the authored inline value if computed is unavailable.
+    const inlineValue = el.style.getPropertyValue(prop);
     const computed = computedStyles.getPropertyValue(prop);
     const value = computed || inlineValue;
     if (value) {
@@ -51,36 +51,13 @@ const extractElementStyles = (el: HTMLElement): Record<string, string> => {
   // box-shadow is not in the inline-only check list above because it is not a
   // shorthand that gets expanded — we need to check it separately for card
   // detection. Add it when explicitly authored inline.
-  const inlineShadow = inlineStyles.getPropertyValue('box-shadow');
-  if (inlineShadow) {
+  if (hasDirectStyle(el, 'box-shadow')) {
+    const inlineShadow = el.style.getPropertyValue('box-shadow');
     const computedShadow = computedStyles.getPropertyValue('box-shadow');
     styles['box-shadow'] = computedShadow || inlineShadow;
   }
 
   return styles;
-};
-
-/**
- * Build a simple CSS selector string for the element.
- * We use the tag name plus the first class name when one is present.
- * This is deliberately lightweight — it is a display hint, not a guaranteed
- * unique selector.
- */
-const buildSelector = (el: Element): string => {
-  const tag = el.tagName.toLowerCase();
-  const firstClass = el.classList[0];
-  if (firstClass) return `${tag}.${firstClass}`;
-
-  const role = el.getAttribute('role');
-  if (role) return `${tag}[role="${role}"]`;
-
-  const type = el.getAttribute('type');
-  if (type) return `${tag}[type="${type}"]`;
-
-  const contenteditable = el.getAttribute('contenteditable');
-  if (contenteditable !== null) return `${tag}[contenteditable]`;
-
-  return tag;
 };
 
 /**
@@ -94,14 +71,12 @@ const buildSelector = (el: Element): string => {
  * component pattern.
  */
 const buildGroupKey = (type: string, el: HTMLElement): string => {
-  const styles = el.style;
   const computed = getComputedStyle(el);
   const tag = el.tagName.toLowerCase();
 
   const get = (prop: string): string => {
-    const inline = styles.getPropertyValue(prop);
-    if (!inline) return '';
-    return computed.getPropertyValue(prop) || inline;
+    if (!hasDirectStyle(el, prop)) return '';
+    return computed.getPropertyValue(prop) || el.style.getPropertyValue(prop);
   };
 
   switch (type) {
@@ -120,7 +95,7 @@ const buildGroupKey = (type: string, el: HTMLElement): string => {
       // Group by background-color + border-radius + box-shadow presence
       const bg = get('background-color');
       const radius = get('border-radius');
-      const shadow = styles.getPropertyValue('box-shadow') ? 'shadow' : 'no-shadow';
+      const shadow = hasDirectStyle(el, 'box-shadow') ? 'shadow' : 'no-shadow';
       return `card|${tag}|${bg}|${radius}|${shadow}`;
     }
     default:
@@ -129,20 +104,17 @@ const buildGroupKey = (type: string, el: HTMLElement): string => {
 };
 
 /**
- * Return true when the element carries enough inline-style signals to be
- * classified as a button-like anchor or generic element.
+ * Return true when the element carries enough directly-applied style signals to
+ * be classified as a button-like anchor or generic element.
  *
  * Heuristic: an <a> or arbitrary element is considered button-like when it has
  * all three of: a non-trivial background colour, a border-radius, and padding.
  */
 const hasButtonLikeStyles = (el: HTMLElement): boolean => {
-  const styles = el.style;
-  const hasBg = !!styles.getPropertyValue('background-color');
-  const hasRadius = !!styles.getPropertyValue('border-radius');
+  const hasBg = hasDirectStyle(el, 'background-color');
+  const hasRadius = hasDirectStyle(el, 'border-radius');
   const hasPadding =
-    !!styles.getPropertyValue('padding') ||
-    !!styles.getPropertyValue('padding-top') ||
-    !!styles.getPropertyValue('padding-left');
+    hasDirectStyle(el, 'padding') || hasDirectStyle(el, 'padding-top') || hasDirectStyle(el, 'padding-left');
   return hasBg && hasRadius && hasPadding;
 };
 
@@ -183,13 +155,12 @@ const classifyElement = (el: Element): string | null => {
   // padding — combined with being a block-level container (div, section, article, li, …).
   const CARD_CONTAINERS = new Set(['div', 'section', 'article', 'li', 'aside', 'main', 'header', 'footer']);
   if (CARD_CONTAINERS.has(tag)) {
-    const inlineStyles = htmlEl.style;
-    const hasShadow = !!inlineStyles.getPropertyValue('box-shadow');
-    const hasRadius = !!inlineStyles.getPropertyValue('border-radius');
+    const hasShadow = hasDirectStyle(htmlEl, 'box-shadow');
+    const hasRadius = hasDirectStyle(htmlEl, 'border-radius');
     const hasPadding =
-      !!inlineStyles.getPropertyValue('padding') ||
-      !!inlineStyles.getPropertyValue('padding-top') ||
-      !!inlineStyles.getPropertyValue('padding-left');
+      hasDirectStyle(htmlEl, 'padding') ||
+      hasDirectStyle(htmlEl, 'padding-top') ||
+      hasDirectStyle(htmlEl, 'padding-left');
 
     const traitCount = [hasShadow, hasRadius, hasPadding].filter(Boolean).length;
     if (traitCount >= 2) return 'card';
@@ -203,9 +174,9 @@ const classifyElement = (el: Element): string | null => {
  * (buttons, inputs, cards), group similar ones, and return an array of
  * `ExtractedComponent` entries sorted by count descending.
  *
- * Only inline style declarations are considered when evaluating style-based
- * heuristics. This keeps the detection consistent with the rest of the
- * extractor suite and avoids false positives caused by inherited or
+ * Only directly-applied style declarations are considered when evaluating
+ * style-based heuristics. This keeps the detection consistent with the rest of
+ * the extractor suite and avoids false positives caused by inherited or
  * stylesheet-defined styles.
  */
 const detectComponents = (root: Element): ExtractedComponent[] => {
