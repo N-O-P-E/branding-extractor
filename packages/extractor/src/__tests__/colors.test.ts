@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 describe('extractColors', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+    // Remove any <style> elements injected into <head> during tests
+    document.head.querySelectorAll('style').forEach(el => el.remove());
   });
   it('extracts color from element style', () => {
     document.body.innerHTML = '<div style="color: #ff0000;">Test</div>';
@@ -63,5 +65,20 @@ describe('extractColors', () => {
     document.body.innerHTML = '<div style="color: rgba(255,0,0,0.5);">Test</div>';
     const colors = extractColors(document.body);
     expect(colors).toHaveLength(0);
+  });
+
+  it('detects CSS variables', () => {
+    const style = document.createElement('style');
+    style.textContent = ':root { --primary: #3b82f6; }';
+    document.head.appendChild(style);
+    document.body.innerHTML = '<div style="color: var(--primary);">Test</div>';
+
+    const colors = extractColors(document.body);
+    expect(colors).toContainEqual(
+      expect.objectContaining({
+        hex: '#3b82f6',
+        cssVariable: '--primary',
+      }),
+    );
   });
 });

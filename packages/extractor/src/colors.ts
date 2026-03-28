@@ -1,5 +1,71 @@
 import type { ExtractedColor } from './types.js';
 
+// Matches a CSS custom property declaration: --name: value;
+// Intentionally kept simple — handles single-line declarations inside :root blocks.
+const CSS_VAR_DECL_RE = /(-{2}[\w-]+)\s*:\s*([^;}\n]+)/g;
+
+// Matches var(--name) or var(--name, fallback) — captures the variable name only.
+const CSS_VAR_USAGE_RE = /var\(\s*(-{2}[\w-]+)/;
+
+/**
+ * Parse <style> elements and the documentElement inline style for CSS custom
+ * properties whose values are colors. Returns a Map of variable name → hex.
+ *
+ * jsdom does not expose StyleSheet rules or resolve var() in computed styles,
+ * so we parse raw textContent instead.
+ */
+const extractCssVariables = (doc: Document): Map<string, string> => {
+  const varMap = new Map<string, string>();
+
+  const registerDecl = (name: string, rawValue: string) => {
+    const trimmed = rawValue.trim();
+    // Accept 3/4/6/8-digit hex literals directly
+    const hexMatch = trimmed.match(/^#([0-9a-fA-F]{3,8})$/);
+    if (hexMatch) {
+      // Normalise shorthand 3-digit hex to 6-digit
+      const digits = hexMatch[1];
+      const hex =
+        digits.length === 3 || digits.length === 4
+          ? '#' +
+            digits
+              .slice(0, 3)
+              .split('')
+              .map(c => c + c)
+              .join('')
+          : '#' + digits.slice(0, 6);
+      varMap.set(name, hex.toLowerCase());
+      return;
+    }
+    // Accept rgb/rgba literals and convert
+    const asHex = rgbToHex(trimmed);
+    if (asHex) {
+      varMap.set(name, asHex);
+    }
+  };
+
+  // Parse every <style> element's text
+  doc.querySelectorAll('style').forEach(styleEl => {
+    const text = styleEl.textContent ?? '';
+    let match: RegExpExecArray | null;
+    CSS_VAR_DECL_RE.lastIndex = 0;
+    while ((match = CSS_VAR_DECL_RE.exec(text)) !== null) {
+      registerDecl(match[1], match[2]);
+    }
+  });
+
+  // Also check inline style on <html>/<body> for custom property overrides
+  const rootInline = doc.documentElement.getAttribute('style') ?? '';
+  if (rootInline) {
+    CSS_VAR_DECL_RE.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = CSS_VAR_DECL_RE.exec(rootInline)) !== null) {
+      registerDecl(match[1], match[2]);
+    }
+  }
+
+  return varMap;
+};
+
 const COLOR_PROPERTIES = [
   'color',
   'background-color',
@@ -92,6 +158,23 @@ const hexToHsl = (hex: string): { h: number; s: number; l: number } => {
 
 const extractColors = (root: Element): ExtractedColor[] => {
   const colorMap = new Map<string, ExtractedColor>();
+  const doc = root.ownerDocument ?? document;
+
+  // Build a map of CSS variable name → resolved hex color by parsing <style> elements.
+  // We do this once per extraction because jsdom does not support var() resolution in
+  // getComputedStyle, so we fall back to our own parser.
+  const cssVarColors = extractCssVariables(doc);
+
+  // Build an inverse map: hex → variable name (first declaration wins).
+  // Used to look up which variable name corresponds to a resolved hex color when the
+  // computed style has already resolved the variable.
+  const hexToVarName = new Map<string, string>();
+  cssVarColors.forEach((hex, name) => {
+    if (!hexToVarName.has(hex)) {
+      hexToVarName.set(hex, name);
+    }
+  });
+
   const elements = root.querySelectorAll('*');
 
   elements.forEach(el => {
@@ -102,26 +185,49 @@ const extractColors = (root: Element): ExtractedColor[] => {
       // Checking the inline style attribute prevents counting inherited values from ancestors.
       const inlineValue = inlineStyles.getPropertyValue(prop);
       if (!inlineValue) return;
-      const value = computedStyles.getPropertyValue(prop);
-      if (value && !isTransparent(value)) {
-        const hex = rgbToHex(value);
-        if (hex) {
-          const existing = colorMap.get(hex);
-          if (existing) {
-            existing.usageCount++;
-            if (!existing.properties.includes(prop)) {
-              existing.properties.push(prop);
-            }
-          } else {
-            colorMap.set(hex, {
-              hex,
-              rgb: hexToRgb(hex),
-              hsl: hexToHsl(hex),
-              usageCount: 1,
-              properties: [prop],
-            });
-          }
+
+      // Detect whether the inline declaration references a CSS variable.
+      const varMatch = CSS_VAR_USAGE_RE.exec(inlineValue);
+      const declaredVarName = varMatch ? varMatch[1] : undefined;
+
+      // Determine the resolved hex color. When a var() is used, jsdom won't resolve
+      // it via getComputedStyle, so we look it up in our parsed variable map.
+      let hex: string | null = null;
+      if (declaredVarName) {
+        hex = cssVarColors.get(declaredVarName) ?? null;
+      } else {
+        const computed = computedStyles.getPropertyValue(prop);
+        if (computed && !isTransparent(computed)) {
+          hex = rgbToHex(computed);
         }
+      }
+
+      if (!hex) return;
+
+      // Determine which CSS variable name to associate. Prefer the one explicitly
+      // written in the declaration; fall back to the inverse lookup for cases where
+      // the browser (or a real env) has already resolved the value.
+      const cssVariable = declaredVarName ?? hexToVarName.get(hex);
+
+      const existing = colorMap.get(hex);
+      if (existing) {
+        existing.usageCount++;
+        if (!existing.properties.includes(prop)) {
+          existing.properties.push(prop);
+        }
+        // Attach variable name if not yet set
+        if (!existing.cssVariable && cssVariable) {
+          existing.cssVariable = cssVariable;
+        }
+      } else {
+        colorMap.set(hex, {
+          hex,
+          rgb: hexToRgb(hex),
+          hsl: hexToHsl(hex),
+          usageCount: 1,
+          properties: [prop],
+          ...(cssVariable ? { cssVariable } : {}),
+        });
       }
     });
   });
