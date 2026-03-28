@@ -3,3 +3,87 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Font faces */
+@font-face {
+  font-family: 'Instrument Serif';
+  src: url('./fonts/InstrumentSerif-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Instrument Serif';
+  src: url('./fonts/InstrumentSerif-Italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  src: url('./fonts/DMSans-Variable.woff2') format('woff2');
+  font-weight: 300 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Fonts */
+  --font-heading: 'Instrument Serif', serif;
+  --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Backgrounds */
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-hover: #334155;
+  --bg-input: rgba(148, 163, 184, 0.08);
+  --bg-input-hover: rgba(148, 163, 184, 0.06);
+
+  /* Accent (purple) */
+  --accent-primary: #8b5cf6;
+  --accent-hover: #7c3aed;
+  --accent-subtle: #a78bfa;
+  --accent-link: #c4b5fd;
+  --accent-gradient: linear-gradient(135deg, #7c3aed, #9333ea);
+  --accent-gradient-disabled: rgba(124, 58, 237, 0.4);
+  --accent-10: rgba(139, 92, 246, 0.1);
+  --accent-15: rgba(139, 92, 246, 0.15);
+  --accent-20: rgba(139, 92, 246, 0.2);
+
+  /* Text */
+  --text-primary: #f1f5f9;
+  --text-secondary: rgba(241, 245, 249, 0.45);
+  --text-muted: rgba(241, 245, 249, 0.3);
+  --text-on-accent: #ffffff;
+
+  /* Borders */
+  --border-default: rgba(148, 163, 184, 0.15);
+  --border-subtle: rgba(148, 163, 184, 0.1);
+  --border-input: rgba(148, 163, 184, 0.12);
+
+  /* Shadow */
+  --shadow-dropdown: rgba(0, 0, 0, 0.4);
+
+  /* Status */
+  --status-success: #4ade80;
+  --status-error: #f87171;
+  --status-warning: #f59e0b;
+
+  /* Branding footer */
+  --brand-footer-bg: #8b5cf6;
+  --brand-footer-text: #ffffff;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading);
+}

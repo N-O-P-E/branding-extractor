@@ -26,13 +26,17 @@ const buildCssValue = (a: ExtractedAnimation): string => {
 
 export const AnimationList = ({ animations, onCopy }: Props) => {
   if (animations.length === 0) {
-    return <p className="py-2 text-xs text-gray-400">No animations or transitions found.</p>;
+    return (
+      <p className="py-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+        No animations or transitions found.
+      </p>
+    );
   }
 
   const maxMs = Math.max(...animations.map(a => toMs(a.duration)), MAX_REFERENCE_MS);
 
   return (
-    <div className="flex flex-col divide-y divide-gray-100">
+    <div className="flex flex-col">
       {animations.map((anim, index) => {
         const durationMs = toMs(anim.duration);
         const barWidth = Math.max(4, Math.round((durationMs / maxMs) * MAX_BAR_WIDTH));
@@ -43,29 +47,39 @@ export const AnimationList = ({ animations, onCopy }: Props) => {
             key={index}
             type="button"
             onClick={() => onCopy(buildCssValue(anim))}
-            className="group flex items-center gap-3 rounded px-1 py-2 text-left transition-colors hover:bg-gray-50"
+            className="group flex items-center gap-3 rounded px-1 py-2 text-left transition-colors"
+            onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--bg-secondary)')}
+            onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent')}
+            style={{ borderBottom: '1px solid var(--border-subtle)' }}
             title={`${anim.property} ${anim.duration} ${anim.timingFunction}${hasDelay ? ` delay ${anim.delay}` : ''} — used ${anim.usageCount}x`}>
             {/* Timeline bar */}
             <span className="flex shrink-0 items-center" style={{ width: MAX_BAR_WIDTH }}>
               <span
-                className="block rounded-sm bg-violet-200 transition-all group-hover:bg-violet-300"
-                style={{ width: barWidth, height: 8 }}
+                className="block rounded-sm transition-all"
+                style={{
+                  width: barWidth,
+                  height: 8,
+                  backgroundColor: 'var(--accent-primary)',
+                  opacity: 0.7,
+                }}
                 aria-hidden="true"
               />
             </span>
 
             {/* Details */}
             <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="truncate font-mono text-[11px] text-gray-700">{anim.property}</span>
-              <span className="font-mono text-[10px] text-gray-400">
+              <span className="truncate font-mono text-[11px]" style={{ color: 'var(--text-secondary)' }}>
+                {anim.property}
+              </span>
+              <span className="font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>
                 {anim.duration}
-                {hasDelay && <span className="text-gray-300"> +{anim.delay}</span>}{' '}
-                <span className="text-gray-300">{anim.timingFunction}</span>
+                {hasDelay && <span style={{ color: 'var(--text-muted)' }}> +{anim.delay}</span>}{' '}
+                <span style={{ color: 'var(--text-muted)' }}>{anim.timingFunction}</span>
               </span>
             </span>
 
             {/* Usage count */}
-            <span className="shrink-0 text-[9px] text-gray-300 transition-colors group-hover:text-gray-400">
+            <span className="shrink-0 text-[9px]" style={{ color: 'var(--text-muted)' }}>
               {anim.usageCount}×
             </span>
           </button>

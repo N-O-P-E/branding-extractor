@@ -40,12 +40,21 @@ export const BrandingDetailView = ({ branding, onBack, onCopy }: Props) => {
   return (
     <>
       {/* Detail header */}
-      <div className="flex items-center gap-2 border-b px-4 py-3">
+      <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: '1px solid var(--border-default)' }}>
         <button
           type="button"
           onClick={onBack}
           aria-label="Back to saved brandings"
-          className="rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600">
+          className="rounded p-1 transition-colors"
+          style={{ color: 'var(--text-muted)' }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--bg-secondary)';
+            (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+            (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
+          }}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path
               d="M10 12L6 8l4-4"
@@ -60,8 +69,10 @@ export const BrandingDetailView = ({ branding, onBack, onCopy }: Props) => {
         {branding.favicon && <img src={branding.favicon} alt="" className="h-4 w-4 shrink-0" aria-hidden="true" />}
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-gray-800">{branding.name}</p>
-          <p className="truncate text-[10px] text-gray-400">
+          <p className="truncate text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+            {branding.name}
+          </p>
+          <p className="truncate text-[10px]" style={{ color: 'var(--text-muted)' }}>
             {branding.url} &middot; {formatDate(branding.savedAt)}
           </p>
         </div>
@@ -69,26 +80,40 @@ export const BrandingDetailView = ({ branding, onBack, onCopy }: Props) => {
         <button
           type="button"
           onClick={handleExportOpen}
-          className="shrink-0 rounded-lg border border-indigo-200 px-3 py-1.5 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-50">
+          className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+          style={{
+            border: '1px solid var(--accent-primary)',
+            color: 'var(--accent-subtle)',
+          }}
+          onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--accent-10)')}
+          onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent')}>
           Export
         </button>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b">
+      <div className="flex" style={{ borderBottom: '1px solid var(--border-default)' }}>
         {tabs.map(tab => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 py-2 text-xs font-medium transition-colors ${
+            className="flex-1 py-2 text-xs font-medium transition-colors"
+            style={
               activeTab === tab.id
-                ? 'border-b-2 border-indigo-600 text-indigo-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}>
+                ? {
+                    borderBottom: '2px solid var(--accent-primary)',
+                    color: 'var(--accent-subtle)',
+                  }
+                : {
+                    color: 'var(--text-secondary)',
+                  }
+            }>
             {tab.label}
             {tab.count !== undefined && tab.count > 0 && (
-              <span className="ml-1 text-[10px] text-gray-400">({tab.count})</span>
+              <span className="ml-1 text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                ({tab.count})
+              </span>
             )}
           </button>
         ))}

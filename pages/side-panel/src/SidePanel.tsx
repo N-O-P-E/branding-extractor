@@ -102,22 +102,38 @@ const SidePanel = () => {
   const isDetailView = view.type === 'detail';
 
   return (
-    <div className="relative flex h-screen flex-col bg-white">
+    <div
+      className="relative flex h-screen flex-col pb-14"
+      style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       {/* Header — hidden when viewing detail (detail has its own header) */}
       {!isDetailView && (
-        <div className="flex items-center justify-between border-b px-4 py-3">
-          <h1 className="text-lg font-semibold">Branding Extractor</h1>
+        <div
+          className="flex items-center justify-between px-4 py-3"
+          style={{ borderBottom: '1px solid var(--border-default)' }}>
+          <h1
+            className="text-lg font-semibold"
+            style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
+            Branding Extractor
+          </h1>
           <div className="flex items-center gap-2">
             {/* Saved brandings toggle */}
             <button
               type="button"
               onClick={() => setView(isBrandingsView ? { type: 'extract' } : { type: 'brandings' })}
               aria-label={isBrandingsView ? 'Back to extraction' : 'View saved brandings'}
-              className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+              className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+              style={
                 isBrandingsView
-                  ? 'border-indigo-200 bg-indigo-50 text-indigo-600'
-                  : 'border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700'
-              }`}>
+                  ? {
+                      border: '1px solid var(--accent-primary)',
+                      background: 'var(--accent-10)',
+                      color: 'var(--accent-subtle)',
+                    }
+                  : {
+                      border: '1px solid var(--border-default)',
+                      color: 'var(--text-secondary)',
+                    }
+              }>
               {isBrandingsView ? 'Extract' : `Saved${brandings.length > 0 ? ` (${brandings.length})` : ''}`}
             </button>
 
@@ -128,13 +144,21 @@ const SidePanel = () => {
                     <button
                       type="button"
                       onClick={handleSaveCurrent}
-                      className="rounded-lg border border-indigo-200 px-3 py-1.5 text-sm font-medium text-indigo-600 transition-colors hover:bg-indigo-50">
+                      className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+                      style={{
+                        border: '1px solid var(--accent-primary)',
+                        color: 'var(--accent-subtle)',
+                      }}>
                       Save
                     </button>
                     <button
                       type="button"
                       onClick={() => setShowExport(true)}
-                      className="rounded-lg border border-indigo-200 px-3 py-1.5 text-sm font-medium text-indigo-600 transition-colors hover:bg-indigo-50">
+                      className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+                      style={{
+                        border: '1px solid var(--accent-primary)',
+                        color: 'var(--accent-subtle)',
+                      }}>
                       Export
                     </button>
                   </>
@@ -143,7 +167,8 @@ const SidePanel = () => {
                   type="button"
                   onClick={handleExtract}
                   disabled={loading}
-                  className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+                  className="rounded-lg px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                  style={{ background: 'var(--accent-gradient)' }}>
                   {loading ? 'Extracting...' : 'Extract'}
                 </button>
               </>
@@ -174,20 +199,28 @@ const SidePanel = () => {
       {isExtractView && (
         <>
           {/* Tabs */}
-          <div className="flex border-b">
+          <div className="flex" style={{ borderBottom: '1px solid var(--border-default)' }}>
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 py-2 text-xs font-medium transition-colors ${
+                className="flex-1 py-2 text-xs font-medium transition-colors"
+                style={
                   activeTab === tab.id
-                    ? 'border-b-2 border-indigo-600 text-indigo-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}>
+                    ? {
+                        borderBottom: '2px solid var(--accent-primary)',
+                        color: 'var(--accent-subtle)',
+                      }
+                    : {
+                        color: 'var(--text-secondary)',
+                      }
+                }>
                 {tab.label}
                 {tab.count !== undefined && tab.count > 0 && (
-                  <span className="ml-1 text-[10px] text-gray-400">({tab.count})</span>
+                  <span className="ml-1 text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                    ({tab.count})
+                  </span>
                 )}
               </button>
             ))}
@@ -198,7 +231,7 @@ const SidePanel = () => {
             {loading ? (
               <SkeletonLoader />
             ) : !result ? (
-              <div className="flex h-full items-center justify-center text-sm text-gray-400">
+              <div className="flex h-full items-center justify-center text-sm" style={{ color: 'var(--text-muted)' }}>
                 Click &ldquo;Extract&rdquo; to analyze this page&apos;s design system
               </div>
             ) : (
@@ -216,20 +249,47 @@ const SidePanel = () => {
 
       {/* Copy toast */}
       {copied && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-gray-900 px-4 py-1.5 text-xs text-white shadow-lg">
+        <div
+          className="absolute bottom-20 left-1/2 -translate-x-1/2 rounded-full px-4 py-1.5 text-xs text-white shadow-lg"
+          style={{ backgroundColor: '#1e293b', border: '1px solid var(--border-default)' }}>
           Copied!
         </div>
       )}
 
       {/* Saved toast */}
       {savedToast && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-indigo-600 px-4 py-1.5 text-xs text-white shadow-lg">
+        <div
+          className="absolute bottom-20 left-1/2 -translate-x-1/2 rounded-full px-4 py-1.5 text-xs text-white shadow-lg"
+          style={{ backgroundColor: 'var(--accent-primary)' }}>
           Saved!
         </div>
       )}
 
       {/* Export modal */}
       {showExport && result && <ExportModal result={result} onClose={() => setShowExport(false)} />}
+
+      {/* Footer */}
+      <a
+        href="https://studionope.nl"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          padding: '12px 20px',
+          background: 'var(--brand-footer-bg)',
+          color: 'var(--brand-footer-text)',
+          textAlign: 'center',
+          fontSize: '18px',
+          fontWeight: 600,
+          fontFamily: "'Instrument Serif', serif",
+          textDecoration: 'none',
+          zIndex: 50,
+        }}>
+        Built by <strong>Studio N.O.P.E.</strong>
+      </a>
     </div>
   );
 };

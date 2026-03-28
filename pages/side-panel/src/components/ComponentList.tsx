@@ -38,7 +38,11 @@ const getHighlightedStyles = (styles: Record<string, string>): Array<[string, st
 
 export const ComponentList = ({ components, onCopy }: Props) => {
   if (components.length === 0) {
-    return <p className="py-2 text-xs text-gray-400">No components found.</p>;
+    return (
+      <p className="py-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+        No components found.
+      </p>
+    );
   }
 
   // Group components by type
@@ -54,11 +58,17 @@ export const ComponentList = ({ components, onCopy }: Props) => {
         <div key={type}>
           {/* Group header */}
           <div className="mb-1 flex items-center gap-2">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">{type}</span>
-            <span className="text-[10px] text-gray-300">{items.length}</span>
+            <span
+              className="text-[10px] font-semibold uppercase tracking-wider"
+              style={{ color: 'var(--accent-subtle)' }}>
+              {type}
+            </span>
+            <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+              {items.length}
+            </span>
           </div>
 
-          <div className="flex flex-col divide-y divide-gray-100">
+          <div className="flex flex-col" style={{ borderColor: 'var(--border-subtle)' }}>
             {items.map((comp, index) => {
               const css = stylesToCss(comp.selector, comp.styles);
               const highlights = getHighlightedStyles(comp.styles);
@@ -68,11 +78,20 @@ export const ComponentList = ({ components, onCopy }: Props) => {
                   key={index}
                   type="button"
                   onClick={() => onCopy(css)}
-                  className="group flex flex-col gap-1 rounded px-1 py-2 text-left transition-colors hover:bg-gray-50"
+                  className="group flex flex-col gap-1 rounded px-1 py-2 text-left transition-colors"
+                  onMouseEnter={e =>
+                    ((e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--bg-secondary)')
+                  }
+                  onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent')}
+                  style={{ borderBottom: '1px solid var(--border-subtle)' }}
                   title="Click to copy CSS">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-gray-700">{comp.selector}</span>
-                    <span className="shrink-0 text-[9px] text-gray-300 transition-colors group-hover:text-gray-400">
+                    <span
+                      className="min-w-0 flex-1 truncate font-mono text-[11px]"
+                      style={{ color: 'var(--text-secondary)' }}>
+                      {comp.selector}
+                    </span>
+                    <span className="shrink-0 text-[9px]" style={{ color: 'var(--text-muted)' }}>
                       {comp.count}×
                     </span>
                   </div>
@@ -82,7 +101,12 @@ export const ComponentList = ({ components, onCopy }: Props) => {
                       {highlights.map(([prop, val]) => (
                         <span
                           key={prop}
-                          className="max-w-[120px] truncate rounded bg-gray-100 px-1 py-0.5 font-mono text-[9px] text-gray-500"
+                          className="max-w-[120px] truncate rounded px-1 py-0.5 font-mono text-[9px]"
+                          style={{
+                            background: 'var(--bg-secondary)',
+                            color: 'var(--text-secondary)',
+                            border: '1px solid var(--border-subtle)',
+                          }}
                           title={`${prop}: ${val}`}>
                           {val}
                         </span>
