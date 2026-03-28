@@ -57,15 +57,20 @@ const SidePanel = () => {
   const handleSaveCurrent = useCallback(async () => {
     if (!result) return;
     try {
-      const hostname = new URL(result.url).hostname;
+      const url = new URL(result.url);
+      const hostname = url.hostname;
       const favicon = `https://www.google.com/s2/favicons?domain=${hostname}`;
       const newBranding: SavedBranding = {
         id: crypto.randomUUID(),
         name: hostname,
         url: result.url,
+        origin: url.origin,
         favicon,
         data: result,
+        overrides: [],
+        enabled: false,
         savedAt: Date.now(),
+        updatedAt: Date.now(),
       };
       await saveBranding(newBranding);
       const updated = await getBrandings();
