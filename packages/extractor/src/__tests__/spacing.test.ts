@@ -98,4 +98,15 @@ describe('extractSpacing', () => {
     expect(s8?.properties).toContain('padding');
     expect(s8?.properties).toContain('margin');
   });
+
+  it('populates selectors array', () => {
+    document.body.innerHTML = `
+      <div class="card" style="padding: 16px;">A</div>
+      <section id="hero" style="padding: 16px;">B</section>
+    `;
+    const spacing = extractSpacing(document.body);
+    const s16 = spacing.find(s => s.value === '16px');
+    expect(s16?.selectors).toContain('div.card');
+    expect(s16?.selectors).toContain('section#hero');
+  });
 });

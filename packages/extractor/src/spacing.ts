@@ -1,3 +1,4 @@
+import { buildSelector, hasAnyDirectStyle, hasDirectStyle } from './parent-diff.js';
 import type { ExtractedSpacing } from './types.js';
 
 /**
@@ -32,6 +33,12 @@ const LONGHAND_PROPERTIES = [
 ] as const;
 
 /**
+ * All spacing properties checked for direct-style detection (shorthands +
+ * longhands). Used for the early-exit guard via hasAnyDirectStyle.
+ */
+const ALL_SPACING_PROPERTIES = ['padding', 'margin', 'gap', ...LONGHAND_PROPERTIES] as const;
+
+/**
  * Normalise a raw CSS value string to a canonical `<n>px` string, or return
  * null when the value is not a resolvable length.
  * getComputedStyle in a browser always returns px, but jsdom may return the
@@ -53,9 +60,10 @@ const normaliseToPx = (raw: string): string | null => {
  * Extract spacing values (padding, margin, gap and their sub-properties) from
  * all descendant elements of `root`.
  *
- * Only inline style declarations are considered — this matches the approach
- * used by extractColors and extractTypography to avoid counting inherited
- * values from ancestors.
+ * Only properties directly applied to an element (inline or via stylesheet rule)
+ * are considered — inherited values from ancestors are filtered out using
+ * parent-diff. This matches the approach used by extractColors and
+ * extractTypography.
  *
  * usageCount counts the number of *elements* that contribute a given value,
  * so a single element using `padding: 16px` adds 1 to the count for `16px`
@@ -65,18 +73,17 @@ const normaliseToPx = (raw: string): string | null => {
  * by usage count descending.
  */
 const extractSpacing = (root: Element): ExtractedSpacing[] => {
-  // value → { usageCount, properties }
+  // value → { usageCount, properties, selectors }
   const spacingMap = new Map<string, ExtractedSpacing>();
 
   const elements = root.querySelectorAll('*');
 
   elements.forEach(el => {
-    const inlineStyles = (el as HTMLElement).style;
-
-    // Short-circuit: skip elements with no inline style at all
-    if (!inlineStyles.length) return;
+    // Short-circuit: skip elements with no directly-applied spacing properties
+    if (!hasAnyDirectStyle(el, ALL_SPACING_PROPERTIES)) return;
 
     const computedStyles = getComputedStyle(el);
+    const sel = buildSelector(el);
 
     // Per-element accumulator: value → Set of property names that produced it.
     // This ensures one element contributes at most 1 to usageCount per value,
@@ -94,7 +101,7 @@ const extractSpacing = (root: Element): ExtractedSpacing[] => {
 
     // --- Shorthand properties ---
     for (const [shorthand, longhands] of Object.entries(SHORTHAND_TO_LONGHANDS)) {
-      if (!inlineStyles.getPropertyValue(shorthand)) continue;
+      if (!hasDirectStyle(el, shorthand)) continue;
 
       // Collect the unique px values that the shorthand resolves to.
       // Each distinct value is attributed to the shorthand name, not the longhand.
@@ -109,7 +116,7 @@ const extractSpacing = (root: Element): ExtractedSpacing[] => {
 
     // --- Longhand properties ---
     for (const prop of LONGHAND_PROPERTIES) {
-      if (!inlineStyles.getPropertyValue(prop)) continue;
+      if (!hasDirectStyle(el, prop)) continue;
 
       const px = normaliseToPx(computedStyles.getPropertyValue(prop));
       if (!px || px === '0px') continue;
@@ -128,11 +135,15 @@ const extractSpacing = (root: Element): ExtractedSpacing[] => {
             existing.properties.push(p);
           }
         });
+        if (!existing.selectors.includes(sel)) {
+          existing.selectors.push(sel);
+        }
       } else {
         spacingMap.set(value, {
           value,
           usageCount: 1,
           properties: Array.from(properties),
+          selectors: [sel],
         });
       }
     });
