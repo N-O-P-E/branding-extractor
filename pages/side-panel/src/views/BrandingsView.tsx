@@ -1,0 +1,114 @@
+import { deleteBranding } from '@extension/storage';
+import { useCallback } from 'react';
+import type { SavedBranding } from '@extension/storage';
+
+interface Props {
+  brandings: SavedBranding[];
+  onSelect: (branding: SavedBranding) => void;
+  onDeleted: (id: string) => void;
+  onSaveCurrent?: () => void;
+  hasCurrentResult: boolean;
+}
+
+const formatDate = (timestamp: number): string => {
+  const date = new Date(timestamp);
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+export const BrandingsView = ({ brandings, onSelect, onDeleted, onSaveCurrent, hasCurrentResult }: Props) => {
+  const handleDelete = useCallback(
+    async (e: React.MouseEvent, id: string) => {
+      e.stopPropagation();
+      await deleteBranding(id);
+      onDeleted(id);
+    },
+    [onDeleted],
+  );
+
+  return (
+    <div className="flex flex-col gap-3 p-4">
+      {hasCurrentResult && onSaveCurrent && (
+        <button
+          type="button"
+          onClick={onSaveCurrent}
+          className="w-full rounded-lg bg-indigo-600 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700">
+          Save Current
+        </button>
+      )}
+
+      {brandings.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+          <svg
+            width="32"
+            height="32"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-gray-300"
+            aria-hidden="true">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+            <polyline points="17 21 17 13 7 13 7 21" />
+            <polyline points="7 3 7 8 15 8" />
+          </svg>
+          <p className="text-sm font-medium text-gray-400">No saved brandings yet</p>
+          <p className="text-xs text-gray-300">Extract a page then click &ldquo;Save Current&rdquo;</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {brandings.map(branding => (
+            <button
+              key={branding.id}
+              type="button"
+              onClick={() => onSelect(branding)}
+              className="group relative flex items-start gap-3 rounded-lg border border-gray-200 p-3 text-left transition-colors hover:border-indigo-200 hover:bg-indigo-50">
+              {/* Favicon */}
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-gray-100">
+                {branding.favicon ? (
+                  <img src={branding.favicon} alt="" className="h-5 w-5" aria-hidden="true" />
+                ) : (
+                  <span className="text-[10px] font-semibold text-gray-400">
+                    {branding.name.slice(0, 2).toUpperCase()}
+                  </span>
+                )}
+              </div>
+
+              {/* Content */}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-gray-800">{branding.name}</p>
+                <p className="truncate text-[11px] text-gray-400">{branding.url}</p>
+                <div className="mt-1.5 flex items-center gap-2">
+                  {/* Color swatch preview */}
+                  <div className="flex gap-0.5">
+                    {branding.data.colors.slice(0, 5).map(color => (
+                      <span
+                        key={color.hex}
+                        className="block h-3.5 w-3.5 rounded-sm ring-1 ring-black/10"
+                        style={{ backgroundColor: color.hex }}
+                        aria-hidden="true"
+                      />
+                    ))}
+                  </div>
+                  <span className="text-[10px] text-gray-300">{formatDate(branding.savedAt)}</span>
+                </div>
+              </div>
+
+              {/* Delete button */}
+              <button
+                type="button"
+                aria-label={`Delete ${branding.name}`}
+                onClick={e => handleDelete(e, branding.id)}
+                className="shrink-0 rounded p-1 text-gray-300 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-400 group-hover:opacity-100">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                  <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </button>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};

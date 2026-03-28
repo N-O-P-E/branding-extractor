@@ -294,6 +294,16 @@ importers:
         specifier: ^5.5.0
         version: 5.5.0
 
+  packages/storage:
+    dependencies:
+      '@extension/extractor':
+        specifier: workspace:*
+        version: link:../extractor
+    devDependencies:
+      '@extension/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+
   packages/tailwindcss-config:
     devDependencies:
       '@extension/tsconfig':
@@ -407,6 +417,9 @@ importers:
       '@extension/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@extension/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
       '@extension/ui':
         specifier: workspace:*
         version: link:../../packages/ui
