@@ -272,6 +272,10 @@ importers:
         version: 17.7.2
 
   packages/shared:
+    dependencies:
+      '@extension/extractor':
+        specifier: workspace:*
+        version: link:../extractor
     devDependencies:
       '@extension/tsconfig':
         specifier: workspace:*
@@ -340,6 +344,9 @@ importers:
       '@extension/env':
         specifier: workspace:*
         version: link:../../packages/env
+      '@extension/extractor':
+        specifier: workspace:*
+        version: link:../../packages/extractor
       '@extension/shared':
         specifier: workspace:*
         version: link:../../packages/shared

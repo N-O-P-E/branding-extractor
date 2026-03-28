@@ -2,9 +2,9 @@
  * Extension message types.
  *
  * Only the types actively used by the content script are kept here.
- * Phase 3 (branding extraction) will extend this file with design-system
- * extraction messages.
  */
+
+import type { ExtractionResult } from '@extension/extractor';
 
 export interface GetHtmlSnippetMessage {
   type: 'GET_HTML_SNIPPET';
@@ -18,4 +18,12 @@ export interface HtmlSnippetResponse {
   html?: string;
 }
 
-export type ExtensionMessage = GetHtmlSnippetMessage;
+export interface ExtractStylesMessage {
+  type: 'EXTRACT_STYLES';
+}
+
+export interface ExtractStylesResponse {
+  result: ExtractionResult;
+}
+
+export type ExtensionMessage = GetHtmlSnippetMessage | ExtractStylesMessage;

@@ -1,4 +1,11 @@
-import type { GetHtmlSnippetMessage, HtmlSnippetResponse } from '@extension/shared';
+import {
+  extractColors,
+  extractTypography,
+  extractSpacing,
+  detectComponents,
+  extractAnimations,
+} from '@extension/extractor';
+import type { ExtensionMessage, HtmlSnippetResponse, ExtractStylesResponse } from '@extension/shared';
 
 const minifyHtml = (raw: string): string =>
   raw
@@ -40,11 +47,28 @@ const getCleanHtml = (x: number, y: number): string | undefined => {
 };
 
 chrome.runtime.onMessage.addListener(
-  (message: GetHtmlSnippetMessage, _sender, sendResponse: (response: HtmlSnippetResponse) => void) => {
+  (
+    message: ExtensionMessage,
+    _sender,
+    sendResponse: (response: HtmlSnippetResponse | ExtractStylesResponse) => void,
+  ) => {
     if (message.type === 'GET_HTML_SNIPPET') {
       const { x, y } = message.payload;
       const html = getCleanHtml(x, y);
       sendResponse({ html });
+    }
+
+    if (message.type === 'EXTRACT_STYLES') {
+      const result = {
+        colors: extractColors(document.body),
+        typography: extractTypography(document.body),
+        spacing: extractSpacing(document.body),
+        components: detectComponents(document.body),
+        animations: extractAnimations(document.body),
+        timestamp: Date.now(),
+        url: window.location.href,
+      };
+      sendResponse({ result });
     }
   },
 );

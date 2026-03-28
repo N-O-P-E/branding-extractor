@@ -22,6 +22,9 @@
     "type-check": "tsc --noEmit",
     "postinstall": "pnpm ready"
   },
+  "dependencies": {
+    "@extension/extractor": "workspace:*"
+  },
   "devDependencies": {
     "@extension/tsconfig": "workspace:*",
     "type-fest": "^5.5.0"
