@@ -79,4 +79,15 @@ describe('extractTypography', () => {
     const typography = extractTypography(document.body);
     expect(typography).toHaveLength(0);
   });
+
+  it('populates selectors array', () => {
+    document.body.innerHTML = `
+      <p class="body-text" style="font-family: Inter; font-size: 16px;">A</p>
+      <span id="label" style="font-family: Inter; font-size: 16px;">B</span>
+    `;
+    const typography = extractTypography(document.body);
+    const entry = typography.find(t => t.fontSize === '16px');
+    expect(entry?.selectors).toContain('p.body-text');
+    expect(entry?.selectors).toContain('span#label');
+  });
 });
