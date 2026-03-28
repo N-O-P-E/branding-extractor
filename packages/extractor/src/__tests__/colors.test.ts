@@ -7,6 +7,7 @@ describe('extractColors', () => {
     // Remove any <style> elements injected into <head> during tests
     document.head.querySelectorAll('style').forEach(el => el.remove());
   });
+
   it('extracts color from element style', () => {
     document.body.innerHTML = '<div style="color: #ff0000;">Test</div>';
     const colors = extractColors(document.body);
@@ -80,5 +81,31 @@ describe('extractColors', () => {
         cssVariable: '--primary',
       }),
     );
+  });
+
+  it('populates selectors array', () => {
+    document.body.innerHTML = '<p class="intro" style="color: #ff0000;">Test</p>';
+    const colors = extractColors(document.body);
+    const red = colors.find(c => c.hex === '#ff0000');
+    expect(red?.selectors).toContain('p.intro');
+  });
+
+  it('deduplicates selectors', () => {
+    document.body.innerHTML = `
+      <p class="text" style="color: #ff0000;">A</p>
+      <p class="text" style="color: #ff0000;">B</p>
+    `;
+    const colors = extractColors(document.body);
+    const red = colors.find(c => c.hex === '#ff0000');
+    // Both have same selector "p.text" but should only appear once
+    expect(red?.selectors.filter(s => s === 'p.text').length).toBe(1);
+  });
+
+  it('returns empty selectors array when color has not been seen', () => {
+    document.body.innerHTML = '<span id="logo" style="color: #123456;">Brand</span>';
+    const colors = extractColors(document.body);
+    const color = colors.find(c => c.hex === '#123456');
+    expect(Array.isArray(color?.selectors)).toBe(true);
+    expect(color?.selectors).toContain('span#logo');
   });
 });
