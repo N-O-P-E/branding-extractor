@@ -1,10 +1,10 @@
 {
   "extensionDescription": {
     "description": "Extension description",
-    "message": "Report visual issues without switching context. Shorter dev cycles, everyone can contribute, not just developers."
+    "message": "Extract design systems, color palettes, typography, and branding assets from any website."
   },
   "extensionName": {
     "description": "Extension name",
-    "message": "Visual Issue Reporter by Studio N.O.P.E."
+    "message": "Branding Extractor"
   }
 }

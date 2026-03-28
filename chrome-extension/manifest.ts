@@ -6,12 +6,11 @@ const packageJson = JSON.parse(readFileSync('./package.json', 'utf8'));
 const manifest = {
   manifest_version: 3,
   default_locale: 'en',
-  name: 'Visual Issue Reporter by Studio N.O.P.E.',
+  name: 'Branding Extractor by Studio N.O.P.E.',
   version: packageJson.version,
   description: '__MSG_extensionDescription__',
   host_permissions: ['<all_urls>'],
-  permissions: ['activeTab', 'storage', 'sidePanel', 'declarativeNetRequest'],
-  optional_permissions: ['cookies'],
+  permissions: ['activeTab', 'storage', 'sidePanel'],
   content_security_policy: {
     extension_pages: "script-src 'self'; object-src 'self'",
   },
@@ -42,12 +41,7 @@ const manifest = {
       css: ['content.css'],
     },
   ],
-  web_accessible_resources: [
-    {
-      resources: ['console-capture.js', 'shopify-data.js'],
-      matches: ['http://*/*', 'https://*/*'],
-    },
-  ],
+  web_accessible_resources: [],
 } as ManifestType & {
   side_panel: { default_path: string };
   content_security_policy: { extension_pages: string };
