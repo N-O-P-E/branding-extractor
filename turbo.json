@@ -33,6 +33,9 @@
     "lint:fix": {
       "cache": false
     },
+    "test": {
+      "cache": false
+    },
     "format": {
       "dependsOn": ["^format"],
       "cache": false

@@ -1,7 +1,10 @@
 import { extractColors } from '../colors.js';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 describe('extractColors', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
   it('extracts color from element style', () => {
     document.body.innerHTML = '<div style="color: #ff0000;">Test</div>';
     const colors = extractColors(document.body);
@@ -54,5 +57,11 @@ describe('extractColors', () => {
     document.body.innerHTML = '<div style="color: rgba(0,0,0,0);">Test</div>';
     const colors = extractColors(document.body);
     expect(colors.find(c => c.hex === '#000000' && c.properties.includes('color'))).toBeUndefined();
+  });
+
+  it('skips partially transparent colors', () => {
+    document.body.innerHTML = '<div style="color: rgba(255,0,0,0.5);">Test</div>';
+    const colors = extractColors(document.body);
+    expect(colors).toHaveLength(0);
   });
 });

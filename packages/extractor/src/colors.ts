@@ -12,12 +12,36 @@ const COLOR_PROPERTIES = [
   'border-left-color',
 ];
 
-const isTransparent = (value: string): boolean => value === 'rgba(0, 0, 0, 0)' || value === 'transparent';
+const isTransparent = (value: string): boolean => {
+  // Handle transparent keyword
+  if (value === 'transparent') return true;
+
+  // Handle rgba(0, 0, 0, 0) with or without spaces
+  const rgbaMatch = value.match(/rgba\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)/);
+  if (rgbaMatch) {
+    const [, r, g, b, a] = rgbaMatch;
+    // Check if it's fully transparent black or has zero alpha
+    const alpha = parseFloat(a);
+    return r === '0' && g === '0' && b === '0' && alpha === 0;
+  }
+
+  return false;
+};
 
 const rgbToHex = (rgb: string): string | null => {
-  const match = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  // Extract rgba values with flexible spacing
+  const match = rgb.match(/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)/);
   if (!match) return null;
-  const [, r, g, b] = match.map(Number);
+
+  const r = Number(match[1]);
+  const g = Number(match[2]);
+  const b = Number(match[3]);
+  const alpha = match[4] ? parseFloat(match[4]) : 1;
+
+  // Skip colors with partial transparency (alpha < 1)
+  // We can't represent alpha in 6-digit hex, so skip these colors
+  if (alpha < 1) return null;
+
   return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
 };
 
