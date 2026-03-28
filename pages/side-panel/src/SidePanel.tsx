@@ -1,10 +1,12 @@
 import { AnimationList } from './components/AnimationList';
-import { ColorSwatches } from './components/ColorSwatches';
+import { ColorEditor } from './components/ColorEditor';
 import { ComponentList } from './components/ComponentList';
 import { ExportModal } from './components/ExportModal';
+import { OverrideToggle } from './components/OverrideToggle';
 import { SkeletonLoader } from './components/SkeletonLoader';
-import { SpacingGrid } from './components/SpacingGrid';
-import { TypographyList } from './components/TypographyList';
+import { SpacingEditor } from './components/SpacingEditor';
+import { TypographyEditor } from './components/TypographyEditor';
+import { useOverrides } from './hooks/useOverrides';
 import { BrandingDetailView } from './views/BrandingDetailView';
 import { BrandingsView } from './views/BrandingsView';
 import { getBrandings, saveBranding } from '@extension/storage';
@@ -25,6 +27,8 @@ const SidePanel = () => {
   const [showExport, setShowExport] = useState(false);
   const [brandings, setBrandings] = useState<SavedBranding[]>([]);
   const [savedToast, setSavedToast] = useState(false);
+
+  const { overrides, hasOverrides, enabled, applyOverride, removeOverride, toggleEnabled } = useOverrides();
 
   useEffect(() => {
     getBrandings()
@@ -120,6 +124,7 @@ const SidePanel = () => {
             style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
             Branding Extractor
           </h1>
+          <OverrideToggle enabled={enabled} onToggle={toggleEnabled} hasOverrides={hasOverrides} />
           <div className="flex items-center gap-2">
             {/* Saved brandings toggle */}
             <button
@@ -241,9 +246,33 @@ const SidePanel = () => {
               </div>
             ) : (
               <>
-                {activeTab === 'colors' && <ColorSwatches colors={result.colors} onCopy={handleCopy} />}
-                {activeTab === 'typography' && <TypographyList typography={result.typography} onCopy={handleCopy} />}
-                {activeTab === 'spacing' && <SpacingGrid spacing={result.spacing} onCopy={handleCopy} />}
+                {activeTab === 'colors' && (
+                  <ColorEditor
+                    colors={result.colors}
+                    overrides={overrides}
+                    onOverride={applyOverride}
+                    onResetOverride={removeOverride}
+                    onCopy={handleCopy}
+                  />
+                )}
+                {activeTab === 'typography' && (
+                  <TypographyEditor
+                    typography={result.typography}
+                    overrides={overrides}
+                    onOverride={applyOverride}
+                    onResetOverride={removeOverride}
+                    onCopy={handleCopy}
+                  />
+                )}
+                {activeTab === 'spacing' && (
+                  <SpacingEditor
+                    spacing={result.spacing}
+                    overrides={overrides}
+                    onOverride={applyOverride}
+                    onResetOverride={removeOverride}
+                    onCopy={handleCopy}
+                  />
+                )}
                 {activeTab === 'components' && <ComponentList components={result.components} onCopy={handleCopy} />}
                 {activeTab === 'animations' && <AnimationList animations={result.animations} onCopy={handleCopy} />}
               </>
