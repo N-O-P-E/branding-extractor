@@ -195,6 +195,16 @@ importers:
         specifier: workspace:*
         version: link:../tsconfig
 
+  packages/exporter:
+    dependencies:
+      '@extension/extractor':
+        specifier: workspace:*
+        version: link:../extractor
+    devDependencies:
+      '@extension/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+
   packages/extractor:
     devDependencies:
       '@extension/tsconfig':
@@ -388,6 +398,9 @@ importers:
 
   pages/side-panel:
     dependencies:
+      '@extension/exporter':
+        specifier: workspace:*
+        version: link:../../packages/exporter
       '@extension/extractor':
         specifier: workspace:*
         version: link:../../packages/extractor

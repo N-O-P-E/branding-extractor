@@ -1,6 +1,7 @@
 import { AnimationList } from './components/AnimationList';
 import { ColorSwatches } from './components/ColorSwatches';
 import { ComponentList } from './components/ComponentList';
+import { ExportModal } from './components/ExportModal';
 import { SkeletonLoader } from './components/SkeletonLoader';
 import { SpacingGrid } from './components/SpacingGrid';
 import { TypographyList } from './components/TypographyList';
@@ -14,6 +15,7 @@ const SidePanel = () => {
   const [result, setResult] = useState<ExtractionResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showExport, setShowExport] = useState(false);
 
   const handleExtract = useCallback(async () => {
     setLoading(true);
@@ -45,16 +47,25 @@ const SidePanel = () => {
   ];
 
   return (
-    <div className="flex h-screen flex-col bg-white">
+    <div className="relative flex h-screen flex-col bg-white">
       {/* Header */}
       <div className="flex items-center justify-between border-b px-4 py-3">
         <h1 className="text-lg font-semibold">Branding Extractor</h1>
-        <button
-          onClick={handleExtract}
-          disabled={loading}
-          className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
-          {loading ? 'Extracting...' : 'Extract'}
-        </button>
+        <div className="flex items-center gap-2">
+          {result && (
+            <button
+              onClick={() => setShowExport(true)}
+              className="rounded-lg border border-indigo-200 px-3 py-1.5 text-sm font-medium text-indigo-600 transition-colors hover:bg-indigo-50">
+              Export
+            </button>
+          )}
+          <button
+            onClick={handleExtract}
+            disabled={loading}
+            className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+            {loading ? 'Extracting...' : 'Extract'}
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -101,6 +112,9 @@ const SidePanel = () => {
           Copied!
         </div>
       )}
+
+      {/* Export modal */}
+      {showExport && result && <ExportModal result={result} onClose={() => setShowExport(false)} />}
     </div>
   );
 };

@@ -1,0 +1,130 @@
+import { exportAsCss, exportAsTokens, exportAsTailwind } from '@extension/exporter';
+import { useCallback, useEffect, useState } from 'react';
+import type { ExtractionResult } from '@extension/extractor';
+
+interface Props {
+  result: ExtractionResult;
+  onClose: () => void;
+}
+
+type Format = 'tokens' | 'css' | 'tailwind';
+
+const FORMAT_META: Record<Format, { label: string; filename: string; mime: string }> = {
+  tokens: { label: 'JSON Tokens', filename: 'tokens.json', mime: 'application/json' },
+  css: { label: 'CSS Variables', filename: 'variables.css', mime: 'text/css' },
+  tailwind: { label: 'Tailwind Config', filename: 'tailwind.config.js', mime: 'text/javascript' },
+};
+
+export const ExportModal = ({ result, onClose }: Props) => {
+  const [activeFormat, setActiveFormat] = useState<Format>('tokens');
+  const [copied, setCopied] = useState(false);
+  const getContent = useCallback(
+    (format: Format): string => {
+      if (format === 'tokens') return exportAsTokens(result);
+      if (format === 'css') return exportAsCss(result);
+      return exportAsTailwind(result);
+    },
+    [result],
+  );
+
+  const handleCopy = useCallback(async () => {
+    await navigator.clipboard.writeText(getContent(activeFormat));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }, [activeFormat, getContent]);
+
+  const handleDownload = useCallback(() => {
+    const meta = FORMAT_META[activeFormat];
+    const blob = new Blob([getContent(activeFormat)], { type: meta.mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = meta.filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [activeFormat, getContent]);
+
+  // Close on Escape key
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const content = getContent(activeFormat);
+  const formats = Object.entries(FORMAT_META) as [Format, (typeof FORMAT_META)[Format]][];
+
+  return (
+    <div
+      className="absolute inset-0 z-50 flex items-end justify-center"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Export design tokens">
+      {/* Backdrop — a button so keyboard users can dismiss with Enter/Space */}
+      <button
+        type="button"
+        aria-label="Close export modal"
+        onClick={onClose}
+        className="absolute inset-0 cursor-default bg-black/40"
+        tabIndex={-1}
+      />
+      <div className="relative flex w-full flex-col rounded-t-2xl bg-white shadow-xl" style={{ maxHeight: '85vh' }}>
+        {/* Modal header */}
+        <div className="flex items-center justify-between border-b px-4 py-3">
+          <h2 className="text-sm font-semibold text-gray-900">Export</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+            aria-label="Close export modal">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Format tabs */}
+        <div className="flex border-b">
+          {formats.map(([id, meta]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setActiveFormat(id)}
+              className={`flex-1 py-2 text-xs font-medium transition-colors ${
+                activeFormat === id
+                  ? 'border-b-2 border-indigo-600 text-indigo-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}>
+              {meta.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Code preview */}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <pre className="whitespace-pre-wrap break-all p-4 font-mono text-[10px] leading-relaxed text-gray-700">
+            {content}
+          </pre>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex gap-2 border-t px-4 py-3">
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="flex-1 rounded-lg border border-gray-200 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50">
+            {copied ? 'Copied!' : 'Copy'}
+          </button>
+          <button
+            type="button"
+            onClick={handleDownload}
+            className="flex-1 rounded-lg bg-indigo-600 py-2 text-xs font-medium text-white transition-colors hover:bg-indigo-700">
+            Download
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
