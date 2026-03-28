@@ -1,0 +1,32 @@
+{
+  "name": "@extension/extractor",
+  "version": "0.1.0",
+  "description": "Design system extraction engine",
+  "type": "module",
+  "private": true,
+  "sideEffects": false,
+  "files": [
+    "dist/**"
+  ],
+  "types": "index.mts",
+  "main": "dist/index.mjs",
+  "scripts": {
+    "clean:bundle": "rimraf dist",
+    "clean:node_modules": "pnpx rimraf node_modules",
+    "clean:turbo": "rimraf .turbo",
+    "clean": "pnpm clean:bundle && pnpm clean:node_modules && pnpm clean:turbo",
+    "ready": "tsc -b",
+    "lint": "eslint .",
+    "lint:fix": "pnpm lint --fix",
+    "format": "prettier . --write --ignore-path ../../.prettierignore",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "postinstall": "pnpm ready"
+  },
+  "devDependencies": {
+    "@extension/tsconfig": "workspace:*",
+    "jsdom": "^26.1.0",
+    "vitest": "^3.2.1"
+  }
+}
