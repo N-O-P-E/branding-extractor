@@ -1,3 +1,4 @@
+import { hasDirectStyle } from './parent-diff.js';
 import type { ExtractedAnimation } from './types.js';
 
 /**
@@ -155,13 +156,16 @@ const splitShorthandSegments = (value: string): string[] => {
  * Extract transition and animation CSS properties from all descendant elements
  * of `root`.
  *
- * Only inline style declarations are inspected. Each unique combination of
+ * Only directly-applied style declarations are inspected — inherited values from
+ * ancestors are filtered out using parent-diff. Each unique combination of
  * (property + duration + timingFunction + delay) is deduplicated and its
  * usageCount reflects how many elements declare it. Results are sorted by
  * usageCount descending.
  *
  * In jsdom, getComputedStyle does not fully parse transition/animation
- * shorthands, so we read the raw inline style attribute string directly.
+ * shorthands, so we read the raw inline style attribute string directly for
+ * value parsing. hasDirectStyle is used as the gate to decide whether the
+ * property is directly declared on the element.
  */
 const extractAnimations = (root: Element): ExtractedAnimation[] => {
   // key → ExtractedAnimation accumulator
@@ -181,23 +185,28 @@ const extractAnimations = (root: Element): ExtractedAnimation[] => {
 
   elements.forEach(el => {
     const style = (el as HTMLElement).style;
-    if (!style.length) return;
 
     // --- transitions ---
-    const transitionValue = style.getPropertyValue('transition');
-    if (transitionValue) {
-      for (const segment of splitShorthandSegments(transitionValue)) {
-        const parsed = parseTransitionSegment(segment);
-        if (parsed) record(parsed);
+    // Use hasDirectStyle as the gate; read the raw inline value for parsing
+    // because jsdom does not fully resolve transition shorthands in getComputedStyle.
+    if (hasDirectStyle(el, 'transition')) {
+      const transitionValue = style.getPropertyValue('transition');
+      if (transitionValue) {
+        for (const segment of splitShorthandSegments(transitionValue)) {
+          const parsed = parseTransitionSegment(segment);
+          if (parsed) record(parsed);
+        }
       }
     }
 
     // --- animations ---
-    const animationValue = style.getPropertyValue('animation');
-    if (animationValue) {
-      for (const segment of splitShorthandSegments(animationValue)) {
-        const parsed = parseAnimationSegment(segment);
-        if (parsed) record(parsed);
+    if (hasDirectStyle(el, 'animation')) {
+      const animationValue = style.getPropertyValue('animation');
+      if (animationValue) {
+        for (const segment of splitShorthandSegments(animationValue)) {
+          const parsed = parseAnimationSegment(segment);
+          if (parsed) record(parsed);
+        }
       }
     }
   });
