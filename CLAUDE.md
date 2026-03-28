@@ -28,12 +28,12 @@ Built by [Studio N.O.P.E.](https://studionope.nl) — [@tijsluitse](https://gith
 
 The extension uses `chrome.runtime.sendMessage` for communication between contexts:
 
-- **Side panel** <-> **Content script**: `GET_HTML_SNIPPET` for element HTML extraction
-- Future (Phase 3): design-token extraction messages will be added to `packages/shared/lib/messages.ts`
+- **Side panel** -> **Content script**: `EXTRACT_STYLES` triggers full design-token extraction from the active tab's DOM
+- The content script responds with an `ExtractStylesResponse` containing colors, typography, spacing, components, and animations
 
-### Design token extraction (Phase 3)
+### Design token extraction
 
-The planned extraction pipeline:
+The extraction pipeline:
 1. Content script walks the DOM and collects computed styles
 2. Color values are deduplicated and grouped into a palette
 3. Font families, sizes, weights, and line-heights are catalogued
@@ -78,6 +78,7 @@ Load `dist/` as unpacked extension in `chrome://extensions` (Developer mode).
 | Permission | Why |
 |-----------|-----|
 | `activeTab` | Access current tab for content script injection |
+| `tabs` | Query active tab to send extraction messages to content script |
 | `storage` | Store user preferences and extracted token sets |
 | `sidePanel` | Chrome side panel API |
 | `host_permissions: <all_urls>` | Inject content scripts on any page to extract styles |

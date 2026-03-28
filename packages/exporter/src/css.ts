@@ -14,7 +14,7 @@ export const exportAsCss = (result: ExtractionResult): string => {
     lines.push('');
     lines.push('  /* Typography */');
     result.typography.forEach((t, i) => {
-      const prefix = `--font-${t.element || i + 1}`;
+      const prefix = `--font-${t.element ? `${t.element}-${i + 1}` : i + 1}`;
       lines.push(`  ${prefix}-family: ${t.fontFamily};`);
       lines.push(`  ${prefix}-size: ${t.fontSize};`);
       lines.push(`  ${prefix}-weight: ${t.fontWeight};`);

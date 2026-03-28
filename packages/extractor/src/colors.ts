@@ -85,10 +85,9 @@ const isTransparent = (value: string): boolean => {
   // Handle rgba(0, 0, 0, 0) with or without spaces
   const rgbaMatch = value.match(/rgba\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)/);
   if (rgbaMatch) {
-    const [, r, g, b, a] = rgbaMatch;
-    // Check if it's fully transparent black or has zero alpha
-    const alpha = parseFloat(a);
-    return r === '0' && g === '0' && b === '0' && alpha === 0;
+    const [, , , , a] = rgbaMatch;
+    // Any color with alpha === 0 is fully transparent regardless of RGB values
+    return parseFloat(a) === 0;
   }
 
   return false;

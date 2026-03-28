@@ -19,7 +19,7 @@
     "base-dev": "pnpm clean:bundle && turbo ready && turbo watch dev",
     "dev": "pnpm set-global-env CLI_CEB_DEV=true && pnpm base-dev",
     "dev:firefox": "pnpm set-global-env CLI_CEB_DEV=true CLI_CEB_FIREFOX=true && pnpm base-dev",
-    "zip": "pnpm build && cd dist && zip -r ../visual-issue-reporter.zip .",
+    "zip": "pnpm build && cd dist && zip -r ../branding-extractor.zip .",
     "e2e": "pnpm zip && turbo e2e",
     "e2e:firefox": "pnpm zip:firefox && turbo e2e",
     "lint": "turbo lint --continue",

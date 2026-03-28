@@ -8,7 +8,7 @@ export const exportAsTokens = (result: ExtractionResult): string =>
       ),
       typography: Object.fromEntries(
         result.typography.map((t, i) => [
-          `type-${t.element || i}`,
+          `type-${t.element ? `${t.element}-${i}` : i}`,
           {
             fontFamily: { value: t.fontFamily, type: 'fontFamily' },
             fontSize: { value: t.fontSize, type: 'fontSize' },
