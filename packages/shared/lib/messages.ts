@@ -50,6 +50,15 @@ export interface DeactivateInspectorMessage {
   type: 'DEACTIVATE_INSPECTOR';
 }
 
+export interface CaptureScreenshotMessage {
+  type: 'CAPTURE_SCREENSHOT';
+  payload: { mode: 'before' | 'after' | 'current' };
+}
+
+export interface CaptureScreenshotResponse {
+  dataUrl: string;
+}
+
 export type ExtensionMessage =
   | ExtractStylesMessage
   | ApplyOverrideMessage
@@ -58,4 +67,5 @@ export type ExtensionMessage =
   | SetOverridesEnabledMessage
   | GetOverrideStateMessage
   | ActivateInspectorMessage
-  | DeactivateInspectorMessage;
+  | DeactivateInspectorMessage
+  | CaptureScreenshotMessage;

@@ -1,14 +1,20 @@
 import {
-  extractColors,
-  extractTypography,
-  extractSpacing,
+  captureFullPage,
   detectComponents,
   extractAnimations,
-  scanStylesheets,
+  extractColors,
+  extractSpacing,
+  extractTypography,
   OverrideEngine,
+  scanStylesheets,
 } from '@extension/extractor';
 import type { TokenOverride } from '@extension/extractor';
-import type { ExtensionMessage, ExtractStylesResponse, GetOverrideStateResponse } from '@extension/shared';
+import type {
+  CaptureScreenshotResponse,
+  ExtensionMessage,
+  ExtractStylesResponse,
+  GetOverrideStateResponse,
+} from '@extension/shared';
 
 // Lazy-initialized override engine
 let engine: OverrideEngine | null = null;
@@ -42,7 +48,9 @@ chrome.runtime.onMessage.addListener(
   (
     message: ExtensionMessage,
     _sender,
-    sendResponse: (response: ExtractStylesResponse | GetOverrideStateResponse | void) => void,
+    sendResponse: (
+      response: ExtractStylesResponse | GetOverrideStateResponse | CaptureScreenshotResponse | void,
+    ) => void,
   ) => {
     if (message.type === 'EXTRACT_STYLES') {
       const scan = scanStylesheets(document);
@@ -81,6 +89,25 @@ chrome.runtime.onMessage.addListener(
         overrides: engine ? engine.getOverrides() : [],
         enabled: overridesEnabled,
       });
+    }
+
+    if (message.type === 'CAPTURE_SCREENSHOT') {
+      const { mode } = message.payload;
+
+      const capture = async () => {
+        if (mode === 'before' && engine) {
+          // Temporarily disable overrides
+          engine.setEnabled(false);
+          await new Promise(resolve => requestAnimationFrame(resolve));
+          const dataUrl = await captureFullPage();
+          engine.setEnabled(overridesEnabled); // restore
+          return dataUrl;
+        }
+        // 'after' or 'current' — capture as-is
+        return captureFullPage();
+      };
+
+      capture().then(dataUrl => sendResponse({ dataUrl }));
     }
 
     return true;

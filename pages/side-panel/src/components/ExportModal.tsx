@@ -1,6 +1,7 @@
 import { exportAsCss, exportAsSession, exportAsTokens, exportAsTailwind } from '@extension/exporter';
 import { useCallback, useEffect, useState } from 'react';
 import type { ExtractionResult, TokenOverride } from '@extension/extractor';
+import type { CaptureScreenshotResponse } from '@extension/shared';
 
 interface Props {
   result: ExtractionResult;
@@ -21,9 +22,36 @@ export const ExportModal = ({ result, onClose, overrides }: Props) => {
   const [activeFormat, setActiveFormat] = useState<Format>('tokens');
   const [copied, setCopied] = useState(false);
   const [useModified, setUseModified] = useState(false);
+  const [screenshotBefore, setScreenshotBefore] = useState<string | undefined>(undefined);
+  const [screenshotAfter, setScreenshotAfter] = useState<string | undefined>(undefined);
+  const [capturingScreenshots, setCapturingScreenshots] = useState(false);
 
   const hasOverrides = overrides !== undefined && overrides.length > 0;
   const activeOverrides = hasOverrides && useModified ? overrides : undefined;
+
+  const handleCaptureScreenshots = useCallback(async () => {
+    setCapturingScreenshots(true);
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab?.id) return;
+
+      const beforeResponse = await chrome.tabs.sendMessage<
+        { type: string; payload: { mode: string } },
+        CaptureScreenshotResponse
+      >(tab.id, { type: 'CAPTURE_SCREENSHOT', payload: { mode: 'before' } });
+      setScreenshotBefore(beforeResponse.dataUrl);
+
+      const afterResponse = await chrome.tabs.sendMessage<
+        { type: string; payload: { mode: string } },
+        CaptureScreenshotResponse
+      >(tab.id, { type: 'CAPTURE_SCREENSHOT', payload: { mode: 'after' } });
+      setScreenshotAfter(afterResponse.dataUrl);
+    } catch (err) {
+      console.error('Screenshot capture failed:', err);
+    } finally {
+      setCapturingScreenshots(false);
+    }
+  }, []);
 
   const getContent = useCallback(
     (format: Format): string => {
@@ -45,9 +73,13 @@ export const ExportModal = ({ result, onClose, overrides }: Props) => {
           return 'branding';
         }
       })();
-      return exportAsSession(name, origin, result, activeOverrides ?? []);
+      const screenshots =
+        screenshotBefore !== undefined || screenshotAfter !== undefined
+          ? { before: screenshotBefore, after: screenshotAfter }
+          : undefined;
+      return exportAsSession(name, origin, result, activeOverrides ?? [], screenshots);
     },
-    [result, activeOverrides],
+    [result, activeOverrides, screenshotBefore, screenshotAfter],
   );
 
   const handleCopy = useCallback(async () => {
@@ -176,6 +208,34 @@ export const ExportModal = ({ result, onClose, overrides }: Props) => {
             </button>
           ))}
         </div>
+
+        {/* Session screenshot capture — only shown on the Session tab */}
+        {activeFormat === 'session' && (
+          <div
+            className="flex items-center gap-3 px-4 py-2"
+            style={{ borderBottom: '1px solid var(--border-default)' }}>
+            <button
+              type="button"
+              onClick={handleCaptureScreenshots}
+              disabled={capturingScreenshots}
+              className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+              style={{
+                border: '1px solid var(--accent-primary)',
+                color: 'var(--accent-subtle)',
+              }}>
+              {capturingScreenshots ? 'Capturing...' : 'Capture Before/After'}
+            </button>
+            {(screenshotBefore !== undefined || screenshotAfter !== undefined) && (
+              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                {screenshotBefore !== undefined && screenshotAfter !== undefined
+                  ? 'Before + After captured'
+                  : screenshotBefore !== undefined
+                    ? 'Before captured'
+                    : 'After captured'}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Code preview */}
         <div className="min-h-0 flex-1 overflow-y-auto" style={{ backgroundColor: 'var(--bg-secondary)' }}>
