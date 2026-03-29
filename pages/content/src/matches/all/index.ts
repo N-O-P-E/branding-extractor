@@ -65,23 +65,28 @@ chrome.runtime.onMessage.addListener(
         url: window.location.href,
       };
       sendResponse({ result });
+      return;
     }
 
     if (message.type === 'APPLY_OVERRIDE') {
       getEngine().applyOverride(message.payload);
+      return;
     }
 
     if (message.type === 'REMOVE_OVERRIDE') {
       getEngine().removeOverride(message.payload.tokenId);
+      return;
     }
 
     if (message.type === 'CLEAR_ALL_OVERRIDES') {
       getEngine().clearAll();
+      return;
     }
 
     if (message.type === 'SET_OVERRIDES_ENABLED') {
       overridesEnabled = message.payload.enabled;
       getEngine().setEnabled(message.payload.enabled);
+      return;
     }
 
     if (message.type === 'GET_OVERRIDE_STATE') {
@@ -89,6 +94,7 @@ chrome.runtime.onMessage.addListener(
         overrides: engine ? engine.getOverrides() : [],
         enabled: overridesEnabled,
       });
+      return;
     }
 
     if (message.type === 'CAPTURE_SCREENSHOT') {
@@ -108,8 +114,7 @@ chrome.runtime.onMessage.addListener(
       };
 
       capture().then(dataUrl => sendResponse({ dataUrl }));
+      return true; // only this handler is async
     }
-
-    return true;
   },
 );
