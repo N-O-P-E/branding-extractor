@@ -229,56 +229,70 @@ const SidePanel = () => {
         <div className="flex flex-col" style={{ borderBottom: '1px solid var(--border-default)' }}>
           {/* Row 1: Title + primary actions */}
           <div className="flex items-center justify-between gap-2 px-4 pb-2 pt-3">
-            <h1
-              className="shrink-0 text-base font-semibold leading-tight"
-              style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
-              Branding Extractor
-            </h1>
+            <div className="flex items-center gap-1.5">
+              {isBrandingsView && (
+                <button
+                  type="button"
+                  onClick={() => setView({ type: 'extract' })}
+                  aria-label="Back to extraction"
+                  className="flex cursor-pointer items-center justify-center rounded-md p-1 transition-colors"
+                  style={{ color: 'var(--text-secondary)' }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-subtle)';
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
+                  }}>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path
+                      d="M10 3L5 8l5 5"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              )}
+              <h1
+                className="shrink-0 text-base font-semibold leading-tight"
+                style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
+                Branding Extractor
+              </h1>
+            </div>
 
             <div className="flex items-center gap-1.5">
-              {/* Saved brandings toggle */}
-              <button
-                type="button"
-                onClick={() => setView(isBrandingsView ? { type: 'extract' } : { type: 'brandings' })}
-                aria-label={isBrandingsView ? 'Back to extraction' : 'View saved brandings'}
-                className="cursor-pointer rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
-                style={
-                  isBrandingsView
-                    ? {
-                        border: '1px solid var(--accent-primary)',
-                        background: 'var(--accent-10)',
-                        color: 'var(--accent-subtle)',
-                      }
-                    : {
-                        border: '1px solid var(--border-default)',
-                        color: 'var(--text-secondary)',
-                      }
-                }
-                onMouseEnter={e => {
-                  if (!isBrandingsView) {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent-primary)';
-                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-subtle)';
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!isBrandingsView) {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-default)';
-                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
-                  }
-                }}>
-                {isBrandingsView ? 'Extract' : `Saved${brandings.length > 0 ? ` (${brandings.length})` : ''}`}
-              </button>
-
+              {/* Saved brandings button — only shown in extract view */}
               {isExtractView && (
                 <button
                   type="button"
-                  onClick={handleExtract}
-                  disabled={loading}
-                  className="cursor-pointer rounded-lg px-2.5 py-1 text-xs font-medium text-white transition-opacity disabled:opacity-50"
-                  style={{ background: 'var(--accent-gradient)' }}>
-                  {loading ? 'Extracting…' : 'Extract'}
+                  onClick={() => setView({ type: 'brandings' })}
+                  aria-label="View saved brandings"
+                  className="cursor-pointer rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
+                  style={{
+                    border: '1px solid var(--border-default)',
+                    color: 'var(--text-secondary)',
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent-primary)';
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-subtle)';
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-default)';
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
+                  }}>
+                  {`Saved${brandings.length > 0 ? ` (${brandings.length})` : ''}`}
                 </button>
               )}
+
+              <button
+                type="button"
+                onClick={handleExtract}
+                disabled={loading}
+                className="cursor-pointer rounded-lg px-2.5 py-1 text-xs font-medium text-white transition-opacity disabled:opacity-50"
+                style={{ background: 'var(--accent-gradient)' }}>
+                {loading ? 'Extracting…' : 'Extract'}
+              </button>
             </div>
           </div>
 
