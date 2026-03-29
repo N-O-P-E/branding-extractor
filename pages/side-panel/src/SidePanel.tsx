@@ -348,8 +348,13 @@ const SidePanel = () => {
                 </button>
               )}
               <h1
-                className="shrink-0 text-base font-semibold leading-tight"
-                style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
+                className="shrink-0 text-lg leading-tight"
+                style={{
+                  fontFamily: "'Instrument Serif', serif",
+                  fontWeight: 400,
+                  fontStyle: 'italic',
+                  color: 'var(--text-primary)',
+                }}>
                 Branding Extractor
               </h1>
             </div>
@@ -495,44 +500,48 @@ const SidePanel = () => {
       {/* Main extraction view */}
       {isExtractView && (
         <>
-          {/* Tab bar */}
-          <div className="flex" style={{ borderBottom: '1px solid var(--border-default)' }}>
-            {tabs.map(tab => {
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className="relative flex flex-1 cursor-pointer flex-col items-center gap-1 px-1 py-2.5 transition-colors"
-                  style={
-                    isActive
-                      ? {
-                          borderBottom: '2px solid var(--accent-primary)',
-                          color: 'var(--accent-subtle)',
-                        }
-                      : {
-                          color: 'var(--text-secondary)',
-                        }
-                  }
-                  title={tab.label}>
-                  <span className="flex items-center gap-1.5">
-                    {tab.icon}
-                    <span className="text-[13px] font-medium">{tab.label}</span>
-                  </span>
-                  {tab.count !== undefined && tab.count > 0 && (
-                    <span
-                      className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 font-mono text-xs leading-none"
-                      style={{
-                        background: isActive ? 'var(--accent-15)' : 'var(--bg-secondary)',
-                        color: isActive ? 'var(--accent-subtle)' : 'var(--text-muted)',
-                      }}>
-                      {tab.count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+          {/* Tab pills */}
+          <div className="px-3 pb-2">
+            <p
+              className="mb-1.5 text-[10px] font-medium uppercase tracking-wider"
+              style={{ color: 'var(--text-muted)' }}>
+              Design Tokens
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {tabs.map(tab => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className="flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all"
+                    style={
+                      isActive
+                        ? {
+                            border: '1px solid var(--accent-primary)',
+                            background: 'var(--accent-10)',
+                            color: 'var(--accent-subtle)',
+                          }
+                        : {
+                            border: '1px solid var(--border-default)',
+                            background: 'transparent',
+                            color: 'var(--text-secondary)',
+                          }
+                    }
+                    title={tab.label}>
+                    {tab.label}
+                    {tab.count !== undefined && tab.count > 0 && (
+                      <span
+                        className="font-mono text-[10px] leading-none"
+                        style={{ color: isActive ? 'var(--accent-subtle)' : 'var(--text-muted)' }}>
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Content area */}
