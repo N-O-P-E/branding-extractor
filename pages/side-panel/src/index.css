@@ -76,6 +76,71 @@
   --brand-footer-text: #ffffff;
 }
 
+/* ─── Ask Phill Theme ───────────────────────────────────────────── */
+[data-theme='ask-phill'] {
+  --bg-primary: #121212;
+  --bg-secondary: #1c1c1c;
+  --bg-hover: #2a2a2a;
+  --bg-input: rgba(216, 204, 181, 0.08);
+
+  --accent-primary: #de0015;
+  --accent-hover: #b80011;
+  --accent-subtle: #d8ccb5;
+  --accent-link: #d8ccb5;
+  --accent-gradient: linear-gradient(135deg, #de0015, #b80011);
+  --accent-gradient-disabled: rgba(222, 0, 21, 0.4);
+  --accent-10: rgba(222, 0, 21, 0.1);
+  --accent-15: rgba(222, 0, 21, 0.15);
+  --accent-20: rgba(222, 0, 21, 0.2);
+
+  --text-primary: #faf8f7;
+  --text-secondary: rgba(250, 248, 247, 0.5);
+  --text-muted: rgba(250, 248, 247, 0.3);
+
+  --border-default: rgba(216, 204, 181, 0.15);
+  --border-subtle: rgba(216, 204, 181, 0.1);
+  --border-input: rgba(216, 204, 181, 0.12);
+
+  --brand-footer-bg: #de0015;
+  --brand-footer-text: #faf8f7;
+
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: -0.08em;
+}
+
+/* ─── Strix Theme ───────────────────────────────────────────────── */
+[data-theme='strix'] {
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #222222;
+  --bg-hover: #2e2e2e;
+  --bg-input: rgba(255, 219, 50, 0.06);
+
+  --accent-primary: #ffdb32;
+  --accent-hover: #e6c52d;
+  --accent-subtle: #ffdb32;
+  --accent-link: #ffdb32;
+  --accent-gradient: linear-gradient(135deg, #ffdb32, #e6c52d);
+  --accent-gradient-disabled: rgba(255, 219, 50, 0.4);
+  --accent-10: rgba(255, 219, 50, 0.1);
+  --accent-15: rgba(255, 219, 50, 0.15);
+  --accent-20: rgba(255, 219, 50, 0.2);
+
+  --text-primary: #f5f5f5;
+  --text-secondary: rgba(245, 245, 245, 0.5);
+  --text-muted: rgba(245, 245, 245, 0.3);
+
+  --border-default: rgba(255, 219, 50, 0.15);
+  --border-subtle: rgba(255, 219, 50, 0.1);
+  --border-input: rgba(255, 219, 50, 0.12);
+
+  --brand-footer-bg: #ffdb32;
+  --brand-footer-text: #1a1a1a;
+
+  --font-body: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-heading: 'Poppins', sans-serif;
+  letter-spacing: -0.03em;
+}
+
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);

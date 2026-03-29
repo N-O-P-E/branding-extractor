@@ -5,8 +5,10 @@ import { ExportModal } from './components/ExportModal';
 import { OverrideToggle } from './components/OverrideToggle';
 import { SkeletonLoader } from './components/SkeletonLoader';
 import { SpacingEditor } from './components/SpacingEditor';
+import { ThemeSettings } from './components/ThemeSettings';
 import { TypographyEditor } from './components/TypographyEditor';
 import { useOverrides } from './hooks/useOverrides';
+import { useTheme } from './hooks/useTheme';
 import { BrandingDetailView } from './views/BrandingDetailView';
 import { BrandingsView } from './views/BrandingsView';
 import { ElementDetailView } from './views/ElementDetailView';
@@ -21,6 +23,7 @@ type Tab = 'colors' | 'typography' | 'spacing' | 'components' | 'animations';
 type View =
   | { type: 'extract' }
   | { type: 'brandings' }
+  | { type: 'settings' }
   | { type: 'detail'; branding: SavedBranding }
   | { type: 'element'; selector: string; styles: Record<string, string>; linkedTokens: Record<string, string> };
 
@@ -82,6 +85,93 @@ const CrosshairIcon = () => (
   </svg>
 );
 
+const SaveIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <path
+      d="M12.5 14H3.5C3.10218 14 2.72064 13.842 2.43934 13.5607C2.15804 13.2794 2 12.8978 2 12.5V3.5C2 3.10218 2.15804 2.72064 2.43934 2.43934C2.72064 2.15804 3.10218 2 3.5 2H10.5L14 5.5V12.5C14 12.8978 13.842 13.2794 13.5607 13.5607C13.2794 13.842 12.8978 14 12.5 14Z"
+      stroke="currentColor"
+      strokeWidth="1.25"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path d="M11.5 14V9H4.5V14" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M4.5 2V5.5H10" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const ExportIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <path
+      d="M14 10V12.5C14 13.3284 13.3284 14 12.5 14H3.5C2.67157 14 2 13.3284 2 12.5V10"
+      stroke="currentColor"
+      strokeWidth="1.25"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M5 6.5L8 3.5L11 6.5"
+      stroke="currentColor"
+      strokeWidth="1.25"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path d="M8 3.5V10.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const SettingsIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.25" />
+    <path
+      d="M13.1 10.1a1.1 1.1 0 0 0 .22 1.21l.04.04a1.33 1.33 0 1 1-1.89 1.89l-.04-.04a1.1 1.1 0 0 0-1.21-.22 1.1 1.1 0 0 0-.67 1.01v.11a1.33 1.33 0 1 1-2.67 0v-.06A1.1 1.1 0 0 0 6.17 12.9a1.1 1.1 0 0 0-1.21.22l-.04.04a1.33 1.33 0 1 1-1.89-1.89l.04-.04a1.1 1.1 0 0 0 .22-1.21 1.1 1.1 0 0 0-1.01-.67h-.11a1.33 1.33 0 1 1 0-2.67h.06A1.1 1.1 0 0 0 3.27 6.17a1.1 1.1 0 0 0-.22-1.21l-.04-.04a1.33 1.33 0 1 1 1.89-1.89l.04.04a1.1 1.1 0 0 0 1.21.22h.05a1.1 1.1 0 0 0 .67-1.01v-.11a1.33 1.33 0 1 1 2.67 0v.06a1.1 1.1 0 0 0 .67 1.01 1.1 1.1 0 0 0 1.21-.22l.04-.04a1.33 1.33 0 1 1 1.89 1.89l-.04.04a1.1 1.1 0 0 0-.22 1.21v.05a1.1 1.1 0 0 0 1.01.67h.11a1.33 1.33 0 0 1 0 2.67h-.06a1.1 1.1 0 0 0-1.01.67Z"
+      stroke="currentColor"
+      strokeWidth="1"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+/** Reusable card button for the action bar grid */
+const ActionCard = ({
+  icon,
+  label,
+  onClick,
+  active,
+}: {
+  icon: ReactNode;
+  label: string;
+  onClick: () => void;
+  active?: boolean;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="flex cursor-pointer items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-xs font-medium transition-all"
+    style={{
+      border: active ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
+      background: active ? 'var(--accent-10)' : 'var(--bg-input)',
+      color: active ? 'var(--accent-subtle)' : 'var(--text-secondary)',
+    }}
+    onMouseEnter={e => {
+      if (!active) {
+        (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent-primary)';
+        (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-subtle)';
+        (e.currentTarget as HTMLButtonElement).style.background = 'var(--accent-10)';
+      }
+    }}
+    onMouseLeave={e => {
+      if (!active) {
+        (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-default)';
+        (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
+        (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-input)';
+      }
+    }}>
+    {icon}
+    {label}
+  </button>
+);
+
 const SidePanel = () => {
   const [view, setView] = useState<View>({ type: 'extract' });
   const [activeTab, setActiveTab] = useState<Tab>('colors');
@@ -95,6 +185,8 @@ const SidePanel = () => {
 
   const { overrides, overridesList, hasOverrides, enabled, applyOverride, removeOverride, toggleEnabled } =
     useOverrides();
+
+  const { activeTheme, allThemes, changeTheme, tryActivateCode } = useTheme();
 
   useEffect(() => {
     getBrandings()
@@ -217,6 +309,7 @@ const SidePanel = () => {
 
   const isExtractView = view.type === 'extract';
   const isBrandingsView = view.type === 'brandings';
+  const isSettingsView = view.type === 'settings';
   const isDetailView = view.type === 'detail';
   const isElementView = view.type === 'element';
 
@@ -225,7 +318,7 @@ const SidePanel = () => {
       className="relative flex h-screen flex-col pb-14"
       style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       {/* Header — hidden when viewing detail or element (they have their own headers) */}
-      {!isDetailView && !isElementView && (
+      {!isDetailView && !isElementView && !isSettingsView && (
         <div className="flex flex-col" style={{ borderBottom: '1px solid var(--border-default)' }}>
           {/* Row 1: Title + primary actions */}
           <div className="flex items-center justify-between gap-2 px-4 pb-2 pt-3">
@@ -296,105 +389,27 @@ const SidePanel = () => {
             </div>
           </div>
 
-          {/* Row 2: secondary actions — only shown when there's extracted data */}
-          {isExtractView && result && (
-            <div
-              className="flex items-center justify-between gap-2 px-4 pb-2"
-              style={{ borderTop: '1px solid var(--border-subtle)' }}>
-              <OverrideToggle enabled={enabled} onToggle={toggleEnabled} hasOverrides={hasOverrides} />
+          {/* Action bar */}
+          {isExtractView && (
+            <div className="px-3 pb-2 pt-1">
+              {/* Override toggle — shown above grid when there are overrides */}
+              {result && hasOverrides && (
+                <div className="mb-2">
+                  <OverrideToggle enabled={enabled} onToggle={toggleEnabled} hasOverrides={hasOverrides} />
+                </div>
+              )}
 
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={handleSaveCurrent}
-                  className="cursor-pointer rounded px-2 py-1 text-[11px] font-medium transition-colors"
-                  style={{
-                    border: '1px solid var(--border-default)',
-                    color: 'var(--text-secondary)',
-                  }}
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent-primary)';
-                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-subtle)';
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-default)';
-                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
-                  }}>
-                  Save
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowExport(true)}
-                  className="cursor-pointer rounded px-2 py-1 text-[11px] font-medium transition-colors"
-                  style={{
-                    border: '1px solid var(--border-default)',
-                    color: 'var(--text-secondary)',
-                  }}
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent-primary)';
-                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-subtle)';
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-default)';
-                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
-                  }}>
-                  Export
-                </button>
-                {/* Inspect button */}
-                <button
-                  type="button"
-                  onClick={handleActivateInspector}
-                  aria-label="Inspect element"
-                  title="Inspect element"
-                  className="flex cursor-pointer items-center justify-center rounded p-1 transition-colors"
-                  style={{
-                    border: '1px solid var(--border-default)',
-                    color: 'var(--text-secondary)',
-                  }}
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent-primary)';
-                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-subtle)';
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--accent-10)';
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-default)';
-                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
-                  }}>
-                  <CrosshairIcon />
-                </button>
+              {/* Action card grid */}
+              <div className="grid grid-cols-2 gap-2">
+                {result && (
+                  <>
+                    <ActionCard icon={<SaveIcon />} label="Save" onClick={handleSaveCurrent} />
+                    <ActionCard icon={<ExportIcon />} label="Export" onClick={() => setShowExport(true)} />
+                  </>
+                )}
+                <ActionCard icon={<CrosshairIcon />} label="Inspect" onClick={handleActivateInspector} />
+                <ActionCard icon={<SettingsIcon />} label="Settings" onClick={() => setView({ type: 'settings' })} />
               </div>
-            </div>
-          )}
-
-          {/* Inspect button when no result yet */}
-          {isExtractView && !result && (
-            <div
-              className="flex items-center justify-end gap-1.5 px-4 pb-2"
-              style={{ borderTop: '1px solid var(--border-subtle)' }}>
-              <button
-                type="button"
-                onClick={handleActivateInspector}
-                aria-label="Inspect element"
-                title="Inspect element"
-                className="flex cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium transition-colors"
-                style={{
-                  border: '1px solid var(--border-default)',
-                  color: 'var(--text-secondary)',
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent-primary)';
-                  (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-subtle)';
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--accent-10)';
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-default)';
-                  (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
-                }}>
-                <CrosshairIcon />
-                Inspect
-              </button>
             </div>
           )}
         </div>
@@ -411,6 +426,51 @@ const SidePanel = () => {
             onSaveCurrent={result ? handleSaveCurrent : undefined}
             hasCurrentResult={result !== null}
           />
+        </div>
+      )}
+
+      {/* Settings view */}
+      {isSettingsView && (
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <div
+            className="flex items-center gap-1.5 px-4 pb-2 pt-3"
+            style={{ borderBottom: '1px solid var(--border-default)' }}>
+            <button
+              type="button"
+              onClick={() => setView({ type: 'extract' })}
+              aria-label="Back"
+              className="flex cursor-pointer items-center justify-center rounded-md p-1 transition-colors"
+              style={{ color: 'var(--text-secondary)' }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-subtle)';
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
+              }}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path
+                  d="M10 3L5 8l5 5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+            <h1
+              className="text-base font-semibold"
+              style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
+              Settings
+            </h1>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            <ThemeSettings
+              activeTheme={activeTheme}
+              allThemes={allThemes}
+              onChangeTheme={changeTheme}
+              onActivateCode={tryActivateCode}
+            />
+          </div>
         </div>
       )}
 
@@ -444,7 +504,7 @@ const SidePanel = () => {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className="relative flex flex-1 cursor-pointer flex-col items-center gap-0.5 px-1 py-2 transition-colors"
+                  className="relative flex flex-1 cursor-pointer flex-col items-center gap-1 px-1 py-2.5 transition-colors"
                   style={
                     isActive
                       ? {
@@ -458,11 +518,11 @@ const SidePanel = () => {
                   title={tab.label}>
                   <span className="flex items-center gap-1.5">
                     {tab.icon}
-                    <span className="text-sm font-medium">{tab.label}</span>
+                    <span className="text-[13px] font-medium">{tab.label}</span>
                   </span>
                   {tab.count !== undefined && tab.count > 0 && (
                     <span
-                      className="h-4.5 inline-flex min-w-[18px] items-center justify-center rounded-full px-1.5 font-mono text-[11px] leading-none"
+                      className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 font-mono text-xs leading-none"
                       style={{
                         background: isActive ? 'var(--accent-15)' : 'var(--bg-secondary)',
                         color: isActive ? 'var(--accent-subtle)' : 'var(--text-muted)',
@@ -576,7 +636,15 @@ const SidePanel = () => {
           textDecoration: 'none',
           zIndex: 50,
         }}>
-        Built by <strong>Studio N.O.P.E.</strong>
+        {activeTheme !== 'default' ? (
+          <>
+            Studio N.O.P.E. &times; <strong>{allThemes.find(t => t.id === activeTheme)?.label}</strong>
+          </>
+        ) : (
+          <>
+            Built by <strong>Studio N.O.P.E.</strong>
+          </>
+        )}
       </a>
     </div>
   );
