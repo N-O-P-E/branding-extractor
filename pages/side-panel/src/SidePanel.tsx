@@ -9,6 +9,7 @@ import { TypographyEditor } from './components/TypographyEditor';
 import { useOverrides } from './hooks/useOverrides';
 import { BrandingDetailView } from './views/BrandingDetailView';
 import { BrandingsView } from './views/BrandingsView';
+import { ElementDetailView } from './views/ElementDetailView';
 import { getBrandings, saveBranding } from '@extension/storage';
 import { useCallback, useEffect, useState } from 'react';
 import type { ExtractionResult } from '@extension/extractor';
@@ -16,7 +17,11 @@ import type { SavedBranding } from '@extension/storage';
 
 type Tab = 'colors' | 'typography' | 'spacing' | 'components' | 'animations';
 
-type View = { type: 'extract' } | { type: 'brandings' } | { type: 'detail'; branding: SavedBranding };
+type View =
+  | { type: 'extract' }
+  | { type: 'brandings' }
+  | { type: 'detail'; branding: SavedBranding }
+  | { type: 'element'; selector: string; styles: Record<string, string>; linkedTokens: Record<string, string> };
 
 const SidePanel = () => {
   const [view, setView] = useState<View>({ type: 'extract' });
@@ -34,6 +39,29 @@ const SidePanel = () => {
     getBrandings()
       .then(setBrandings)
       .catch((err: unknown) => console.error('Failed to load brandings:', err));
+  }, []);
+
+  // Listen for element selection from the content-ui inspector
+  useEffect(() => {
+    const handler = (message: { type: string; payload?: unknown }) => {
+      if (message.type === 'ELEMENT_SELECTED' && message.payload) {
+        const { selector, computedStyles, linkedTokens } = message.payload as {
+          selector: string;
+          computedStyles: Record<string, string>;
+          linkedTokens: Record<string, string>;
+        };
+        setView({ type: 'element', selector, styles: computedStyles, linkedTokens });
+      }
+    };
+    chrome.runtime.onMessage.addListener(handler);
+    return () => chrome.runtime.onMessage.removeListener(handler);
+  }, []);
+
+  const handleActivateInspector = useCallback(async () => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab?.id) {
+      await chrome.tabs.sendMessage(tab.id, { type: 'ACTIVATE_INSPECTOR' });
+    }
   }, []);
 
   const handleExtract = useCallback(async () => {
@@ -109,13 +137,14 @@ const SidePanel = () => {
   const isExtractView = view.type === 'extract';
   const isBrandingsView = view.type === 'brandings';
   const isDetailView = view.type === 'detail';
+  const isElementView = view.type === 'element';
 
   return (
     <div
       className="relative flex h-screen flex-col pb-14"
       style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
-      {/* Header — hidden when viewing detail (detail has its own header) */}
-      {!isDetailView && (
+      {/* Header — hidden when viewing detail or element (they have their own headers) */}
+      {!isDetailView && !isElementView && (
         <div
           className="flex items-center justify-between px-4 py-3"
           style={{ borderBottom: '1px solid var(--border-default)' }}>
@@ -173,6 +202,68 @@ const SidePanel = () => {
                     </button>
                   </>
                 )}
+                {/* Inspect button — activates the element picker overlay */}
+                <button
+                  type="button"
+                  onClick={handleActivateInspector}
+                  aria-label="Inspect element"
+                  title="Inspect element"
+                  className="flex items-center justify-center rounded-lg p-1.5 transition-colors"
+                  style={{
+                    border: '1px solid var(--border-default)',
+                    color: 'var(--text-secondary)',
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent-primary)';
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-subtle)';
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--accent-10)';
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-default)';
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+                  }}>
+                  {/* Crosshair icon */}
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                    <circle cx="7" cy="7" r="3" stroke="currentColor" strokeWidth="1.25" />
+                    <line
+                      x1="7"
+                      y1="1"
+                      x2="7"
+                      y2="3.5"
+                      stroke="currentColor"
+                      strokeWidth="1.25"
+                      strokeLinecap="round"
+                    />
+                    <line
+                      x1="7"
+                      y1="10.5"
+                      x2="7"
+                      y2="13"
+                      stroke="currentColor"
+                      strokeWidth="1.25"
+                      strokeLinecap="round"
+                    />
+                    <line
+                      x1="1"
+                      y1="7"
+                      x2="3.5"
+                      y2="7"
+                      stroke="currentColor"
+                      strokeWidth="1.25"
+                      strokeLinecap="round"
+                    />
+                    <line
+                      x1="10.5"
+                      y1="7"
+                      x2="13"
+                      y2="7"
+                      stroke="currentColor"
+                      strokeWidth="1.25"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
                 <button
                   type="button"
                   onClick={handleExtract}
@@ -203,6 +294,19 @@ const SidePanel = () => {
       {/* Branding detail view */}
       {isDetailView && view.type === 'detail' && (
         <BrandingDetailView branding={view.branding} onBack={handleBackFromDetail} onCopy={handleCopy} />
+      )}
+
+      {/* Element inspector detail view */}
+      {isElementView && view.type === 'element' && (
+        <ElementDetailView
+          selector={view.selector}
+          computedStyles={view.styles}
+          linkedTokens={view.linkedTokens}
+          overrides={overrides}
+          onOverride={applyOverride}
+          onResetOverride={removeOverride}
+          onBack={() => setView({ type: 'extract' })}
+        />
       )}
 
       {/* Main extraction view */}
