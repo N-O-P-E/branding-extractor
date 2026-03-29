@@ -44,28 +44,32 @@ const hasAnyDirectStyle = (el: Element, properties: readonly string[]): boolean 
   properties.some(prop => hasDirectStyle(el, prop));
 
 /**
- * Build a simple CSS selector string for an element.
+ * Build a CSS selector string for an element that is as specific as possible
+ * without resorting to DOM mutation (data attributes).
  *
  * Priority (descending):
- *  1. `tag#id`          — when the element has an id attribute
- *  2. `tag.firstClass`  — when the element has a class attribute
- *  3. `tag[role="..."]` — when the element has a role attribute
- *  4. `tag[type="..."]` — when the element has a type attribute
- *  5. `tag`             — bare tag name as fallback
+ *  1. `tag#id`                    — when the element has an id attribute
+ *  2. `tag.class1.class2.class3`  — all classes for maximum specificity
+ *  3. `tag[role="..."]`           — when the element has a role attribute
+ *  4. `tag[type="..."]`           — when the element has a type attribute
+ *  5. `parent > tag:nth-of-type(n)` — positional selector as fallback
  */
 const buildSelector = (el: Element): string => {
   const tag = el.tagName.toLowerCase();
 
   const id = el.getAttribute('id');
   if (id) {
-    return `${tag}#${id}`;
+    return `${tag}#${CSS.escape(id)}`;
   }
 
   const className = el.getAttribute('class');
   if (className) {
-    const firstClass = className.trim().split(/\s+/)[0];
-    if (firstClass) {
-      return `${tag}.${firstClass}`;
+    const classes = className
+      .trim()
+      .split(/\s+/)
+      .filter(c => c.length > 0);
+    if (classes.length > 0) {
+      return `${tag}.${classes.map(c => CSS.escape(c)).join('.')}`;
     }
   }
 
@@ -77,6 +81,17 @@ const buildSelector = (el: Element): string => {
   const type = el.getAttribute('type');
   if (type) {
     return `${tag}[type="${type}"]`;
+  }
+
+  // Positional fallback: use nth-of-type relative to parent
+  const parent = el.parentElement;
+  if (parent) {
+    const siblings = Array.from(parent.children).filter(c => c.tagName === el.tagName);
+    if (siblings.length > 1) {
+      const idx = siblings.indexOf(el) + 1;
+      const parentSel = buildSelector(parent);
+      return `${parentSel} > ${tag}:nth-of-type(${idx})`;
+    }
   }
 
   return tag;

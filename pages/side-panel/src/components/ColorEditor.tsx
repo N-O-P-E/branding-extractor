@@ -14,8 +14,10 @@ const getColorKey = (color: ExtractedColor): string => color.hex;
 
 /** All override token IDs that belong to a single color entry. */
 const getOverrideTokenIds = (color: ExtractedColor): string[] => {
+  if (color.cssVariable) {
+    return [color.cssVariable];
+  }
   const ids: string[] = [];
-  if (color.cssVariable) ids.push(color.cssVariable);
   for (const prop of Object.keys(color.propertySelectorMap ?? {})) {
     ids.push(`${prop}-${color.hex.slice(1)}`);
   }
@@ -45,26 +47,27 @@ const ColorEditor = ({ colors, overrides, onOverride, onResetOverride, onCopy }:
   };
 
   const handleColorChange = (color: ExtractedColor, newHex: string) => {
-    // CSS variable override (`:root { --var: value }`)
     if (color.cssVariable) {
+      // CSS variable colors: only override the variable on :root.
+      // This cascades naturally to all elements using var(--name).
       onOverride({
         tokenId: color.cssVariable,
         originalValue: color.hex,
         modifiedValue: newHex,
         type: 'cssVariable',
       });
-    }
-
-    // Per-property computed overrides with correct selectors
-    const map = color.propertySelectorMap ?? {};
-    for (const [prop, propSelectors] of Object.entries(map)) {
-      onOverride({
-        tokenId: `${prop}-${color.hex.slice(1)}`,
-        originalValue: color.hex,
-        modifiedValue: newHex,
-        type: 'computed',
-        selectors: propSelectors,
-      });
+    } else {
+      // Computed colors (no variable): per-property overrides with selectors
+      const map = color.propertySelectorMap ?? {};
+      for (const [prop, propSelectors] of Object.entries(map)) {
+        onOverride({
+          tokenId: `${prop}-${color.hex.slice(1)}`,
+          originalValue: color.hex,
+          modifiedValue: newHex,
+          type: 'computed',
+          selectors: propSelectors,
+        });
+      }
     }
 
     forceUpdate(n => n + 1);
