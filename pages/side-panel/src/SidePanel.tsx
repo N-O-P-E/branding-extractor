@@ -24,22 +24,22 @@ type View =
   | { type: 'detail'; branding: SavedBranding }
   | { type: 'element'; selector: string; styles: Record<string, string>; linkedTokens: Record<string, string> };
 
-// Tab icon components (inline SVG, 12×12)
+// Tab icon components (inline SVG, 14×14)
 const ColorIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+  <svg width="14" height="14" viewBox="0 0 12 12" fill="none" aria-hidden="true">
     <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.25" />
     <circle cx="6" cy="6" r="2" fill="currentColor" />
   </svg>
 );
 
 const TypeIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+  <svg width="14" height="14" viewBox="0 0 12 12" fill="none" aria-hidden="true">
     <path d="M2 3h8M6 3v6" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
   </svg>
 );
 
 const SpacingIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+  <svg width="14" height="14" viewBox="0 0 12 12" fill="none" aria-hidden="true">
     <path
       d="M1 6h10M4 3l-3 3 3 3M8 3l3 3-3 3"
       stroke="currentColor"
@@ -51,7 +51,7 @@ const SpacingIcon = () => (
 );
 
 const ComponentIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+  <svg width="14" height="14" viewBox="0 0 12 12" fill="none" aria-hidden="true">
     <rect x="1.5" y="1.5" width="4" height="4" rx="0.75" stroke="currentColor" strokeWidth="1.25" />
     <rect x="6.5" y="1.5" width="4" height="4" rx="0.75" stroke="currentColor" strokeWidth="1.25" />
     <rect x="1.5" y="6.5" width="4" height="4" rx="0.75" stroke="currentColor" strokeWidth="1.25" />
@@ -60,7 +60,7 @@ const ComponentIcon = () => (
 );
 
 const AnimIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+  <svg width="14" height="14" viewBox="0 0 12 12" fill="none" aria-hidden="true">
     <path d="M2 6c0-2.2 1.8-4 4-4s4 1.8 4 4" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
     <path
       d="M10 6c0 2.2-1.8 4-4 4S2 8.2 2 6"
@@ -442,13 +442,13 @@ const SidePanel = () => {
                         }
                   }
                   title={tab.label}>
-                  <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1.5">
                     {tab.icon}
-                    <span className="text-[11px] font-medium">{tab.label}</span>
+                    <span className="text-sm font-medium">{tab.label}</span>
                   </span>
                   {tab.count !== undefined && tab.count > 0 && (
                     <span
-                      className="inline-flex h-3.5 min-w-[14px] items-center justify-center rounded-full px-1 font-mono text-[9px] leading-none"
+                      className="h-4.5 inline-flex min-w-[18px] items-center justify-center rounded-full px-1.5 font-mono text-[11px] leading-none"
                       style={{
                         background: isActive ? 'var(--accent-15)' : 'var(--bg-secondary)',
                         color: isActive ? 'var(--accent-subtle)' : 'var(--text-muted)',

@@ -9,8 +9,20 @@ interface Props {
   onCopy: (value: string) => void;
 }
 
-const getTokenId = (color: ExtractedColor): string =>
-  color.cssVariable ? color.cssVariable : `color-${color.hex.slice(1)}`;
+/** Stable key for a color used in UI (ref map, React key). */
+const getColorKey = (color: ExtractedColor): string => color.hex;
+
+/** All override token IDs that belong to a single color entry. */
+const getOverrideTokenIds = (color: ExtractedColor): string[] => {
+  const ids: string[] = [];
+  if (color.cssVariable) ids.push(color.cssVariable);
+  for (const prop of Object.keys(color.propertySelectorMap ?? {})) {
+    ids.push(`${prop}-${color.hex.slice(1)}`);
+  }
+  // Fallback: if no propertySelectorMap, use legacy computed id
+  if (ids.length === 0) ids.push(`color-${color.hex.slice(1)}`);
+  return ids;
+};
 
 const ColorEditor = ({ colors, overrides, onOverride, onResetOverride, onCopy }: Props) => {
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
@@ -25,44 +37,64 @@ const ColorEditor = ({ colors, overrides, onOverride, onResetOverride, onCopy }:
   }
 
   const handleSwatchClick = (color: ExtractedColor) => {
-    const tokenId = getTokenId(color);
-    const input = inputRefs.current.get(tokenId);
+    const key = getColorKey(color);
+    const input = inputRefs.current.get(key);
     if (input) {
       input.click();
     }
   };
 
   const handleColorChange = (color: ExtractedColor, newHex: string) => {
-    const tokenId = getTokenId(color);
-    const override: TokenOverride = {
-      tokenId,
-      originalValue: color.hex,
-      modifiedValue: newHex,
-      type: color.cssVariable ? 'cssVariable' : 'computed',
-      selectors: color.cssVariable ? undefined : color.selectors,
-    };
-    onOverride(override);
+    // CSS variable override (`:root { --var: value }`)
+    if (color.cssVariable) {
+      onOverride({
+        tokenId: color.cssVariable,
+        originalValue: color.hex,
+        modifiedValue: newHex,
+        type: 'cssVariable',
+      });
+    }
+
+    // Per-property computed overrides with correct selectors
+    const map = color.propertySelectorMap ?? {};
+    for (const [prop, propSelectors] of Object.entries(map)) {
+      onOverride({
+        tokenId: `${prop}-${color.hex.slice(1)}`,
+        originalValue: color.hex,
+        modifiedValue: newHex,
+        type: 'computed',
+        selectors: propSelectors,
+      });
+    }
+
     forceUpdate(n => n + 1);
+  };
+
+  const handleReset = (color: ExtractedColor) => {
+    for (const tokenId of getOverrideTokenIds(color)) {
+      onResetOverride(tokenId);
+    }
   };
 
   return (
     <div className="grid grid-cols-4 gap-2">
       {colors.map(color => {
-        const tokenId = getTokenId(color);
-        const override = overrides.get(tokenId);
-        const displayHex = override ? override.modifiedValue : color.hex;
-        const isModified = override !== undefined;
+        const key = getColorKey(color);
+        const tokenIds = getOverrideTokenIds(color);
+        const activeOverride = tokenIds.map(id => overrides.get(id)).find(o => o !== undefined);
+        const displayHex = activeOverride ? activeOverride.modifiedValue : color.hex;
+        const isModified = activeOverride !== undefined;
 
         return (
-          <div key={tokenId} className="relative flex flex-col items-center gap-1 rounded p-1">
+          <div key={key} className="relative flex flex-col items-center gap-1 rounded p-1">
             {/* Hidden native color picker */}
             <input
               type="color"
               ref={el => {
                 if (el) {
-                  inputRefs.current.set(tokenId, el);
+                  inputRefs.current.set(key, el);
                 } else {
-                  inputRefs.current.delete(tokenId);
+                  inputRefs.current.delete(key);
                 }
               }}
               value={displayHex.startsWith('#') ? displayHex : color.hex}
@@ -118,7 +150,7 @@ const ColorEditor = ({ colors, overrides, onOverride, onResetOverride, onCopy }:
             {isModified && (
               <button
                 type="button"
-                onClick={() => onResetOverride(tokenId)}
+                onClick={() => handleReset(color)}
                 className="text-[9px] leading-none transition-colors"
                 style={{ color: 'var(--status-error)' }}
                 onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.opacity = '0.8')}

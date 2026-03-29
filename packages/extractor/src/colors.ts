@@ -168,6 +168,13 @@ const extractColors = (root: Element): ExtractedColor[] => {
         if (!existing.selectors.includes(sel)) {
           existing.selectors.push(sel);
         }
+        // Build per-property selector map
+        if (!existing.propertySelectorMap[prop]) {
+          existing.propertySelectorMap[prop] = [];
+        }
+        if (!existing.propertySelectorMap[prop].includes(sel)) {
+          existing.propertySelectorMap[prop].push(sel);
+        }
         // Attach variable name if not yet set
         if (!existing.cssVariable && cssVariable) {
           existing.cssVariable = cssVariable;
@@ -180,6 +187,7 @@ const extractColors = (root: Element): ExtractedColor[] => {
           usageCount: 1,
           properties: [prop],
           selectors: [sel],
+          propertySelectorMap: { [prop]: [sel] },
           ...(cssVariable ? { cssVariable } : {}),
         });
       }

@@ -5,6 +5,7 @@ export interface ExtractedColor {
   usageCount: number;
   properties: string[]; // e.g., ['color', 'background-color']
   selectors: string[];
+  propertySelectorMap: Record<string, string[]>; // e.g., { 'color': ['.text'], 'background-color': ['.bg'] }
   cssVariable?: string; // e.g., '--primary-color'
 }
 

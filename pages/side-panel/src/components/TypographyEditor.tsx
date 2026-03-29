@@ -9,8 +9,6 @@ interface Props {
   onCopy: (value: string) => void;
 }
 
-const WEIGHT_OPTIONS = [100, 200, 300, 400, 500, 600, 700, 800, 900] as const;
-
 const normalizeFamilyName = (fontFamily: string): string => fontFamily.split(',')[0].replace(/['"]/g, '').trim();
 
 const getFamilyTokenId = (family: string): string => `font-family-${family}`;
@@ -36,18 +34,42 @@ const buildCssString = (t: ExtractedTypography, overrides: Map<string, TokenOver
 
 // ─── FamilyGroup ────────────────────────────────────────────────────────────
 
+const COMMON_FONTS = [
+  'Arial',
+  'Helvetica',
+  'Georgia',
+  'Times New Roman',
+  'Verdana',
+  'Tahoma',
+  'Trebuchet MS',
+  'Courier New',
+  'system-ui',
+  'sans-serif',
+  'serif',
+  'monospace',
+] as const;
+
 interface FamilyGroupProps {
   family: string;
   entries: ExtractedTypography[];
+  allFamilies: string[];
   overrides: Map<string, TokenOverride>;
   onOverride: (override: TokenOverride) => void;
   onResetOverride: (tokenId: string) => void;
   onCopy: (value: string) => void;
 }
 
-const FamilyGroup = ({ family, entries, overrides, onOverride, onResetOverride, onCopy }: FamilyGroupProps) => {
+const FamilyGroup = ({
+  family,
+  entries,
+  allFamilies,
+  overrides,
+  onOverride,
+  onResetOverride,
+  onCopy,
+}: FamilyGroupProps) => {
   const [expanded, setExpanded] = useState(true);
-  const [editingFamily, setEditingFamily] = useState(false);
+  const [showFontPicker, setShowFontPicker] = useState(false);
 
   const familyTokenId = getFamilyTokenId(family);
   const familyOverride = overrides.get(familyTokenId);
@@ -77,16 +99,6 @@ const FamilyGroup = ({ family, entries, overrides, onOverride, onResetOverride, 
       tokenId: getSizeTokenId(t.fontSize),
       originalValue: t.fontSize,
       modifiedValue: `${px}px`,
-      type: 'computed',
-      selectors: t.selectors,
-    });
-  };
-
-  const handleWeightChange = (t: ExtractedTypography, newWeight: string) => {
-    onOverride({
-      tokenId: getWeightTokenId(t.fontWeight),
-      originalValue: t.fontWeight,
-      modifiedValue: newWeight,
       type: 'computed',
       selectors: t.selectors,
     });
@@ -165,33 +177,44 @@ const FamilyGroup = ({ family, entries, overrides, onOverride, onResetOverride, 
           </span>
         </button>
 
-        {/* Change Font button / inline input */}
-        {editingFamily ? (
-          <input
-            type="text"
-            defaultValue={displayFamily}
+        {/* Change Font dropdown / button */}
+        {showFontPicker ? (
+          <select
+            value={displayFamily}
+            onChange={e => {
+              handleFamilyChange(e.target.value);
+              setShowFontPicker(false);
+            }}
+            onBlur={() => setShowFontPicker(false)}
             ref={el => el?.focus()}
-            onBlur={e => {
-              const val = e.target.value.trim();
-              handleFamilyChange(val);
-              setEditingFamily(false);
-            }}
-            onKeyDown={e => {
-              if (e.key === 'Enter') e.currentTarget.blur();
-              else if (e.key === 'Escape') setEditingFamily(false);
-            }}
-            className="w-24 min-w-0 rounded px-1.5 py-0.5 font-mono text-[11px] outline-none"
+            className="min-w-0 max-w-[140px] rounded px-1.5 py-0.5 font-mono text-[11px] outline-none"
             style={{
               background: 'var(--bg-input)',
               border: '1px solid var(--accent-primary)',
               color: 'var(--text-secondary)',
             }}
-            aria-label="New font family name"
-          />
+            aria-label="Choose font family">
+            {/* Page fonts */}
+            <optgroup label="Page fonts">
+              {allFamilies.map(f => (
+                <option key={f} value={f}>
+                  {f}
+                </option>
+              ))}
+            </optgroup>
+            {/* System fonts */}
+            <optgroup label="System fonts">
+              {COMMON_FONTS.filter(f => !allFamilies.includes(f)).map(f => (
+                <option key={f} value={f}>
+                  {f}
+                </option>
+              ))}
+            </optgroup>
+          </select>
         ) : (
           <button
             type="button"
-            onClick={() => setEditingFamily(true)}
+            onClick={() => setShowFontPicker(true)}
             className="shrink-0 cursor-pointer rounded px-2 py-0.5 text-[10px] font-medium transition-colors"
             style={{
               border: '1px solid var(--border-default)',
@@ -223,127 +246,131 @@ const FamilyGroup = ({ family, entries, overrides, onOverride, onResetOverride, 
         )}
       </div>
 
-      {/* Variant rows */}
+      {/* Variant rows — grouped by font size */}
       {expanded && (
         <div>
-          {entries.map((t, idx) => {
-            const sizeTokenId = getSizeTokenId(t.fontSize);
-            const weightTokenId = getWeightTokenId(t.fontWeight);
-            const sizeOverride = overrides.get(sizeTokenId);
-            const weightOverride = overrides.get(weightTokenId);
+          {(() => {
+            // Group entries by original font size
+            const sizeGroups = new Map<string, ExtractedTypography[]>();
+            for (const entry of entries) {
+              const group = sizeGroups.get(entry.fontSize) ?? [];
+              group.push(entry);
+              sizeGroups.set(entry.fontSize, group);
+            }
+            // Sort groups by combined usage count descending
+            const sortedGroups = Array.from(sizeGroups.entries()).sort(
+              (a, b) => b[1].reduce((s, e) => s + e.usageCount, 0) - a[1].reduce((s, e) => s + e.usageCount, 0),
+            );
 
-            const displaySize = sizeOverride?.modifiedValue ?? t.fontSize;
-            const displayWeight = weightOverride?.modifiedValue ?? t.fontWeight;
-            const isModified = sizeOverride !== undefined || weightOverride !== undefined;
+            return sortedGroups.map(([fontSize, groupEntries], idx) => {
+              const sizeTokenId = getSizeTokenId(fontSize);
+              const sizeOverride = overrides.get(sizeTokenId);
+              const displaySize = sizeOverride?.modifiedValue ?? fontSize;
+              const isModified = sizeOverride !== undefined;
+              const totalUsage = groupEntries.reduce((s, e) => s + e.usageCount, 0);
 
-            const label = t.element ? `<${t.element}>` : null;
-            const rowKey = `${t.fontFamily}-${t.fontSize}-${t.fontWeight}-${idx}`;
+              // Collect unique weights and elements
+              const uniqueWeights = Array.from(new Set(groupEntries.map(e => e.fontWeight))).sort(
+                (a, b) => Number(a) - Number(b),
+              );
+              const uniqueElements = Array.from(new Set(groupEntries.map(e => e.element).filter(Boolean)));
+              // Most common line height
+              const lhCounts = new Map<string, number>();
+              for (const e of groupEntries) {
+                lhCounts.set(e.lineHeight, (lhCounts.get(e.lineHeight) ?? 0) + e.usageCount);
+              }
+              const primaryLh = Array.from(lhCounts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
 
-            return (
-              <div
-                key={rowKey}
-                className="flex items-center gap-2 px-3 py-1.5"
-                style={{
-                  borderTop: '1px solid var(--border-subtle)',
-                  background: idx % 2 === 0 ? 'transparent' : 'rgba(148, 163, 184, 0.02)',
-                }}>
-                {/* Modified dot */}
-                <span
-                  className="h-1.5 w-1.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: isModified ? 'var(--accent-primary)' : 'transparent' }}
-                  aria-label={isModified ? 'Modified' : undefined}
-                />
-
-                {/* Variant details */}
-                <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-                  {/* Size input */}
-                  <input
-                    type="number"
-                    value={parseFloat(displaySize) || 0}
-                    min={1}
-                    max={200}
-                    onChange={e => handleSizeChange(t, e.target.value)}
-                    className="w-12 rounded px-1 font-mono text-[10px] outline-none"
-                    style={{
-                      background: 'var(--bg-input)',
-                      border: '1px solid var(--border-input)',
-                      color: 'var(--text-muted)',
-                    }}
-                    title="Font size (px)"
-                    aria-label="Font size in pixels"
+              return (
+                <div
+                  key={`${fontSize}-${idx}`}
+                  className="flex items-center gap-2 px-3 py-1.5"
+                  style={{
+                    borderTop: '1px solid var(--border-subtle)',
+                    background: idx % 2 === 0 ? 'transparent' : 'rgba(148, 163, 184, 0.02)',
+                  }}>
+                  {/* Modified dot */}
+                  <span
+                    className="h-1.5 w-1.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: isModified ? 'var(--accent-primary)' : 'transparent' }}
+                    aria-label={isModified ? 'Modified' : undefined}
                   />
-                  <span className="font-mono text-[9px]" style={{ color: 'var(--text-muted)' }}>
-                    px
-                  </span>
 
-                  {/* Weight select */}
-                  <select
-                    value={displayWeight}
-                    onChange={e => handleWeightChange(t, e.target.value)}
-                    className="rounded px-1 font-mono text-[10px] outline-none"
-                    style={{
-                      background: 'var(--bg-input)',
-                      border: '1px solid var(--border-input)',
-                      color: 'var(--text-muted)',
-                    }}
-                    title="Font weight"
-                    aria-label="Font weight">
-                    {WEIGHT_OPTIONS.map(w => (
-                      <option key={w} value={String(w)}>
-                        {w}
-                      </option>
-                    ))}
-                  </select>
-
-                  {/* Line height */}
-                  <span className="font-mono text-[9px]" style={{ color: 'var(--text-muted)' }}>
-                    lh {t.lineHeight}
-                  </span>
-
-                  {/* Element tag badge */}
-                  {label && (
-                    <span
-                      className="rounded px-1 py-0.5 font-mono text-[9px]"
+                  {/* Size group details */}
+                  <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+                    {/* Size input */}
+                    <input
+                      type="number"
+                      value={parseFloat(displaySize) || 0}
+                      min={1}
+                      max={200}
+                      onChange={e => handleSizeChange(groupEntries[0], e.target.value)}
+                      className="w-12 rounded px-1 font-mono text-[10px] outline-none"
                       style={{
-                        background: 'var(--accent-10)',
-                        color: 'var(--accent-subtle)',
-                        border: '1px solid var(--accent-20)',
-                      }}>
-                      {label}
+                        background: 'var(--bg-input)',
+                        border: '1px solid var(--border-input)',
+                        color: 'var(--text-muted)',
+                      }}
+                      title="Font size (px)"
+                      aria-label="Font size in pixels"
+                    />
+                    <span className="font-mono text-[9px]" style={{ color: 'var(--text-muted)' }}>
+                      px
                     </span>
-                  )}
-                </span>
 
-                {/* Right actions */}
-                <span className="flex shrink-0 flex-col items-end gap-0.5">
-                  <span className="font-mono text-[9px]" style={{ color: 'var(--text-muted)' }}>
-                    {t.usageCount}×
+                    {/* Weights */}
+                    <span className="font-mono text-[9px]" style={{ color: 'var(--text-muted)' }}>
+                      {uniqueWeights.join(' · ')}
+                    </span>
+
+                    {/* Line height */}
+                    <span className="font-mono text-[9px]" style={{ color: 'var(--text-muted)' }}>
+                      lh {primaryLh}
+                    </span>
+
+                    {/* Element tag badges */}
+                    {uniqueElements.map(el => (
+                      <span
+                        key={el}
+                        className="rounded px-1 py-0.5 font-mono text-[9px]"
+                        style={{
+                          background: 'var(--accent-10)',
+                          color: 'var(--accent-subtle)',
+                          border: '1px solid var(--accent-20)',
+                        }}>
+                        {`<${el}>`}
+                      </span>
+                    ))}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => onCopy(buildCssString(t, overrides))}
-                    className="cursor-pointer text-[9px] transition-opacity hover:opacity-70"
-                    style={{ color: 'var(--text-muted)' }}
-                    title="Copy CSS">
-                    Copy
-                  </button>
-                  {isModified && (
+
+                  {/* Right actions */}
+                  <span className="flex shrink-0 flex-col items-end gap-0.5">
+                    <span className="font-mono text-[9px]" style={{ color: 'var(--text-muted)' }}>
+                      {totalUsage}×
+                    </span>
                     <button
                       type="button"
-                      onClick={() => {
-                        if (sizeOverride) onResetOverride(sizeTokenId);
-                        if (weightOverride) onResetOverride(weightTokenId);
-                      }}
+                      onClick={() => onCopy(buildCssString(groupEntries[0], overrides))}
                       className="cursor-pointer text-[9px] transition-opacity hover:opacity-70"
-                      style={{ color: 'var(--status-error)' }}
-                      title="Reset variant overrides">
-                      Reset
+                      style={{ color: 'var(--text-muted)' }}
+                      title="Copy CSS">
+                      Copy
                     </button>
-                  )}
-                </span>
-              </div>
-            );
-          })}
+                    {isModified && (
+                      <button
+                        type="button"
+                        onClick={() => onResetOverride(sizeTokenId)}
+                        className="cursor-pointer text-[9px] transition-opacity hover:opacity-70"
+                        style={{ color: 'var(--status-error)' }}
+                        title="Reset size override">
+                        Reset
+                      </button>
+                    )}
+                  </span>
+                </div>
+              );
+            });
+          })()}
         </div>
       )}
     </div>
@@ -367,6 +394,8 @@ const TypographyEditor = ({ typography, overrides, onOverride, onResetOverride, 
     );
   }, [typography]);
 
+  const allFamilies = useMemo(() => grouped.map(([family]) => family), [grouped]);
+
   if (typography.length === 0) {
     return (
       <p className="py-2 text-xs" style={{ color: 'var(--text-muted)' }}>
@@ -381,6 +410,7 @@ const TypographyEditor = ({ typography, overrides, onOverride, onResetOverride, 
         <FamilyGroup
           key={family}
           family={family}
+          allFamilies={allFamilies}
           entries={entries}
           overrides={overrides}
           onOverride={onOverride}
