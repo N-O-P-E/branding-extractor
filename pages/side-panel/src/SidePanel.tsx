@@ -14,6 +14,7 @@ import { getBrandings, saveBranding } from '@extension/storage';
 import { useCallback, useEffect, useState } from 'react';
 import type { ExtractionResult } from '@extension/extractor';
 import type { SavedBranding } from '@extension/storage';
+import type { ReactNode } from 'react';
 
 type Tab = 'colors' | 'typography' | 'spacing' | 'components' | 'animations';
 
@@ -23,11 +24,70 @@ type View =
   | { type: 'detail'; branding: SavedBranding }
   | { type: 'element'; selector: string; styles: Record<string, string>; linkedTokens: Record<string, string> };
 
+// Tab icon components (inline SVG, 12×12)
+const ColorIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+    <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.25" />
+    <circle cx="6" cy="6" r="2" fill="currentColor" />
+  </svg>
+);
+
+const TypeIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+    <path d="M2 3h8M6 3v6" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+  </svg>
+);
+
+const SpacingIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+    <path
+      d="M1 6h10M4 3l-3 3 3 3M8 3l3 3-3 3"
+      stroke="currentColor"
+      strokeWidth="1.25"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const ComponentIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+    <rect x="1.5" y="1.5" width="4" height="4" rx="0.75" stroke="currentColor" strokeWidth="1.25" />
+    <rect x="6.5" y="1.5" width="4" height="4" rx="0.75" stroke="currentColor" strokeWidth="1.25" />
+    <rect x="1.5" y="6.5" width="4" height="4" rx="0.75" stroke="currentColor" strokeWidth="1.25" />
+    <rect x="6.5" y="6.5" width="4" height="4" rx="0.75" stroke="currentColor" strokeWidth="1.25" />
+  </svg>
+);
+
+const AnimIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+    <path d="M2 6c0-2.2 1.8-4 4-4s4 1.8 4 4" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+    <path
+      d="M10 6c0 2.2-1.8 4-4 4S2 8.2 2 6"
+      stroke="currentColor"
+      strokeWidth="1.25"
+      strokeLinecap="round"
+      strokeDasharray="2 1.5"
+    />
+  </svg>
+);
+
+const CrosshairIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+    <circle cx="7" cy="7" r="3" stroke="currentColor" strokeWidth="1.25" />
+    <line x1="7" y1="1" x2="7" y2="3.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+    <line x1="7" y1="10.5" x2="7" y2="13" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+    <line x1="1" y1="7" x2="3.5" y2="7" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+    <line x1="10.5" y1="7" x2="13" y2="7" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+  </svg>
+);
+
 const SidePanel = () => {
   const [view, setView] = useState<View>({ type: 'extract' });
   const [activeTab, setActiveTab] = useState<Tab>('colors');
   const [result, setResult] = useState<ExtractionResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [brandings, setBrandings] = useState<SavedBranding[]>([]);
@@ -59,23 +119,39 @@ const SidePanel = () => {
   }, []);
 
   const handleActivateInspector = useCallback(async () => {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab?.id) {
+    setError(null);
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab?.id || !tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
+        setError('Cannot inspect this page. Navigate to a website first.');
+        return;
+      }
       await chrome.tabs.sendMessage(tab.id, { type: 'ACTIVATE_INSPECTOR' });
+    } catch (err) {
+      console.error('Inspector activation failed:', err);
+      setError('Could not connect to this page. Try refreshing the page.');
     }
   }, []);
 
   const handleExtract = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tab?.id) {
-        const response = await chrome.tabs.sendMessage(tab.id, { type: 'EXTRACT_STYLES' });
+      if (!tab?.id || !tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
+        setError('Cannot extract from this page. Navigate to a website first.');
+        return;
+      }
+      const response = await chrome.tabs.sendMessage(tab.id, { type: 'EXTRACT_STYLES' });
+      if (response?.result) {
         setResult(response.result);
         setView({ type: 'extract' });
+      } else {
+        setError('Extraction returned no results.');
       }
     } catch (err) {
       console.error('Extraction failed:', err);
+      setError('Could not connect to this page. Try refreshing the page.');
     } finally {
       setLoading(false);
     }
@@ -131,12 +207,12 @@ const SidePanel = () => {
     setView({ type: 'brandings' });
   }, []);
 
-  const tabs: { id: Tab; label: string; count?: number }[] = [
-    { id: 'colors', label: 'Colors', count: result?.colors.length },
-    { id: 'typography', label: 'Type', count: result?.typography.length },
-    { id: 'spacing', label: 'Spacing', count: result?.spacing.length },
-    { id: 'components', label: 'Components', count: result?.components.length },
-    { id: 'animations', label: 'Animations', count: result?.animations.length },
+  const tabs: { id: Tab; label: string; icon: ReactNode; count?: number }[] = [
+    { id: 'colors', label: 'Color', icon: <ColorIcon />, count: result?.colors.length },
+    { id: 'typography', label: 'Type', icon: <TypeIcon />, count: result?.typography.length },
+    { id: 'spacing', label: 'Space', icon: <SpacingIcon />, count: result?.spacing.length },
+    { id: 'components', label: 'Comps', icon: <ComponentIcon />, count: result?.components.length },
+    { id: 'animations', label: 'Anim', icon: <AnimIcon />, count: result?.animations.length },
   ];
 
   const isExtractView = view.type === 'extract';
@@ -150,70 +226,113 @@ const SidePanel = () => {
       style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       {/* Header — hidden when viewing detail or element (they have their own headers) */}
       {!isDetailView && !isElementView && (
-        <div
-          className="flex items-center justify-between px-4 py-3"
-          style={{ borderBottom: '1px solid var(--border-default)' }}>
-          <h1
-            className="text-lg font-semibold"
-            style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
-            Branding Extractor
-          </h1>
-          <OverrideToggle enabled={enabled} onToggle={toggleEnabled} hasOverrides={hasOverrides} />
-          <div className="flex items-center gap-2">
-            {/* Saved brandings toggle */}
-            <button
-              type="button"
-              onClick={() => setView(isBrandingsView ? { type: 'extract' } : { type: 'brandings' })}
-              aria-label={isBrandingsView ? 'Back to extraction' : 'View saved brandings'}
-              className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
-              style={
-                isBrandingsView
-                  ? {
-                      border: '1px solid var(--accent-primary)',
-                      background: 'var(--accent-10)',
-                      color: 'var(--accent-subtle)',
-                    }
-                  : {
-                      border: '1px solid var(--border-default)',
-                      color: 'var(--text-secondary)',
-                    }
-              }>
-              {isBrandingsView ? 'Extract' : `Saved${brandings.length > 0 ? ` (${brandings.length})` : ''}`}
-            </button>
+        <div className="flex flex-col" style={{ borderBottom: '1px solid var(--border-default)' }}>
+          {/* Row 1: Title + primary actions */}
+          <div className="flex items-center justify-between gap-2 px-4 pb-2 pt-3">
+            <h1
+              className="shrink-0 text-base font-semibold leading-tight"
+              style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
+              Branding Extractor
+            </h1>
 
-            {isExtractView && (
-              <>
-                {result && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={handleSaveCurrent}
-                      className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
-                      style={{
+            <div className="flex items-center gap-1.5">
+              {/* Saved brandings toggle */}
+              <button
+                type="button"
+                onClick={() => setView(isBrandingsView ? { type: 'extract' } : { type: 'brandings' })}
+                aria-label={isBrandingsView ? 'Back to extraction' : 'View saved brandings'}
+                className="cursor-pointer rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
+                style={
+                  isBrandingsView
+                    ? {
                         border: '1px solid var(--accent-primary)',
+                        background: 'var(--accent-10)',
                         color: 'var(--accent-subtle)',
-                      }}>
-                      Save
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowExport(true)}
-                      className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
-                      style={{
-                        border: '1px solid var(--accent-primary)',
-                        color: 'var(--accent-subtle)',
-                      }}>
-                      Export
-                    </button>
-                  </>
-                )}
-                {/* Inspect button — activates the element picker overlay */}
+                      }
+                    : {
+                        border: '1px solid var(--border-default)',
+                        color: 'var(--text-secondary)',
+                      }
+                }
+                onMouseEnter={e => {
+                  if (!isBrandingsView) {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent-primary)';
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-subtle)';
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!isBrandingsView) {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-default)';
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
+                  }
+                }}>
+                {isBrandingsView ? 'Extract' : `Saved${brandings.length > 0 ? ` (${brandings.length})` : ''}`}
+              </button>
+
+              {isExtractView && (
+                <button
+                  type="button"
+                  onClick={handleExtract}
+                  disabled={loading}
+                  className="cursor-pointer rounded-lg px-2.5 py-1 text-xs font-medium text-white transition-opacity disabled:opacity-50"
+                  style={{ background: 'var(--accent-gradient)' }}>
+                  {loading ? 'Extracting…' : 'Extract'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Row 2: secondary actions — only shown when there's extracted data */}
+          {isExtractView && result && (
+            <div
+              className="flex items-center justify-between gap-2 px-4 pb-2"
+              style={{ borderTop: '1px solid var(--border-subtle)' }}>
+              <OverrideToggle enabled={enabled} onToggle={toggleEnabled} hasOverrides={hasOverrides} />
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleSaveCurrent}
+                  className="cursor-pointer rounded px-2 py-1 text-[11px] font-medium transition-colors"
+                  style={{
+                    border: '1px solid var(--border-default)',
+                    color: 'var(--text-secondary)',
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent-primary)';
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-subtle)';
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-default)';
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
+                  }}>
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowExport(true)}
+                  className="cursor-pointer rounded px-2 py-1 text-[11px] font-medium transition-colors"
+                  style={{
+                    border: '1px solid var(--border-default)',
+                    color: 'var(--text-secondary)',
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent-primary)';
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-subtle)';
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-default)';
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
+                  }}>
+                  Export
+                </button>
+                {/* Inspect button */}
                 <button
                   type="button"
                   onClick={handleActivateInspector}
                   aria-label="Inspect element"
                   title="Inspect element"
-                  className="flex items-center justify-center rounded-lg p-1.5 transition-colors"
+                  className="flex cursor-pointer items-center justify-center rounded p-1 transition-colors"
                   style={{
                     border: '1px solid var(--border-default)',
                     color: 'var(--text-secondary)',
@@ -228,58 +347,42 @@ const SidePanel = () => {
                     (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
                     (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
                   }}>
-                  {/* Crosshair icon */}
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                    <circle cx="7" cy="7" r="3" stroke="currentColor" strokeWidth="1.25" />
-                    <line
-                      x1="7"
-                      y1="1"
-                      x2="7"
-                      y2="3.5"
-                      stroke="currentColor"
-                      strokeWidth="1.25"
-                      strokeLinecap="round"
-                    />
-                    <line
-                      x1="7"
-                      y1="10.5"
-                      x2="7"
-                      y2="13"
-                      stroke="currentColor"
-                      strokeWidth="1.25"
-                      strokeLinecap="round"
-                    />
-                    <line
-                      x1="1"
-                      y1="7"
-                      x2="3.5"
-                      y2="7"
-                      stroke="currentColor"
-                      strokeWidth="1.25"
-                      strokeLinecap="round"
-                    />
-                    <line
-                      x1="10.5"
-                      y1="7"
-                      x2="13"
-                      y2="7"
-                      stroke="currentColor"
-                      strokeWidth="1.25"
-                      strokeLinecap="round"
-                    />
-                  </svg>
+                  <CrosshairIcon />
                 </button>
-                <button
-                  type="button"
-                  onClick={handleExtract}
-                  disabled={loading}
-                  className="rounded-lg px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-                  style={{ background: 'var(--accent-gradient)' }}>
-                  {loading ? 'Extracting...' : 'Extract'}
-                </button>
-              </>
-            )}
-          </div>
+              </div>
+            </div>
+          )}
+
+          {/* Inspect button when no result yet */}
+          {isExtractView && !result && (
+            <div
+              className="flex items-center justify-end gap-1.5 px-4 pb-2"
+              style={{ borderTop: '1px solid var(--border-subtle)' }}>
+              <button
+                type="button"
+                onClick={handleActivateInspector}
+                aria-label="Inspect element"
+                title="Inspect element"
+                className="flex cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium transition-colors"
+                style={{
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-secondary)',
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent-primary)';
+                  (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-subtle)';
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--accent-10)';
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-default)';
+                  (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+                }}>
+                <CrosshairIcon />
+                Inspect
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -318,38 +421,63 @@ const SidePanel = () => {
       {/* Main extraction view */}
       {isExtractView && (
         <>
-          {/* Tabs */}
+          {/* Tab bar */}
           <div className="flex" style={{ borderBottom: '1px solid var(--border-default)' }}>
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className="flex-1 py-2 text-xs font-medium transition-colors"
-                style={
-                  activeTab === tab.id
-                    ? {
-                        borderBottom: '2px solid var(--accent-primary)',
-                        color: 'var(--accent-subtle)',
-                      }
-                    : {
-                        color: 'var(--text-secondary)',
-                      }
-                }>
-                {tab.label}
-                {tab.count !== undefined && tab.count > 0 && (
-                  <span className="ml-1 text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                    ({tab.count})
+            {tabs.map(tab => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className="relative flex flex-1 cursor-pointer flex-col items-center gap-0.5 px-1 py-2 transition-colors"
+                  style={
+                    isActive
+                      ? {
+                          borderBottom: '2px solid var(--accent-primary)',
+                          color: 'var(--accent-subtle)',
+                        }
+                      : {
+                          color: 'var(--text-secondary)',
+                        }
+                  }
+                  title={tab.label}>
+                  <span className="flex items-center gap-1">
+                    {tab.icon}
+                    <span className="text-[11px] font-medium">{tab.label}</span>
                   </span>
-                )}
-              </button>
-            ))}
+                  {tab.count !== undefined && tab.count > 0 && (
+                    <span
+                      className="inline-flex h-3.5 min-w-[14px] items-center justify-center rounded-full px-1 font-mono text-[9px] leading-none"
+                      style={{
+                        background: isActive ? 'var(--accent-15)' : 'var(--bg-secondary)',
+                        color: isActive ? 'var(--accent-subtle)' : 'var(--text-muted)',
+                      }}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
-          {/* Content */}
+          {/* Content area */}
           <div className="flex-1 overflow-y-auto p-4">
             {loading ? (
               <SkeletonLoader />
+            ) : error ? (
+              <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--status-error)' }}>
+                  {error}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setError(null)}
+                  className="cursor-pointer text-xs underline transition-opacity hover:opacity-70"
+                  style={{ color: 'var(--text-muted)' }}>
+                  Dismiss
+                </button>
+              </div>
             ) : !result ? (
               <div className="flex h-full items-center justify-center text-sm" style={{ color: 'var(--text-muted)' }}>
                 Click &ldquo;Extract&rdquo; to analyze this page&apos;s design system
