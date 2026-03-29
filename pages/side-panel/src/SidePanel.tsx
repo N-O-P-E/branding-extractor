@@ -132,6 +132,19 @@ const SettingsIcon = () => (
   </svg>
 );
 
+const ResetIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <path d="M2 2v5h5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+    <path
+      d="M3.05 10A6 6 0 1 0 4.18 4.18L2 7"
+      stroke="currentColor"
+      strokeWidth="1.25"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 /** Reusable card button for the action bar grid */
 const ActionCard = ({
   icon,
@@ -183,7 +196,7 @@ const SidePanel = () => {
   const [brandings, setBrandings] = useState<SavedBranding[]>([]);
   const [savedToast, setSavedToast] = useState(false);
 
-  const { overrides, overridesList, hasOverrides, enabled, applyOverride, removeOverride, toggleEnabled } =
+  const { overrides, overridesList, hasOverrides, enabled, applyOverride, removeOverride, clearAll, toggleEnabled } =
     useOverrides();
 
   const { activeTheme, allThemes, changeTheme, tryActivateCode } = useTheme();
@@ -413,6 +426,7 @@ const SidePanel = () => {
                   </>
                 )}
                 <ActionCard icon={<CrosshairIcon />} label="Inspect" onClick={handleActivateInspector} />
+                <ActionCard icon={<ResetIcon />} label="Reset" onClick={() => clearAll()} />
                 <ActionCard icon={<SettingsIcon />} label="Settings" onClick={() => setView({ type: 'settings' })} />
               </div>
             </div>

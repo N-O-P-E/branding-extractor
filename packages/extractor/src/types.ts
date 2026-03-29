@@ -55,6 +55,7 @@ export interface TokenOverride {
   modifiedValue: string;
   type: 'cssVariable' | 'computed';
   selectors?: string[]; // for computed token overrides
+  priority?: number; // higher = wins over lower; element-level overrides use 1
 }
 
 export interface ExtractionResult {

@@ -75,8 +75,7 @@ const toHex = (value: string): string => {
   return `#${r}${g}${b}`;
 };
 
-const makeTokenId = (selector: string, prop: string): string =>
-  `element-${selector.replace(/[^a-z0-9]/gi, '_')}-${prop}`;
+const makeTokenId = (selector: string, prop: string): string => `${prop}-${selector.replace(/[^a-z0-9]/gi, '_')}`;
 
 const ElementDetailView = ({ selector, computedStyles, overrides, onOverride, onResetOverride, onBack }: Props) => {
   const [editingProp, setEditingProp] = useState<string | null>(null);
@@ -97,6 +96,7 @@ const ElementDetailView = ({ selector, computedStyles, overrides, onOverride, on
       modifiedValue: newValue.trim(),
       type: 'computed',
       selectors: [selector],
+      priority: 1,
     });
   };
 
@@ -109,6 +109,7 @@ const ElementDetailView = ({ selector, computedStyles, overrides, onOverride, on
       modifiedValue: newHex,
       type: 'computed',
       selectors: [selector],
+      priority: 1,
     });
   };
 

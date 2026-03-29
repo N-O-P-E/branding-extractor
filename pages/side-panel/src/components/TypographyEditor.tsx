@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { GOOGLE_FONTS } from '../data/google-fonts';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ExtractedTypography, TokenOverride } from '@extension/extractor';
 
 interface Props {
@@ -34,20 +35,192 @@ const buildCssString = (t: ExtractedTypography, overrides: Map<string, TokenOver
 
 // ─── FamilyGroup ────────────────────────────────────────────────────────────
 
-const COMMON_FONTS = [
+const SYSTEM_FONTS = [
   'Arial',
   'Helvetica',
   'Georgia',
   'Times New Roman',
   'Verdana',
   'Tahoma',
-  'Trebuchet MS',
   'Courier New',
   'system-ui',
   'sans-serif',
   'serif',
   'monospace',
 ] as const;
+
+/** Searchable font picker dropdown */
+const FontPicker = ({
+  currentFamily,
+  pageFonts,
+  onSelect,
+  onClose,
+}: {
+  currentFamily: string;
+  pageFonts: string[];
+  onSelect: (font: string) => void;
+  onClose: () => void;
+}) => {
+  const [query, setQuery] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  // Close on click outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (listRef.current && !listRef.current.contains(target)) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [onClose]);
+
+  const lowerQuery = query.toLowerCase();
+
+  const filteredPage = pageFonts.filter(f => f.toLowerCase().includes(lowerQuery));
+  const filteredSystem = (SYSTEM_FONTS as readonly string[]).filter(
+    f => f.toLowerCase().includes(lowerQuery) && !pageFonts.includes(f),
+  );
+  const filteredGoogle = GOOGLE_FONTS.filter(f => f.toLowerCase().includes(lowerQuery) && !pageFonts.includes(f));
+
+  return (
+    <div
+      ref={listRef}
+      className="absolute right-0 top-full z-50 mt-1 flex max-h-[280px] w-56 flex-col overflow-hidden rounded-lg shadow-lg"
+      style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-default)' }}>
+      {/* Search input */}
+      <div className="p-1.5" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Escape') onClose();
+          }}
+          placeholder="Search fonts…"
+          className="w-full rounded px-2 py-1.5 text-[11px] outline-none"
+          style={{
+            background: 'var(--bg-input)',
+            border: '1px solid var(--border-input)',
+            color: 'var(--text-primary)',
+          }}
+        />
+      </div>
+
+      {/* Results */}
+      <div className="flex-1 overflow-y-auto p-1">
+        {filteredPage.length > 0 && (
+          <>
+            <div
+              className="px-2 py-1 text-[9px] font-semibold uppercase tracking-wider"
+              style={{ color: 'var(--text-muted)' }}>
+              Page fonts
+            </div>
+            {filteredPage.map(f => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => {
+                  onSelect(f);
+                  onClose();
+                }}
+                className="flex w-full cursor-pointer items-center rounded px-2 py-1.5 text-left text-[11px] transition-colors"
+                style={{
+                  color: f === currentFamily ? 'var(--accent-subtle)' : 'var(--text-secondary)',
+                  background: f === currentFamily ? 'var(--accent-10)' : 'transparent',
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-hover)';
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLButtonElement).style.background =
+                    f === currentFamily ? 'var(--accent-10)' : 'transparent';
+                }}>
+                {f}
+              </button>
+            ))}
+          </>
+        )}
+
+        {filteredSystem.length > 0 && (
+          <>
+            <div
+              className="px-2 py-1 text-[9px] font-semibold uppercase tracking-wider"
+              style={{ color: 'var(--text-muted)' }}>
+              System
+            </div>
+            {filteredSystem.map(f => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => {
+                  onSelect(f);
+                  onClose();
+                }}
+                className="flex w-full cursor-pointer items-center rounded px-2 py-1.5 text-left text-[11px] transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-hover)';
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+                }}>
+                {f}
+              </button>
+            ))}
+          </>
+        )}
+
+        {filteredGoogle.length > 0 && (
+          <>
+            <div
+              className="px-2 py-1 text-[9px] font-semibold uppercase tracking-wider"
+              style={{ color: 'var(--text-muted)' }}>
+              Google Fonts
+            </div>
+            {filteredGoogle.slice(0, 100).map(f => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => {
+                  onSelect(f);
+                  onClose();
+                }}
+                className="flex w-full cursor-pointer items-center rounded px-2 py-1.5 text-left text-[11px] transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-hover)';
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+                }}>
+                {f}
+              </button>
+            ))}
+            {filteredGoogle.length > 100 && (
+              <div className="px-2 py-1 text-[9px]" style={{ color: 'var(--text-muted)' }}>
+                Type to filter {filteredGoogle.length - 100} more…
+              </div>
+            )}
+          </>
+        )}
+
+        {filteredPage.length === 0 && filteredSystem.length === 0 && filteredGoogle.length === 0 && (
+          <div className="px-2 py-3 text-center text-[11px]" style={{ color: 'var(--text-muted)' }}>
+            No fonts found
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 interface FamilyGroupProps {
   family: string;
@@ -177,62 +350,42 @@ const FamilyGroup = ({
           </span>
         </button>
 
-        {/* Change Font dropdown / button */}
-        {showFontPicker ? (
-          <select
-            value={displayFamily}
-            onChange={e => {
-              handleFamilyChange(e.target.value);
-              setShowFontPicker(false);
-            }}
-            onBlur={() => setShowFontPicker(false)}
-            ref={el => el?.focus()}
-            className="min-w-0 max-w-[140px] rounded px-1.5 py-0.5 font-mono text-[11px] outline-none"
-            style={{
-              background: 'var(--bg-input)',
-              border: '1px solid var(--accent-primary)',
-              color: 'var(--text-secondary)',
-            }}
-            aria-label="Choose font family">
-            {/* Page fonts */}
-            <optgroup label="Page fonts">
-              {allFamilies.map(f => (
-                <option key={f} value={f}>
-                  {f}
-                </option>
-              ))}
-            </optgroup>
-            {/* System fonts */}
-            <optgroup label="System fonts">
-              {COMMON_FONTS.filter(f => !allFamilies.includes(f)).map(f => (
-                <option key={f} value={f}>
-                  {f}
-                </option>
-              ))}
-            </optgroup>
-          </select>
-        ) : (
+        {/* Change Font button + picker */}
+        <div className="relative">
           <button
             type="button"
-            onClick={() => setShowFontPicker(true)}
+            onClick={() => setShowFontPicker(v => !v)}
             className="shrink-0 cursor-pointer rounded px-2 py-0.5 text-[10px] font-medium transition-colors"
             style={{
-              border: '1px solid var(--border-default)',
-              color: 'var(--text-secondary)',
+              border: showFontPicker ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
+              color: showFontPicker ? 'var(--accent-subtle)' : 'var(--text-secondary)',
+              backgroundColor: showFontPicker ? 'var(--accent-10)' : 'transparent',
             }}
             onMouseEnter={e => {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent-primary)';
-              (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-subtle)';
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--accent-10)';
+              if (!showFontPicker) {
+                (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent-primary)';
+                (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-subtle)';
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--accent-10)';
+              }
             }}
             onMouseLeave={e => {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-default)';
-              (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+              if (!showFontPicker) {
+                (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-default)';
+                (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+              }
             }}>
             Change Font
           </button>
-        )}
+          {showFontPicker && (
+            <FontPicker
+              currentFamily={displayFamily}
+              pageFonts={allFamilies}
+              onSelect={handleFamilyChange}
+              onClose={() => setShowFontPicker(false)}
+            />
+          )}
+        </div>
 
         {familyOverride && (
           <button

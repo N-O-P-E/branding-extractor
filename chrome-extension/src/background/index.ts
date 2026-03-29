@@ -41,12 +41,53 @@ chrome.storage.local.get('extensionTheme').then(data => {
   if (theme !== 'default') updateIconForTheme(theme);
 });
 
+/** Capture full page via Chrome DevTools Protocol — no scrolling, no stitching. */
+const captureFullPageCDP = async (tabId: number): Promise<string> => {
+  const target = { tabId };
+  await chrome.debugger.attach(target, '1.3');
+
+  try {
+    // Get full page dimensions without changing the viewport
+    const layoutResult = (await chrome.debugger.sendCommand(target, 'Page.getLayoutMetrics')) as {
+      contentSize: { width: number; height: number };
+      cssContentSize: { width: number; height: number };
+    };
+
+    const { width, height } = layoutResult.cssContentSize ?? layoutResult.contentSize;
+
+    // Capture with a clip region covering the full page — viewport stays unchanged
+    const screenshot = (await chrome.debugger.sendCommand(target, 'Page.captureScreenshot', {
+      format: 'png',
+      captureBeyondViewport: true,
+      clip: {
+        x: 0,
+        y: 0,
+        width,
+        height: Math.min(height, 16384),
+        scale: 1,
+      },
+    })) as { data: string };
+
+    return `data:image/png;base64,${screenshot.data}`;
+  } finally {
+    await chrome.debugger.detach(target).catch(() => {});
+  }
+};
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'CAPTURE_VISIBLE_TAB') {
     chrome.tabs.captureVisibleTab(undefined, { format: 'png' }, dataUrl => {
       sendResponse({ dataUrl });
     });
-    return true; // async response
+    return true;
+  }
+
+  if (message.type === 'CAPTURE_FULL_PAGE') {
+    const { tabId } = message.payload;
+    captureFullPageCDP(tabId)
+      .then(dataUrl => sendResponse({ dataUrl }))
+      .catch(err => sendResponse({ dataUrl: '', error: String(err) }));
+    return true;
   }
 
   if (message.type === 'UPDATE_ICON_THEME') {

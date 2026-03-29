@@ -22,8 +22,16 @@ const captureFullPage = async (): Promise<string> => {
       requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
     });
 
-    const dataUrl = await new Promise<string>(resolve => {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
       chrome.runtime.sendMessage({ type: 'CAPTURE_VISIBLE_TAB' }, (response: { dataUrl: string }) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+        if (!response?.dataUrl) {
+          reject(new Error('Empty capture response'));
+          return;
+        }
         resolve(response.dataUrl);
       });
     });

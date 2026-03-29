@@ -1,7 +1,6 @@
 import { exportAsCss, exportAsSession, exportAsTokens, exportAsTailwind } from '@extension/exporter';
 import { useCallback, useEffect, useState } from 'react';
 import type { ExtractionResult, TokenOverride } from '@extension/extractor';
-import type { CaptureScreenshotResponse } from '@extension/shared';
 
 interface Props {
   result: ExtractionResult;
@@ -29,29 +28,39 @@ export const ExportModal = ({ result, onClose, overrides }: Props) => {
   const hasOverrides = overrides !== undefined && overrides.length > 0;
   const activeOverrides = hasOverrides && useModified ? overrides : undefined;
 
+  /** Capture full page via CDP (no scrolling, single shot). */
+  const captureFullPage = useCallback(async (tabId: number): Promise<string> => {
+    const response = await chrome.runtime.sendMessage({
+      type: 'CAPTURE_FULL_PAGE',
+      payload: { tabId },
+    });
+    if (!response?.dataUrl) throw new Error(response?.error ?? 'Capture failed');
+    return response.dataUrl;
+  }, []);
+
   const handleCaptureScreenshots = useCallback(async () => {
     setCapturingScreenshots(true);
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!tab?.id) return;
 
-      const beforeResponse = await chrome.tabs.sendMessage<
-        { type: string; payload: { mode: string } },
-        CaptureScreenshotResponse
-      >(tab.id, { type: 'CAPTURE_SCREENSHOT', payload: { mode: 'before' } });
-      setScreenshotBefore(beforeResponse.dataUrl);
+      // Capture "before" — temporarily disable overrides
+      await chrome.tabs.sendMessage(tab.id, { type: 'SET_OVERRIDES_ENABLED', payload: { enabled: false } });
+      await new Promise(r => setTimeout(r, 400));
+      const before = await captureFullPage(tab.id);
+      setScreenshotBefore(before);
 
-      const afterResponse = await chrome.tabs.sendMessage<
-        { type: string; payload: { mode: string } },
-        CaptureScreenshotResponse
-      >(tab.id, { type: 'CAPTURE_SCREENSHOT', payload: { mode: 'after' } });
-      setScreenshotAfter(afterResponse.dataUrl);
+      // Restore overrides and capture "after"
+      await chrome.tabs.sendMessage(tab.id, { type: 'SET_OVERRIDES_ENABLED', payload: { enabled: true } });
+      await new Promise(r => setTimeout(r, 400));
+      const after = await captureFullPage(tab.id);
+      setScreenshotAfter(after);
     } catch (err) {
       console.error('Screenshot capture failed:', err);
     } finally {
       setCapturingScreenshots(false);
     }
-  }, []);
+  }, [captureFullPage]);
 
   const getContent = useCallback(
     (format: Format): string => {
@@ -211,28 +220,69 @@ export const ExportModal = ({ result, onClose, overrides }: Props) => {
 
         {/* Session screenshot capture — only shown on the Session tab */}
         {activeFormat === 'session' && (
-          <div
-            className="flex items-center gap-3 px-4 py-2"
-            style={{ borderBottom: '1px solid var(--border-default)' }}>
-            <button
-              type="button"
-              onClick={handleCaptureScreenshots}
-              disabled={capturingScreenshots}
-              className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
-              style={{
-                border: '1px solid var(--accent-primary)',
-                color: 'var(--accent-subtle)',
-              }}>
-              {capturingScreenshots ? 'Capturing...' : 'Capture Before/After'}
-            </button>
-            {(screenshotBefore !== undefined || screenshotAfter !== undefined) && (
-              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                {screenshotBefore !== undefined && screenshotAfter !== undefined
-                  ? 'Before + After captured'
-                  : screenshotBefore !== undefined
-                    ? 'Before captured'
-                    : 'After captured'}
-              </span>
+          <div className="flex flex-col gap-2 px-4 py-2" style={{ borderBottom: '1px solid var(--border-default)' }}>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleCaptureScreenshots}
+                disabled={capturingScreenshots}
+                className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+                style={{
+                  border: '1px solid var(--accent-primary)',
+                  color: 'var(--accent-subtle)',
+                }}>
+                {capturingScreenshots ? 'Capturing...' : 'Capture Before/After'}
+              </button>
+            </div>
+
+            {/* Screenshot previews */}
+            {(screenshotBefore || screenshotAfter) && (
+              <div className="flex gap-2">
+                {screenshotBefore && (
+                  <div className="flex-1">
+                    <p
+                      className="mb-1 text-[9px] font-medium uppercase tracking-wider"
+                      style={{ color: 'var(--text-muted)' }}>
+                      Before
+                    </p>
+                    <img
+                      src={screenshotBefore}
+                      alt="Before"
+                      className="w-full rounded border"
+                      style={{ borderColor: 'var(--border-default)' }}
+                    />
+                    <a
+                      href={screenshotBefore}
+                      download="screenshot-before.png"
+                      className="mt-1 inline-block text-[10px] transition-opacity hover:opacity-70"
+                      style={{ color: 'var(--accent-subtle)' }}>
+                      Download
+                    </a>
+                  </div>
+                )}
+                {screenshotAfter && (
+                  <div className="flex-1">
+                    <p
+                      className="mb-1 text-[9px] font-medium uppercase tracking-wider"
+                      style={{ color: 'var(--text-muted)' }}>
+                      After
+                    </p>
+                    <img
+                      src={screenshotAfter}
+                      alt="After"
+                      className="w-full rounded border"
+                      style={{ borderColor: 'var(--border-default)' }}
+                    />
+                    <a
+                      href={screenshotAfter}
+                      download="screenshot-after.png"
+                      className="mt-1 inline-block text-[10px] transition-opacity hover:opacity-70"
+                      style={{ color: 'var(--accent-subtle)' }}>
+                      Download
+                    </a>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}

@@ -27,21 +27,16 @@ const getEngine = (): OverrideEngine => {
   return engine;
 };
 
-// Restore active session on page load
-chrome.storage.local.get('brandings').then(({ brandings }) => {
-  if (!brandings || !Array.isArray(brandings)) return;
-  const origin = window.location.origin;
-  const session = brandings.find(
-    (b: { origin?: string; overrides?: TokenOverride[]; enabled?: boolean }) =>
-      b.origin === origin && Array.isArray(b.overrides) && b.overrides.length > 0 && b.enabled,
-  );
-  if (session) {
-    const eng = getEngine();
-    for (const override of session.overrides as TokenOverride[]) {
-      eng.applyOverride(override);
-    }
-    overridesEnabled = true;
+// Restore live overrides on page load (persisted by the side panel)
+chrome.storage.local.get('liveOverrides').then(data => {
+  const session = data.liveOverrides as { overrides?: TokenOverride[]; enabled?: boolean } | undefined;
+  if (!session || !Array.isArray(session.overrides) || session.overrides.length === 0) return;
+  const eng = getEngine();
+  for (const override of session.overrides) {
+    eng.applyOverride(override);
   }
+  overridesEnabled = session.enabled !== false;
+  eng.setEnabled(overridesEnabled);
 });
 
 chrome.runtime.onMessage.addListener(
@@ -89,6 +84,24 @@ chrome.runtime.onMessage.addListener(
       return;
     }
 
+    if (message.type === 'GET_PAGE_INFO') {
+      sendResponse({
+        scrollHeight: document.documentElement.scrollHeight,
+        viewportHeight: window.innerHeight,
+        viewportWidth: window.innerWidth,
+        currentScroll: window.scrollY,
+        dpr: window.devicePixelRatio || 1,
+      });
+      return;
+    }
+
+    if (message.type === 'SCROLL_TO') {
+      window.scrollTo(0, message.payload.y);
+      // Wait two frames for repaint
+      requestAnimationFrame(() => requestAnimationFrame(() => sendResponse({ done: true })));
+      return true; // async
+    }
+
     if (message.type === 'GET_OVERRIDE_STATE') {
       sendResponse({
         overrides: engine ? engine.getOverrides() : [],
@@ -102,18 +115,21 @@ chrome.runtime.onMessage.addListener(
 
       const capture = async () => {
         if (mode === 'before' && engine) {
-          // Temporarily disable overrides
           engine.setEnabled(false);
           await new Promise(resolve => requestAnimationFrame(resolve));
-          const dataUrl = await captureFullPage();
-          engine.setEnabled(overridesEnabled); // restore
-          return dataUrl;
+          try {
+            const dataUrl = await captureFullPage();
+            return dataUrl;
+          } finally {
+            engine.setEnabled(overridesEnabled);
+          }
         }
-        // 'after' or 'current' — capture as-is
         return captureFullPage();
       };
 
-      capture().then(dataUrl => sendResponse({ dataUrl }));
+      capture()
+        .then(dataUrl => sendResponse({ dataUrl }))
+        .catch(err => sendResponse({ dataUrl: '', error: String(err) }));
       return true; // only this handler is async
     }
   },
