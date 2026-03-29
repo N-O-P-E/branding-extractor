@@ -1,11 +1,13 @@
-import { deleteBranding } from '@extension/storage';
-import { useCallback } from 'react';
+import { parseSessionFile } from '@extension/exporter';
+import { deleteBranding, saveBranding } from '@extension/storage';
+import { useCallback, useRef } from 'react';
 import type { SavedBranding } from '@extension/storage';
 
 interface Props {
   brandings: SavedBranding[];
   onSelect: (branding: SavedBranding) => void;
   onDeleted: (id: string) => void;
+  onImported: (branding: SavedBranding) => void;
   onSaveCurrent?: () => void;
   hasCurrentResult: boolean;
 }
@@ -15,7 +17,16 @@ const formatDate = (timestamp: number): string => {
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
-export const BrandingsView = ({ brandings, onSelect, onDeleted, onSaveCurrent, hasCurrentResult }: Props) => {
+export const BrandingsView = ({
+  brandings,
+  onSelect,
+  onDeleted,
+  onImported,
+  onSaveCurrent,
+  hasCurrentResult,
+}: Props) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const handleDelete = useCallback(
     async (e: React.MouseEvent, id: string) => {
       e.stopPropagation();
@@ -25,17 +36,95 @@ export const BrandingsView = ({ brandings, onSelect, onDeleted, onSaveCurrent, h
     [onDeleted],
   );
 
+  const handleImportClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      // Reset so re-selecting the same file triggers the event again
+      e.target.value = '';
+
+      try {
+        const text = await file.text();
+        const session = parseSessionFile(text);
+
+        const hostname = (() => {
+          try {
+            return new URL(session.origin).hostname;
+          } catch {
+            return session.name;
+          }
+        })();
+
+        const favicon = `https://www.google.com/s2/favicons?domain=${hostname}`;
+
+        const newBranding: SavedBranding = {
+          id: crypto.randomUUID(),
+          name: session.name,
+          url: session.originalExtraction.url,
+          origin: session.origin,
+          favicon,
+          data: session.originalExtraction,
+          overrides: session.overrides,
+          enabled: false,
+          savedAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+
+        await saveBranding(newBranding);
+        onImported(newBranding);
+      } catch (err) {
+        console.error('Failed to import branding session:', err);
+      }
+    },
+    [onImported],
+  );
+
   return (
     <div className="flex flex-col gap-3 p-4">
-      {hasCurrentResult && onSaveCurrent && (
+      {/* Hidden file input for import */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        className="hidden"
+        onChange={handleFileChange}
+        aria-hidden="true"
+      />
+
+      <div className="flex gap-2">
+        {hasCurrentResult && onSaveCurrent && (
+          <button
+            type="button"
+            onClick={onSaveCurrent}
+            className="flex-1 rounded-lg py-2 text-sm font-medium text-white transition-colors"
+            style={{ background: 'var(--accent-gradient)' }}>
+            Save Current
+          </button>
+        )}
         <button
           type="button"
-          onClick={onSaveCurrent}
-          className="w-full rounded-lg py-2 text-sm font-medium text-white transition-colors"
-          style={{ background: 'var(--accent-gradient)' }}>
-          Save Current
+          onClick={handleImportClick}
+          className="flex-1 rounded-lg py-2 text-sm font-medium transition-colors"
+          style={{
+            border: '1px solid var(--border-default)',
+            color: 'var(--text-secondary)',
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent-primary)';
+            (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-subtle)';
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-default)';
+            (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
+          }}>
+          Import
         </button>
-      )}
+      </div>
 
       {brandings.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">

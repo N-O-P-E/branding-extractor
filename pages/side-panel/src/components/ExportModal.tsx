@@ -1,30 +1,53 @@
-import { exportAsCss, exportAsTokens, exportAsTailwind } from '@extension/exporter';
+import { exportAsCss, exportAsSession, exportAsTokens, exportAsTailwind } from '@extension/exporter';
 import { useCallback, useEffect, useState } from 'react';
-import type { ExtractionResult } from '@extension/extractor';
+import type { ExtractionResult, TokenOverride } from '@extension/extractor';
 
 interface Props {
   result: ExtractionResult;
   onClose: () => void;
+  overrides?: TokenOverride[];
 }
 
-type Format = 'tokens' | 'css' | 'tailwind';
+type Format = 'tokens' | 'css' | 'tailwind' | 'session';
 
 const FORMAT_META: Record<Format, { label: string; filename: string; mime: string }> = {
   tokens: { label: 'JSON Tokens', filename: 'tokens.json', mime: 'application/json' },
   css: { label: 'CSS Variables', filename: 'variables.css', mime: 'text/css' },
   tailwind: { label: 'Tailwind Config', filename: 'tailwind.config.js', mime: 'text/javascript' },
+  session: { label: 'Session', filename: 'branding.branding.json', mime: 'application/json' },
 };
 
-export const ExportModal = ({ result, onClose }: Props) => {
+export const ExportModal = ({ result, onClose, overrides }: Props) => {
   const [activeFormat, setActiveFormat] = useState<Format>('tokens');
   const [copied, setCopied] = useState(false);
+  const [useModified, setUseModified] = useState(false);
+
+  const hasOverrides = overrides !== undefined && overrides.length > 0;
+  const activeOverrides = hasOverrides && useModified ? overrides : undefined;
+
   const getContent = useCallback(
     (format: Format): string => {
-      if (format === 'tokens') return exportAsTokens(result);
-      if (format === 'css') return exportAsCss(result);
-      return exportAsTailwind(result);
+      if (format === 'tokens') return exportAsTokens(result, activeOverrides);
+      if (format === 'css') return exportAsCss(result, activeOverrides);
+      if (format === 'tailwind') return exportAsTailwind(result, activeOverrides);
+      // session
+      const origin = (() => {
+        try {
+          return new URL(result.url).origin;
+        } catch {
+          return result.url;
+        }
+      })();
+      const name = (() => {
+        try {
+          return new URL(result.url).hostname;
+        } catch {
+          return 'branding';
+        }
+      })();
+      return exportAsSession(name, origin, result, activeOverrides ?? []);
     },
-    [result],
+    [result, activeOverrides],
   );
 
   const handleCopy = useCallback(async () => {
@@ -82,24 +105,53 @@ export const ExportModal = ({ result, onClose }: Props) => {
             style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
             Export
           </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded p-1 transition-colors"
-            style={{ color: 'var(--text-muted)' }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--bg-secondary)';
-              (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
-              (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
-            }}
-            aria-label="Close export modal">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Original / Modified toggle — only shown when overrides exist */}
+            {hasOverrides && (
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="text-[11px]"
+                  style={{ color: useModified ? 'var(--text-muted)' : 'var(--accent-subtle)' }}>
+                  Original
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={useModified}
+                  onClick={() => setUseModified(v => !v)}
+                  className="relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full transition-colors"
+                  style={{ backgroundColor: useModified ? 'var(--accent-primary)' : 'var(--border-default)' }}>
+                  <span
+                    className="pointer-events-none inline-block h-3 w-3 translate-y-0.5 rounded-full bg-white shadow transition-transform"
+                    style={{ transform: `translateX(${useModified ? '14px' : '2px'})` }}
+                  />
+                </button>
+                <span
+                  className="text-[11px]"
+                  style={{ color: useModified ? 'var(--accent-subtle)' : 'var(--text-muted)' }}>
+                  Modified
+                </span>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded p-1 transition-colors"
+              style={{ color: 'var(--text-muted)' }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--bg-secondary)';
+                (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+                (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
+              }}
+              aria-label="Close export modal">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Format tabs */}

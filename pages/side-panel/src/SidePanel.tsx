@@ -33,7 +33,8 @@ const SidePanel = () => {
   const [brandings, setBrandings] = useState<SavedBranding[]>([]);
   const [savedToast, setSavedToast] = useState(false);
 
-  const { overrides, hasOverrides, enabled, applyOverride, removeOverride, toggleEnabled } = useOverrides();
+  const { overrides, overridesList, hasOverrides, enabled, applyOverride, removeOverride, toggleEnabled } =
+    useOverrides();
 
   useEffect(() => {
     getBrandings()
@@ -116,6 +117,10 @@ const SidePanel = () => {
 
   const handleBrandingDeleted = useCallback((id: string) => {
     setBrandings(prev => prev.filter(b => b.id !== id));
+  }, []);
+
+  const handleBrandingImported = useCallback((branding: SavedBranding) => {
+    setBrandings(prev => [...prev, branding]);
   }, []);
 
   const handleSelectBranding = useCallback((branding: SavedBranding) => {
@@ -285,6 +290,7 @@ const SidePanel = () => {
             brandings={brandings}
             onSelect={handleSelectBranding}
             onDeleted={handleBrandingDeleted}
+            onImported={handleBrandingImported}
             onSaveCurrent={result ? handleSaveCurrent : undefined}
             hasCurrentResult={result !== null}
           />
@@ -404,7 +410,9 @@ const SidePanel = () => {
       )}
 
       {/* Export modal */}
-      {showExport && result && <ExportModal result={result} onClose={() => setShowExport(false)} />}
+      {showExport && result && (
+        <ExportModal result={result} onClose={() => setShowExport(false)} overrides={overridesList} />
+      )}
 
       {/* Footer */}
       <a
