@@ -7,3 +7,4 @@ export * from './src/animations.js';
 export * from './src/stylesheet-scanner.js';
 export * from './src/override-engine.js';
 export * from './src/parent-diff.js';
+export * from './src/screenshot.js';
